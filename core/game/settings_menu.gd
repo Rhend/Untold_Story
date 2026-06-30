@@ -88,8 +88,18 @@ func _build_ui() -> void:
 
 
 func _on_fullscreen_toggled(on: bool) -> void:
-	DisplayServer.window_set_mode(
-		DisplayServer.WINDOW_MODE_FULLSCREEN if on else DisplayServer.WINDOW_MODE_WINDOWED)
+	if on:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		return
+	# En quittant le plein écran, la fenêtre garderait sinon une taille
+	# « bordless » plein écran : on impose une taille fenêtrée et on recentre.
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+	var win_size := Vector2i(1280, 720)
+	DisplayServer.window_set_size(win_size)
+	var screen := DisplayServer.window_get_current_screen()
+	var screen_pos := DisplayServer.screen_get_position(screen)
+	var screen_size := DisplayServer.screen_get_size(screen)
+	DisplayServer.window_set_position(screen_pos + (screen_size - win_size) / 2)
 
 
 func _on_quit_pressed() -> void:
