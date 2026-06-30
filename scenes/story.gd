@@ -12,6 +12,12 @@ var _text_label: RichTextLabel
 var _choices_box: VBoxContainer
 var _typewriter: Tween
 var _illustration: Illustration
+var _scrim: ColorRect
+var _content: MarginContainer
+var _has_badge := false
+
+## Marge gauche du texte laissant la place à la pastille de profil (px de réf.).
+const BADGE_CLEARANCE := 340
 
 
 func _ready() -> void:
@@ -45,33 +51,26 @@ func _build_ui() -> void:
 	add_child(bg)
 
 	# Voile sombre posé AU-DESSUS de l'illustration (insérée dynamiquement en
-	# index 1) et SOUS l'UI, pour garder le texte lisible par-dessus l'image.
-	var scrim := ColorRect.new()
-	scrim.color = Color(0, 0, 0, 0.3)
-	scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(scrim)
+	# index 1) et SOUS l'UI. Affiché seulement pour une illustration plein écran
+	# (paysage), afin de garder le texte lisible par-dessus l'image.
+	_scrim = ColorRect.new()
+	_scrim.color = Color(0, 0, 0, 0.35)
+	_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_scrim.visible = false
+	add_child(_scrim)
 
-	var margin := MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# Zone de récit (en-tête, texte, choix). Sa zone est repositionnée selon la
+	# mise en page : plein écran, ou demi-page droite pour le mode « livre ».
+	_content = MarginContainer.new()
+	_content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
-		margin.add_theme_constant_override(side, 56)
-	add_child(margin)
+		_content.add_theme_constant_override(side, 56)
+	add_child(_content)
 
-	var hbox := HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 40)
-	margin.add_child(hbox)
-
-	# Panneau personnage (buste + nom), si un personnage est sélectionné.
-	var character: CharacterData = GameState.selected_character
-	if character != null:
-		hbox.add_child(_build_character_panel(character))
-
-	# Colonne d'histoire (en-tête, texte, choix).
 	var col := VBoxContainer.new()
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 24)
-	hbox.add_child(col)
+	_content.add_child(col)
 
 	_header = Label.new()
 	_header.modulate = Color(0.55, 0.55, 0.7)
@@ -88,34 +87,53 @@ func _build_ui() -> void:
 	_choices_box.add_theme_constant_override("separation", 12)
 	col.add_child(_choices_box)
 
+	# Pastille de profil du personnage, dans le coin haut-gauche.
+	var character: CharacterData = GameState.selected_character
+	_has_badge = character != null
+	if _has_badge:
+		add_child(_build_badge(character))
+		# État initial (avant toute illustration) : texte plein écran → on
+		# décale pour ne pas écrire sous la pastille.
+		_content.add_theme_constant_override("margin_left", BADGE_CLEARANCE)
 
-func _build_character_panel(character: CharacterData) -> Control:
-	var panel := VBoxContainer.new()
-	panel.custom_minimum_size = Vector2(240, 0)
-	panel.add_theme_constant_override("separation", 10)
-	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
-	var bust := TextureRect.new()
-	bust.texture = character.bust
-	bust.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-	bust.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	bust.custom_minimum_size = Vector2(240, 320)
-	panel.add_child(bust)
+## Pastille de profil : petit carré (~15 % de la largeur de référence) ancré
+## dans le coin haut-gauche, surimposé au reste.
+func _build_badge(character: CharacterData) -> Control:
+	const SIDE := 288.0  # ~15 % de 1920 (résolution de référence)
+
+	var holder := VBoxContainer.new()
+	holder.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	holder.position = Vector2(24, 24)
+	holder.add_theme_constant_override("separation", 4)
+
+	var frame := PanelContainer.new()
+	frame.custom_minimum_size = Vector2(SIDE, SIDE)
+	frame.clip_contents = true
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.07, 0.06, 0.09)
+	style.set_border_width_all(3)
+	style.border_color = character.color
+	style.set_corner_radius_all(6)
+	frame.add_theme_stylebox_override("panel", style)
+
+	var portrait := TextureRect.new()
+	portrait.texture = character.icon if character.icon != null else character.bust
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	portrait.custom_minimum_size = Vector2(SIDE, SIDE)
+	frame.add_child(portrait)
+	holder.add_child(frame)
 
 	var name_label := Label.new()
 	name_label.text = character.display_name
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 20)
+	name_label.custom_minimum_size = Vector2(SIDE, 0)
+	name_label.add_theme_font_size_override("font_size", 18)
 	name_label.add_theme_color_override("font_color", character.color)
-	panel.add_child(name_label)
+	holder.add_child(name_label)
 
-	var type_label := Label.new()
-	type_label.text = character.character_type
-	type_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	type_label.modulate = Color(0.65, 0.65, 0.78)
-	panel.add_child(type_label)
-
-	return panel
+	return holder
 
 
 func _clear_choices() -> void:
@@ -174,11 +192,41 @@ func _show_illustration(illustration_name: String) -> void:
 		return
 
 	_illustration = Illustration.new()
-	_illustration.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_illustration)
 	# Au-dessus du fond (index 0), sous le voile et l'UI.
 	move_child(_illustration, 1)
 	_illustration.setup(data)
+	_apply_illustration_layout(data.template)
+
+
+## Place l'illustration et la zone de texte selon le gabarit :
+##  - PAYSAGE : illustration plein écran, texte par-dessus (voile sombre).
+##  - PORTRAIT : mise en page « livre » — illustration sur la moitié gauche,
+##    texte sur la moitié droite.
+func _apply_illustration_layout(template: int) -> void:
+	if template == IllustrationData.Template.PORTRAIT:
+		# Livre : texte sur la demi-page droite, loin de la pastille → marge normale.
+		_set_rect_anchors(_illustration, 0.0, 0.0, 0.5, 1.0)
+		_set_rect_anchors(_content, 0.5, 0.0, 1.0, 1.0)
+		_content.add_theme_constant_override("margin_left", 56)
+		_scrim.visible = false
+	else:
+		# Plein écran : texte par-dessus l'image ; on dégage la pastille à gauche.
+		_set_rect_anchors(_illustration, 0.0, 0.0, 1.0, 1.0)
+		_set_rect_anchors(_content, 0.0, 0.0, 1.0, 1.0)
+		_content.add_theme_constant_override("margin_left", BADGE_CLEARANCE if _has_badge else 56)
+		_scrim.visible = true
+
+
+func _set_rect_anchors(node: Control, l: float, t: float, r: float, b: float) -> void:
+	node.anchor_left = l
+	node.anchor_top = t
+	node.anchor_right = r
+	node.anchor_bottom = b
+	node.offset_left = 0.0
+	node.offset_top = 0.0
+	node.offset_right = 0.0
+	node.offset_bottom = 0.0
 
 
 func _on_story_ended() -> void:
