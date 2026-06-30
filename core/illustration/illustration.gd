@@ -29,8 +29,11 @@ func setup(data: IllustrationData) -> void:
 		child.queue_free()
 	_layers.clear()
 
+	# Tri par layer_index DÉCROISSANT : le fond (index élevé) est ajouté en
+	# premier (dessiné dessous), le premier plan (index faible) en dernier
+	# (dessiné au-dessus). L'inverse masquerait le premier plan sous le fond.
 	var ordered := data.layers.duplicate()
-	ordered.sort_custom(func(a, b): return a.layer_index < b.layer_index)
+	ordered.sort_custom(func(a, b): return a.layer_index > b.layer_index)
 
 	for layer in ordered:
 		var rect := TextureRect.new()
