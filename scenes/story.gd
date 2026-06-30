@@ -1,9 +1,10 @@
 extends Control
-## Scène de démonstration : charge l'histoire d'exemple, la fait tourner via le
-## StoryRunner et affiche texte + choix. L'UI est construite en code pour cette
-## première tranche (on la passera en scènes .tscn éditables ensuite).
+## Vue d'histoire : charge l'histoire, la fait tourner via le StoryRunner et
+## affiche le buste du personnage + texte (effet machine à écrire) + choix.
+## UI construite en code pour cette tranche (passage en .tscn éditable plus tard).
 
 const SAMPLE_PATH := "res://data/stories/sample.untold"
+const SELECTION_SCENE := "res://scenes/character_selection.tscn"
 
 var _runner: StoryRunner
 var _header: Label
@@ -45,27 +46,67 @@ func _build_ui() -> void:
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
-		margin.add_theme_constant_override(side, 72)
+		margin.add_theme_constant_override(side, 56)
 	add_child(margin)
 
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 28)
-	margin.add_child(vbox)
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 40)
+	margin.add_child(hbox)
+
+	# Panneau personnage (buste + nom), si un personnage est sélectionné.
+	var character: CharacterData = GameState.selected_character
+	if character != null:
+		hbox.add_child(_build_character_panel(character))
+
+	# Colonne d'histoire (en-tête, texte, choix).
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 24)
+	hbox.add_child(col)
 
 	_header = Label.new()
 	_header.modulate = Color(0.55, 0.55, 0.7)
-	vbox.add_child(_header)
+	col.add_child(_header)
 
 	_text_label = RichTextLabel.new()
 	_text_label.bbcode_enabled = true
 	_text_label.fit_content = true
 	_text_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_text_label.add_theme_font_size_override("normal_font_size", 20)
-	vbox.add_child(_text_label)
+	col.add_child(_text_label)
 
 	_choices_box = VBoxContainer.new()
 	_choices_box.add_theme_constant_override("separation", 12)
-	vbox.add_child(_choices_box)
+	col.add_child(_choices_box)
+
+
+func _build_character_panel(character: CharacterData) -> Control:
+	var panel := VBoxContainer.new()
+	panel.custom_minimum_size = Vector2(240, 0)
+	panel.add_theme_constant_override("separation", 10)
+	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+
+	var bust := TextureRect.new()
+	bust.texture = character.bust
+	bust.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	bust.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	bust.custom_minimum_size = Vector2(240, 320)
+	panel.add_child(bust)
+
+	var name_label := Label.new()
+	name_label.text = character.display_name
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.add_theme_font_size_override("font_size", 20)
+	name_label.add_theme_color_override("font_color", character.color)
+	panel.add_child(name_label)
+
+	var type_label := Label.new()
+	type_label.text = character.character_type
+	type_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	type_label.modulate = Color(0.65, 0.65, 0.78)
+	panel.add_child(type_label)
+
+	return panel
 
 
 func _clear_choices() -> void:
@@ -85,7 +126,7 @@ func _on_display_text(text: String, node_id: String, tags: Array) -> void:
 
 	_text_label.text = text
 
-	# Effet "machine à écrire" — premier exemple du contrôle d'affichage du texte.
+	# Effet "machine à écrire" — contrôle d'affichage du texte.
 	_text_label.visible_ratio = 0.0
 	if _typewriter and _typewriter.is_running():
 		_typewriter.kill()
@@ -110,7 +151,17 @@ func _on_command(name: String, args: Array) -> void:
 
 func _on_story_ended() -> void:
 	_clear_choices()
-	var button := Button.new()
-	button.text = "↻ Recommencer"
-	button.pressed.connect(_start_story)
-	_choices_box.add_child(button)
+
+	var restart := Button.new()
+	restart.text = "↻ Recommencer"
+	restart.pressed.connect(_start_story)
+	_choices_box.add_child(restart)
+
+	var back := Button.new()
+	back.text = "↩ Choisir un autre personnage"
+	back.pressed.connect(_go_to_selection)
+	_choices_box.add_child(back)
+
+
+func _go_to_selection() -> void:
+	get_tree().change_scene_to_file(SELECTION_SCENE)

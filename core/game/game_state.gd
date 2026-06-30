@@ -3,9 +3,13 @@ extends Node
 ## Remplace le GameManager statique de la version Unity, sans ses défauts
 ## (pas de singleton bricolé, pas de SaveManager recréé à chaque accès).
 
+## Personnage complet sélectionné (renseigné par l'écran de sélection).
+var selected_character: CharacterData = null
+
 ## Personnage et attribut sélectionnés (pilotent le filtrage narratif par tags).
+## Valeurs par défaut utilisées si l'histoire est lancée sans passer par la sélection.
 var character_type: String = "Nadîtum"
-var character_attribute: String = "Mystique"
+var character_attribute: String = "Social"
 
 ## Contrôle de l'affichage du texte (sera enrichi : vitesse, sauts, effets).
 ## Secondes par caractère pour l'effet "machine à écrire".
