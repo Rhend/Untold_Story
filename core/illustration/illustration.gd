@@ -36,6 +36,9 @@ func setup(data: IllustrationData) -> void:
 		var rect := TextureRect.new()
 		rect.texture = layer.sprite
 		rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		# Sans ça, la taille native de la texture sert de taille minimale et le
+		# dimensionnement au viewport (cf. _process) est ignoré → image énorme.
+		rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(rect)
 
