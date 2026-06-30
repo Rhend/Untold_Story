@@ -1,0 +1,61 @@
+// ============================================================
+//  Histoire d'exemple — format maison ".untold"
+//  Tirée du Prologue de la version Unity (texte raccourci).
+//  Démontre : routage par personnage, tags, commande illustration,
+//  choix, routage par attribut, accumulation de texte, fin.
+// ============================================================
+
+@var character = ""
+@var type = ""
+
+// --- Aiguillage initial selon le personnage choisi ---
+:: start
+{ character == "Nadîtum" -> prologue_n }
+{ character == "Soldat" -> prologue_s }
+{ character == "Prêtresse" -> prologue_p }
+-> END
+
+:: prologue_n
+#Nadîtum
+Ton nom est Erešti-Aya, « réclamée par Aya ». Ton destin de nadîtum était fixé dès le moment de ta naissance. Épouse sacrée du dieu Šamaš, tu es une femme puissante, et ce statut te convient très bien.
+* [Le dieu lunaire] -> prologue2
+
+:: prologue_s
+#Soldat
+Ton nom est Warad-Ninurta, « serviteur de Ninurta ». Plus jeune de ta fratrie, tu as choisi de suivre la voie du dieu guerrier et de t'enrôler comme soldat.
+* [Le dieu lunaire] -> prologue2
+
+:: prologue_p
+#Prêtresse
+Ton nom est Zakûtu, « la pure ». Tu es une prêtresse qadištu au temple du dieu Sîn à Ur, envoyée là par ton père, riche dignitaire de Larsa.
+* [Le dieu lunaire] -> prologue2
+
+:: prologue2
+#Nadîtum #Soldat #Prêtresse
+@illustration("Statue de Sîn")
+Quatre hommes en pagne portent une lourde statue de bois de cèdre recouverte de feuilles d'or, aux yeux de nacre incrustés de lapis-lazuli.
+Le dieu lunaire Sîn quitte sa demeure d'Ur pour rendre visite à son père Enlil, dans sa cité de Nippur. Aujourd'hui, pour célébrer l'équinoxe d'automne, Sîn entame son voyage sur l'Euphrate.
+* [Démarrer la procession] -> prologue3
+
+:: prologue3
+Les flots matinaux emportent la divine embarcation. Le soleil est encore bas, les oiseaux s'envolent des roseaux.
+{ type == "Physique" -> route_phys }
+{ type == "Social" -> route_soc }
+{ type == "Mystique" -> route_myst }
+-> fin
+
+:: route_phys
+On t'a demandé de veiller au bon déroulement de la cérémonie, le long du fleuve où la faune sauvage est parfois dangereuse.
+-> fin
+
+:: route_soc
+Tu marches parmi le peuple, attentif aux humeurs de la foule et aux conversations des dignitaires.
+-> fin
+
+:: route_myst
+Tu observes tout, à l'affût du moindre signe qui trahirait la présence d'une force démoniaque.
+-> fin
+
+:: fin
+La procession s'éloigne lentement sur l'Euphrate. ( Fin de la démo. )
+-> END

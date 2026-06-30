@@ -1,0 +1,21 @@
+; Engine configuration file.
+; Untold — version Godot (réécriture native, sans plugin tiers).
+; Format narratif maison : voir FORMAT.md
+
+config_version=5
+
+[application]
+
+config/name="Untold (Godot)"
+config/description="Visual novel narratif — réécriture native Godot. Source narrative unique au format .untold."
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.3", "GL Compatibility")
+
+[autoload]
+
+GameState="*res://core/game/game_state.gd"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
