@@ -38,6 +38,7 @@ Le dieu lunaire Sîn quitte sa demeure d'Ur pour rendre visite à son père Enli
 * [Démarrer la procession] -> prologue3
 
 :: prologue3
+@illustration("Le village")
 Les flots matinaux emportent la divine embarcation. Le soleil est encore bas, les oiseaux s'envolent des roseaux.
 { type == "Physique" -> route_phys }
 { type == "Social" -> route_soc }

@@ -11,6 +11,7 @@ var _header: Label
 var _text_label: RichTextLabel
 var _choices_box: VBoxContainer
 var _typewriter: Tween
+var _illustration: Illustration
 
 
 func _ready() -> void:
@@ -42,6 +43,14 @@ func _build_ui() -> void:
 	bg.color = Color(0.07, 0.06, 0.09)
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
+
+	# Voile sombre posé AU-DESSUS de l'illustration (insérée dynamiquement en
+	# index 1) et SOUS l'UI, pour garder le texte lisible par-dessus l'image.
+	var scrim := ColorRect.new()
+	scrim.color = Color(0, 0, 0, 0.3)
+	scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(scrim)
 
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -145,8 +154,31 @@ func _on_present_choices(choices: Array) -> void:
 
 
 func _on_command(name: String, args: Array) -> void:
-	# Branchements à venir (illustrations, mini-jeux). Pour l'instant : trace.
-	print("[command] %s(%s)" % [name, ", ".join(PackedStringArray(args))])
+	match name:
+		"illustration":
+			if args.size() > 0:
+				_show_illustration(args[0])
+		_:
+			# Autres commandes à venir (mini-jeux, etc.).
+			print("[command] %s(%s)" % [name, ", ".join(PackedStringArray(args))])
+
+
+func _show_illustration(illustration_name: String) -> void:
+	if _illustration != null:
+		_illustration.queue_free()
+		_illustration = null
+
+	var data := IllustrationLibrary.get_illustration(illustration_name)
+	if data == null:
+		push_warning("Illustration inconnue : " + illustration_name)
+		return
+
+	_illustration = Illustration.new()
+	_illustration.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(_illustration)
+	# Au-dessus du fond (index 0), sous le voile et l'UI.
+	move_child(_illustration, 1)
+	_illustration.setup(data)
 
 
 func _on_story_ended() -> void:
