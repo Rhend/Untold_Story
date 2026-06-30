@@ -18,10 +18,16 @@ var _has_badge := false
 
 ## Marge gauche du texte laissant la place à la pastille de profil (px de réf.).
 const BADGE_CLEARANCE := 340
+## Bordure autour de l'illustration (px de réf.) pour aérer et faciliter la lecture.
+const BORDER := 56.0
 
 
 func _ready() -> void:
 	_build_ui()
+
+	# Précharge les textures d'illustration en tâche de fond pour éviter
+	# l'à-coup quand une page à parallaxe apparaît.
+	IllustrationLibrary.preload_all()
 
 	_runner = StoryRunner.new()
 	add_child(_runner)
@@ -206,27 +212,29 @@ func _show_illustration(illustration_name: String) -> void:
 func _apply_illustration_layout(template: int) -> void:
 	if template == IllustrationData.Template.PORTRAIT:
 		# Livre : texte sur la demi-page droite, loin de la pastille → marge normale.
-		_set_rect_anchors(_illustration, 0.0, 0.0, 0.5, 1.0)
+		_set_rect_anchors(_illustration, 0.0, 0.0, 0.5, 1.0, BORDER)
 		_set_rect_anchors(_content, 0.5, 0.0, 1.0, 1.0)
 		_content.add_theme_constant_override("margin_left", 56)
 		_scrim.visible = false
 	else:
-		# Plein écran : texte par-dessus l'image ; on dégage la pastille à gauche.
-		_set_rect_anchors(_illustration, 0.0, 0.0, 1.0, 1.0)
+		# Plein cadre : illustration encadrée d'une bordure (meilleure lecture),
+		# texte par-dessus ; on dégage la pastille à gauche.
+		_set_rect_anchors(_illustration, 0.0, 0.0, 1.0, 1.0, BORDER)
 		_set_rect_anchors(_content, 0.0, 0.0, 1.0, 1.0)
 		_content.add_theme_constant_override("margin_left", BADGE_CLEARANCE if _has_badge else 56)
 		_scrim.visible = true
 
 
-func _set_rect_anchors(node: Control, l: float, t: float, r: float, b: float) -> void:
+func _set_rect_anchors(node: Control, l: float, t: float, r: float, b: float, inset: float = 0.0) -> void:
 	node.anchor_left = l
 	node.anchor_top = t
 	node.anchor_right = r
 	node.anchor_bottom = b
-	node.offset_left = 0.0
-	node.offset_top = 0.0
-	node.offset_right = 0.0
-	node.offset_bottom = 0.0
+	# inset > 0 : marge intérieure sur les 4 côtés (bordure autour du décor).
+	node.offset_left = inset
+	node.offset_top = inset
+	node.offset_right = -inset
+	node.offset_bottom = -inset
 
 
 func _on_story_ended() -> void:

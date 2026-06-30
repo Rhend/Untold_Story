@@ -11,5 +11,5 @@ character_type = "Soldat"
 attribute = "Physique"
 bust = ExtResource("2_bust")
 icon = ExtResource("3_icon")
-color = Color(0.82, 0.45, 0.4, 1)
+color = Color(0.85, 0.38, 0.36, 1)
 description = "Soldat à la voie du dieu guerrier Ninurta. Robuste, il veille sur la procession."

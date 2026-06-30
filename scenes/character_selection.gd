@@ -52,12 +52,26 @@ func _make_card(data: CharacterData) -> Control:
 	card.add_theme_constant_override("separation", 12)
 	card.custom_minimum_size = Vector2(300, 0)
 
+	# Cadre avec outline à la couleur du héros ; cliquable pour sélectionner.
+	var bust_frame := PanelContainer.new()
+	bust_frame.custom_minimum_size = Vector2(300, 380)
+	bust_frame.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	bust_frame.gui_input.connect(_on_card_input.bind(data))
+	var frame_style := StyleBoxFlat.new()
+	frame_style.bg_color = Color(0.1, 0.09, 0.12)
+	frame_style.set_border_width_all(3)
+	frame_style.border_color = data.color
+	frame_style.set_corner_radius_all(8)
+	frame_style.set_content_margin_all(6)
+	bust_frame.add_theme_stylebox_override("panel", frame_style)
+
 	var bust := TextureRect.new()
 	bust.texture = data.bust
-	bust.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	bust.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bust.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	bust.custom_minimum_size = Vector2(300, 380)
-	card.add_child(bust)
+	bust.mouse_filter = Control.MOUSE_FILTER_IGNORE  # le clic passe au cadre
+	bust_frame.add_child(bust)
+	card.add_child(bust_frame)
 
 	var name_label := Label.new()
 	name_label.text = data.display_name
@@ -87,6 +101,12 @@ func _make_card(data: CharacterData) -> Control:
 	card.add_child(button)
 
 	return card
+
+
+func _on_card_input(event: InputEvent, data: CharacterData) -> void:
+	if event is InputEventMouseButton and event.pressed \
+			and event.button_index == MOUSE_BUTTON_LEFT:
+		_on_choose(data)
 
 
 func _on_choose(data: CharacterData) -> void:

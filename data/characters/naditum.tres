@@ -11,5 +11,5 @@ character_type = "Nadîtum"
 attribute = "Social"
 bust = ExtResource("2_bust")
 icon = ExtResource("3_icon")
-color = Color(0.64, 0.52, 0.82, 1)
+color = Color(0.4, 0.62, 0.86, 1)
 description = "Nadîtum, épouse sacrée du dieu Šamaš. Une femme puissante et indépendante."
