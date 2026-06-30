@@ -22,6 +22,7 @@ config/features=PackedStringArray("4.6", "GL Compatibility")
 [autoload]
 
 GameState="*res://core/game/game_state.gd"
+SettingsMenu="*res://core/game/settings_menu.gd"
 
 [display]
 

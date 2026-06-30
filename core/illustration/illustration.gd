@@ -14,11 +14,14 @@ extends Control
 ## Table ParallaxScrollValue d'origine (indexée par layer_index, 1 à 9).
 const SCROLL_VALUES := [10.0, 7.0, 5.0, 2.0, 0.0, -2.0, -5.0, -7.0, -10.0]
 ## Marge de débord pour que le décalage ne révèle pas les bords des calques
-## (mode plein cadre uniquement).
-const OVERSCAN := 96.0
+## (mode plein cadre uniquement). Gardée juste au-dessus du décalage max de
+## parallaxe (|scroll| max = 10 × parallax_gain) pour minimiser le zoom : une
+## marge trop grande agrandit l'image et rogne le décor.
+const OVERSCAN := 24.0
 
 ## Amplitude globale du parallaxe (px par unité de scroll). Réglable au debug.
-@export var parallax_gain := 4.0
+## Volontairement faible : un parallaxe subtil évite de devoir sur-zoomer l'image.
+@export var parallax_gain := 2.0
 
 var look_source: LookSource = MouseLookSource.new()
 
