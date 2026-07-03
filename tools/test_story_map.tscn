@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://dtestmapstory1"]
+
+[ext_resource type="Script" path="res://tools/test_story_map.gd" id="1"]
+
+[node name="TestStoryMap" type="Node"]
+script = ExtResource("1")

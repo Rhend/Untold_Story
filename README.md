@@ -22,8 +22,18 @@ fait sous Unity avec Ink. **Aucun plugin tiers** : tout est reconstruit nativeme
   pour chaque point de choix, quelles réponses ont déjà été choisies (et par qui)
   ou pas encore. Affiché en jeu : compteur de nœuds découverts, mention
   « déjà lu / lu par X », réponses déjà choisies cochées et atténuées.
-- [ ] L7 — Plugin de visualisation de l'histoire (Phase 2, lit le `.untold`)
-  — **prochaine étape**.
+- [x] **L7 (v1) — Outil narratif** (branche `OutilNarratif`), deux volets :
+  - **Carte de progression en jeu** (bouton 🗺 ou touche M) : nœuds visités
+    nommés + pastilles des personnages passés ; nœuds aperçus en bulle noire
+    « ? » sans aucune suite dévoilée ; liens découverts en trait continu ;
+    pistes cachées (gardes/conditions) en pointillé qui s'évanouit.
+  - **Plugin éditeur « Narratif »** (`addons/narrative_graph/`) : graphe
+    drag & drop des `.untold` ; « Appliquer l'ordre » réécrit la source de
+    vérité (blocs réordonnés, contenu intact) ; inspecteur MODULAIRE au clic
+    (identité, events + ajout, commentaire privé à l'outil) — un volet = un
+    script hérité d'`inspector_section.gd` ajouté à `SECTIONS`.
+  - Disposition et commentaires vivent dans un sidecar `<histoire>.meta.json`
+    (jamais dans le `.untold`), partagé entre la carte et l'éditeur.
 
 ## Lancer
 Ouvrir le dossier du projet dans Godot 4.x et lancer (F5).

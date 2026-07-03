@@ -10,6 +10,7 @@ var _runner: StoryRunner
 var _story: Story
 var _header: Label
 var _progress_label: Label
+var _map: StoryMap
 var _text_label: RichTextLabel
 var _choices_box: VBoxContainer
 var _typewriter: Tween
@@ -110,6 +111,14 @@ func _build_ui() -> void:
 	_progress_label.modulate = Color(0.55, 0.55, 0.7)
 	_progress_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_progress_label)
+
+	# Accès à la carte de progression narrative (aussi via la touche M).
+	var map_button := Button.new()
+	map_button.text = "🗺  Carte (M)"
+	map_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	map_button.position = Vector2(-160, 48)
+	map_button.pressed.connect(_toggle_map)
+	add_child(map_button)
 
 	# Pastille de profil du personnage, dans le coin haut-gauche.
 	var character: CharacterData = GameState.selected_character
@@ -222,6 +231,27 @@ func _on_node_visited(node_id: String) -> void:
 
 func _on_choice_selected(node_id: String, choice: Dictionary) -> void:
 	Progress.record_choice(node_id, choice["text"])
+
+
+# ------------------------------------------------------- Carte de progression
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo \
+			and event.keycode == KEY_M:
+		_toggle_map()
+
+
+## Ouvre/ferme la carte, reconstruite à chaque ouverture pour refléter la
+## progression courante.
+func _toggle_map() -> void:
+	if _map != null:
+		_map.queue_free()
+		_map = null
+		return
+	_map = StoryMap.new()
+	add_child(_map)
+	_map.setup(_story, STORY_PATH)
+	_map.close_requested.connect(_toggle_map)
 
 
 func _on_command(name: String, args: Array) -> void:

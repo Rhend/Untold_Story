@@ -26,6 +26,10 @@ GameState="*res://core/game/game_state.gd"
 Progress="*res://core/game/progress_tracker.gd"
 SettingsMenu="*res://core/game/settings_menu.gd"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/narrative_graph/plugin.cfg")
+
 [display]
 
 window/size/viewport_width=1920
