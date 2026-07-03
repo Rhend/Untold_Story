@@ -1,3 +1,4 @@
+@tool
 class_name IllustrationLibrary
 extends RefCounted
 ## Construit une IllustrationData à partir de son nom (celui utilisé dans le

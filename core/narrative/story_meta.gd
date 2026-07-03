@@ -1,3 +1,4 @@
+@tool
 class_name StoryMeta
 extends RefCounted
 ## Métadonnées d'édition d'une histoire, dans un fichier « sidecar »
@@ -7,6 +8,7 @@ extends RefCounted
 ## Structure libre (extensible sans migration), clés utilisées aujourd'hui :
 ##   "positions": { node_id: [x, y] }  — disposition du graphe (outil + carte)
 ##   "comments":  { node_id: String }  — notes privées à l'outil narratif
+##   "collapsed": { node_id: true }    — nœuds repliés dans l'outil graphe
 
 var path := ""
 var data: Dictionary = {}
@@ -51,6 +53,21 @@ func positions() -> Dictionary:
 
 func set_node_position(node_id: String, pos: Vector2) -> void:
 	section("positions")[node_id] = [pos.x, pos.y]
+
+
+# ---------------------------------------------------------------------- Repli
+
+## Un nœud « replié » masque en cascade les nœuds qui dépendent de lui
+## dans l'outil graphe (state d'outillage, sans effet en jeu).
+func is_collapsed(node_id: String) -> bool:
+	return bool(section("collapsed").get(node_id, false))
+
+
+func set_collapsed(node_id: String, collapsed: bool) -> void:
+	if collapsed:
+		section("collapsed")[node_id] = true
+	else:
+		section("collapsed").erase(node_id)
 
 
 # ---------------------------------------------------------------- Commentaires

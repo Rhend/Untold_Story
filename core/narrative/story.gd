@@ -1,3 +1,4 @@
+@tool
 class_name Story
 extends Resource
 ## Une histoire complète : l'ensemble des nœuds + les variables par défaut.

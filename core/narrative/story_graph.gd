@@ -1,3 +1,4 @@
+@tool
 class_name StoryGraph
 extends RefCounted
 ## Vue « graphe » d'une Story : pour chaque nœud, ses liens sortants typés.

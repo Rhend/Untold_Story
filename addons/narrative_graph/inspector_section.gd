@@ -10,6 +10,7 @@ extends VBoxContainer
 ##   "node_id" : String            — id du nœud sélectionné
 ##   "node"    : StoryNode         — le nœud parsé
 ##   "story"   : Story             — l'histoire complète
+##   "graph"   : StoryGraph        — liens sortants typés (outgoing(id))
 ##   "source"  : UntoldSource      — le fichier .untold (édition par blocs)
 ##   "meta"    : StoryMeta         — sidecar (positions, commentaires, ...)
 ##   "editor"  : graph_editor      — reload_and_select(id), set_status(msg)

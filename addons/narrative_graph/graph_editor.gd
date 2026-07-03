@@ -32,11 +32,16 @@ var _story: Story
 var _graph: StoryGraph
 var _meta: StoryMeta
 var _node_ids: Dictionary = {}  # nom du GraphNode -> id du nœud d'histoire
+var _collapse_buttons: Dictionary = {}  # id du nœud -> Button de repli (titre)
 
 
 func _init() -> void:
 	name = "OutilNarratif"
+	# L'écran principal de l'éditeur est un VBoxContainer : les ancres y sont
+	# ignorées, seuls les size flags donnent la place au panneau.
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_build_ui()
 
 
@@ -71,6 +76,24 @@ func _build_ui() -> void:
 	apply.pressed.connect(_apply_order)
 	toolbar.add_child(apply)
 
+	var auto_layout := Button.new()
+	auto_layout.text = "Disposition auto"
+	auto_layout.tooltip_text = "Range les nœuds en colonnes par profondeur depuis le début (gauche → droite), et sauve cette disposition."
+	auto_layout.pressed.connect(_apply_auto_layout)
+	toolbar.add_child(auto_layout)
+
+	var fold_all := Button.new()
+	fold_all.text = "Replier tout"
+	fold_all.tooltip_text = "Replie tous les nœuds : seul le début (et les orphelins) reste visible."
+	fold_all.pressed.connect(_set_all_collapsed.bind(true))
+	toolbar.add_child(fold_all)
+
+	var unfold_all := Button.new()
+	unfold_all.text = "Déplier tout"
+	unfold_all.tooltip_text = "Déplie tous les nœuds de l'histoire."
+	unfold_all.pressed.connect(_set_all_collapsed.bind(false))
+	toolbar.add_child(unfold_all)
+
 	_status = Label.new()
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -84,6 +107,9 @@ func _build_ui() -> void:
 	_graph_edit = GraphEdit.new()
 	_graph_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_graph_edit.minimap_enabled = true
+	# Le rangement natif de GraphEdit ignore la logique de l'histoire :
+	# masqué au profit du bouton « Disposition auto » de la barre d'outils.
+	_graph_edit.show_arrange_button = false
 	_graph_edit.node_selected.connect(_on_node_selected)
 	_graph_edit.end_node_move.connect(_save_positions)
 	split.add_child(_graph_edit)
@@ -139,6 +165,7 @@ func _rebuild_graph_view() -> void:
 		if child is GraphNode:
 			child.free()  # libération immédiate : les noms doivent être réutilisables
 	_node_ids.clear()
+	_collapse_buttons.clear()
 
 	# Disposition : positions sauvegardées, complétées par l'auto-layout.
 	var positions := _meta.positions()
@@ -153,12 +180,7 @@ func _rebuild_graph_view() -> void:
 		if _story.has_node(id):
 			_graph_edit.add_child(_make_graph_node(id, positions[id]))
 
-	for id in _story.nodes:
-		var links := _graph.outgoing(id)
-		for i in links.size():
-			var target: String = links[i]["target"]
-			if _story.has_node(target):
-				_graph_edit.connect_node(_gnode_name(id), i, _gnode_name(target), 0)
+	_update_visibility()
 
 
 func _make_graph_node(id: String, pos: Vector2) -> GraphNode:
@@ -168,6 +190,30 @@ func _make_graph_node(id: String, pos: Vector2) -> GraphNode:
 	gnode.title = id
 	gnode.position_offset = pos
 	_node_ids[String(gnode.name)] = id
+
+	# Badge « illustration » dans la barre de titre : repérable sans avoir à
+	# cliquer sur chaque nœud (le nom est dans l'infobulle).
+	var illustrations := _illustration_names(node)
+	if not illustrations.is_empty():
+		var badge := TextureRect.new()
+		badge.texture = get_theme_icon("ImageTexture", "EditorIcons")
+		badge.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		badge.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		badge.custom_minimum_size = Vector2(20, 20)
+		badge.tooltip_text = "Illustration : " + ", ".join(PackedStringArray(illustrations))
+		gnode.get_titlebar_hbox().add_child(badge)
+
+	# Bouton de repli dans la barre de titre : masque en cascade les nœuds
+	# qui dépendent de celui-ci (état conservé dans le sidecar .meta.json).
+	if not _graph.outgoing(id).is_empty():
+		var fold := Button.new()
+		fold.flat = true
+		fold.focus_mode = Control.FOCUS_NONE
+		fold.add_theme_font_size_override("font_size", 26)
+		fold.tooltip_text = "Replier / déplier les nœuds qui dépendent de celui-ci."
+		fold.pressed.connect(_toggle_collapsed.bind(id))
+		gnode.get_titlebar_hbox().add_child(fold)
+		_collapse_buttons[id] = fold
 
 	# Rangée 0 : extrait du texte, port d'entrée à gauche.
 	var excerpt := Label.new()
@@ -196,6 +242,16 @@ func _gnode_name(id: String) -> StringName:
 	return StringName(("n_" + id).validate_node_name())
 
 
+## Noms passés aux commandes @illustration(...) du nœud, dans l'ordre.
+func _illustration_names(node: StoryNode) -> Array:
+	var names: Array = []
+	for ins in node.instructions:
+		if ins["type"] == "command" and ins["name"] == "illustration" \
+				and not ins["args"].is_empty():
+			names.append(str(ins["args"][0]))
+	return names
+
+
 func _excerpt(node: StoryNode) -> String:
 	for ins in node.instructions:
 		if ins["type"] == "text":
@@ -220,6 +276,91 @@ func _link_caption(link: Dictionary) -> String:
 			return guard_prefix + "→ " + link["target"]
 
 
+# ------------------------------------------------------------------- Repli
+
+## Ids visibles : ceux qu'on atteint depuis le début SANS traverser un nœud
+## replié (le nœud replié reste visible, ses dépendants exclusifs non).
+## Un nœud encore atteignable par une autre branche ouverte reste affiché.
+## Les nœuds inaccessibles depuis le début (orphelins) restent visibles.
+func _visible_ids() -> Dictionary:
+	var visible: Dictionary = {}
+	var reachable: Dictionary = {}
+	if _story.has_node(_story.start_node):
+		reachable[_story.start_node] = true
+		var queue: Array = [_story.start_node]
+		while not queue.is_empty():
+			var id: String = queue.pop_front()
+			for link in _graph.outgoing(id):
+				var target: String = link["target"]
+				if _story.has_node(target) and not reachable.has(target):
+					reachable[target] = true
+					queue.append(target)
+
+		visible[_story.start_node] = true
+		queue = [_story.start_node]
+		while not queue.is_empty():
+			var open_id: String = queue.pop_front()
+			if _meta.is_collapsed(open_id):
+				continue
+			for link in _graph.outgoing(open_id):
+				var target: String = link["target"]
+				if _story.has_node(target) and not visible.has(target):
+					visible[target] = true
+					queue.append(target)
+
+	for id in _story.nodes:
+		if not reachable.has(id):
+			visible[id] = true
+	return visible
+
+
+## Applique l'état de repli : visibilité des nœuds, glyphes des boutons,
+## et connexions redessinées entre nœuds visibles uniquement.
+func _update_visibility() -> void:
+	var shown := _visible_ids()
+	var hidden := 0
+	for child in _graph_edit.get_children():
+		if child is GraphNode:
+			child.visible = shown.has(_node_ids[String(child.name)])
+			if not child.visible:
+				child.selected = false
+				hidden += 1
+
+	for id in _collapse_buttons:
+		_collapse_buttons[id].text = "▸" if _meta.is_collapsed(id) else "▾"
+
+	_graph_edit.clear_connections()
+	for id in _story.nodes:
+		if not shown.has(id):
+			continue
+		var links := _graph.outgoing(id)
+		for i in links.size():
+			var target: String = links[i]["target"]
+			if _story.has_node(target) and shown.has(target):
+				_graph_edit.connect_node(_gnode_name(id), i, _gnode_name(target), 0)
+
+	if hidden > 0:
+		set_status("%d nœud(s) masqué(s) par repli." % hidden)
+
+
+func _toggle_collapsed(id: String) -> void:
+	_meta.set_collapsed(id, not _meta.is_collapsed(id))
+	_meta.save()
+	_update_visibility()
+
+
+func _set_all_collapsed(collapsed: bool) -> void:
+	if _story == null:
+		return
+	for id in _story.nodes:
+		if not _graph.outgoing(id).is_empty():
+			_meta.set_collapsed(id, collapsed)
+	_meta.save()
+	_update_visibility()
+	if not collapsed:
+		set_status("Tous les nœuds sont dépliés.")
+
+
 # ----------------------------------------------------------------- Actions
 
 ## Fin d'un drag : toute la disposition est sauvée dans le sidecar .meta.json
@@ -230,6 +371,23 @@ func _save_positions() -> void:
 			_meta.set_node_position(_node_ids[String(child.name)], child.position_offset)
 	_meta.save()
 	set_status("Disposition enregistrée (partagée avec la carte en jeu).")
+
+
+## Réapplique la disposition automatique en colonnes (profondeur depuis le
+## début, gauche → droite) à tous les nœuds, et la sauve comme disposition
+## partagée — remplace le rangement natif de GraphEdit, masqué car il
+## ignore la logique de l'histoire.
+func _apply_auto_layout() -> void:
+	if _graph == null:
+		return
+	var layout := _graph.auto_layout()
+	for child in _graph_edit.get_children():
+		if child is GraphNode:
+			var id: String = _node_ids[String(child.name)]
+			if layout.has(id):
+				child.position_offset = layout[id]
+	_save_positions()
+	set_status("Disposition auto appliquée : colonnes par profondeur depuis le début.")
 
 
 ## Réordonne les blocs du fichier source selon la disposition : colonne par
@@ -265,6 +423,7 @@ func _make_context(id: String) -> Dictionary:
 		"node_id": id,
 		"node": _story.get_node_by_id(id),
 		"story": _story,
+		"graph": _graph,
 		"source": _source,
 		"meta": _meta,
 		"editor": self,

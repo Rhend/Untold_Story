@@ -1,3 +1,4 @@
+@tool
 class_name StoryParser
 extends RefCounted
 ## Parse le format texte maison ".untold" en une ressource Story.

@@ -1,3 +1,4 @@
+@tool
 class_name IllustrationData
 extends Resource
 ## Une illustration complète (équivalent de l'IllustrationData Unity) :

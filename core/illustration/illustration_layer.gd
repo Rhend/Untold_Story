@@ -1,3 +1,4 @@
+@tool
 class_name IllustrationLayer
 extends Resource
 ## Un calque d'illustration (équivalent du LayerInfo Unity).

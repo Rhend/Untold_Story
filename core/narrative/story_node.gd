@@ -1,3 +1,4 @@
+@tool
 class_name StoryNode
 extends Resource
 ## Un nœud narratif (équivalent d'un "knot" Ink), identifié par son id.

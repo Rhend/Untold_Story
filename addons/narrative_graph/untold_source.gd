@@ -73,6 +73,100 @@ func reorder(new_order: Array) -> void:
 	order = result
 
 
+## Remplace la cible du index-ième lien sortant du nœud (même ordre que
+## StoryGraph.outgoing) : seule la cible après la flèche « -> » est réécrite,
+## tout le reste de la ligne (texte du choix, garde, espaces) est intact.
+func set_link_target(id: String, link_index: int, new_target: String) -> bool:
+	if not blocks.has(id):
+		return false
+	var line_i := _link_line(id, link_index)
+	if line_i < 0:
+		return false
+	var raw: String = blocks[id][line_i]
+	var arrow := raw.rfind("->")
+	if arrow < 0:
+		return false
+	var tail := raw.substr(arrow + 2)
+	var token := RegEx.create_from_string("\\S+").search(tail)
+	if token == null:
+		return false
+	# Premier token après la flèche = la cible ; un « } » collé (saut
+	# conditionnel écrit sans espace) n'en fait pas partie.
+	var end := token.get_end()
+	var brace := token.get_string().find("}")
+	if brace >= 0:
+		end = token.get_start() + brace
+	blocks[id][line_i] = raw.substr(0, arrow + 2) \
+			+ tail.substr(0, token.get_start()) + new_target + tail.substr(end)
+	return true
+
+
+## Indice de la ligne du index-ième lien sortant du bloc. Reproduit le
+## classement de StoryParser : choix, saut conditionnel et saut direct,
+## gardes « { ... } instruction » comprises.
+func _link_line(id: String, link_index: int) -> int:
+	var re_guard := RegEx.create_from_string("^\\{\\s*[^{}]+?\\s*\\}\\s*(\\S.*)$")
+	var re_choice := RegEx.create_from_string("^\\*\\s*\\[.*?\\]\\s*->\\s*\\S+$")
+	var re_cond := RegEx.create_from_string(
+			"^\\{\\s*[A-Za-z_]\\w*\\s*==\\s*\"[^\"]*\"\\s*->\\s*\\S+\\s*\\}$")
+	var count := 0
+	for i in blocks[id].size():
+		var line: String = str(blocks[id][i]).strip_edges()
+		if line.is_empty() or line.begins_with("//") or line.begins_with("::") \
+				or line.begins_with("#"):
+			continue
+		var mg := re_guard.search(line)
+		if mg:
+			line = mg.get_string(1).strip_edges()
+		if re_choice.search(line) or re_cond.search(line) or line.begins_with("->"):
+			if count == link_index:
+				return i
+			count += 1
+	return -1
+
+
+## Remplace la première commande « @nom(...) » du bloc par de nouveaux
+## arguments (préfixe de la ligne — garde, indentation — conservé), ou
+## l'ajoute en fin de bloc si le nœud n'en a pas.
+func set_command(id: String, command: String, args: Array) -> bool:
+	if not blocks.has(id):
+		return false
+	var quoted := PackedStringArray()
+	for arg in args:
+		quoted.append('"%s"' % arg)
+	var call := "@%s(%s)" % [command, ", ".join(quoted)]
+	var re := RegEx.create_from_string("@" + command + "\\(.*\\)")
+	for i in blocks[id].size():
+		var raw: String = blocks[id][i]
+		if str(raw).strip_edges().begins_with("//"):
+			continue
+		var found := re.search(raw)
+		if found:
+			blocks[id][i] = raw.substr(0, found.get_start()) + call + raw.substr(found.get_end())
+			return true
+	append_instruction(id, call)
+	return true
+
+
+## Supprime la occurrence-ième commande « @nom(...) » du bloc — la ligne
+## entière, garde éventuelle comprise. Retourne false si absente.
+func remove_command(id: String, command: String, occurrence := 0) -> bool:
+	if not blocks.has(id):
+		return false
+	var re := RegEx.create_from_string("@" + command + "\\(.*\\)")
+	var count := 0
+	for i in blocks[id].size():
+		var raw: String = blocks[id][i]
+		if str(raw).strip_edges().begins_with("//"):
+			continue
+		if re.search(raw):
+			if count == occurrence:
+				blocks[id].remove_at(i)
+				return true
+			count += 1
+	return false
+
+
 ## Ajoute une ligne d'instruction à la fin du bloc d'un nœud (ex: un event
 ## « @illustration("...") » depuis l'inspecteur).
 func append_instruction(id: String, line: String) -> void:
