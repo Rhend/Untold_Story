@@ -3,11 +3,13 @@ extends Control
 ## affiche le buste du personnage + texte (effet machine à écrire) + choix.
 ## UI construite en code pour cette tranche (passage en .tscn éditable plus tard).
 
-const SAMPLE_PATH := "res://data/stories/sample.untold"
+const STORY_PATH := "res://data/stories/act1_sc1.untold"
 const SELECTION_SCENE := "res://scenes/character_selection.tscn"
 
 var _runner: StoryRunner
+var _story: Story
 var _header: Label
+var _progress_label: Label
 var _text_label: RichTextLabel
 var _choices_box: VBoxContainer
 var _typewriter: Tween
@@ -35,14 +37,17 @@ func _ready() -> void:
 	_runner.present_choices.connect(_on_present_choices)
 	_runner.command.connect(_on_command)
 	_runner.story_ended.connect(_on_story_ended)
+	_runner.node_visited.connect(_on_node_visited)
+	_runner.choice_selected.connect(_on_choice_selected)
 
 	_start_story()
 
 
 func _start_story() -> void:
-	var source := FileAccess.get_file_as_string(SAMPLE_PATH)
-	var story := StoryParser.parse(source)
-	_runner.start(story, {
+	var source := FileAccess.get_file_as_string(STORY_PATH)
+	_story = StoryParser.parse(source)
+	Progress.begin_story(STORY_PATH.get_file().get_basename(), GameState.character_type)
+	_runner.start(_story, {
 		"character": GameState.character_type,
 		"type": GameState.character_attribute,
 	})
@@ -92,6 +97,19 @@ func _build_ui() -> void:
 	_choices_box = VBoxContainer.new()
 	_choices_box.add_theme_constant_override("separation", 12)
 	col.add_child(_choices_box)
+
+	# Compteur de progression narrative (nœuds découverts, tous personnages
+	# confondus), en haut à droite, au-dessus du reste.
+	_progress_label = Label.new()
+	_progress_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_progress_label.offset_left = -480
+	_progress_label.offset_top = 16
+	_progress_label.offset_right = -24
+	_progress_label.offset_bottom = 44
+	_progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_progress_label.modulate = Color(0.55, 0.55, 0.7)
+	_progress_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_progress_label)
 
 	# Pastille de profil du personnage, dans le coin haut-gauche.
 	var character: CharacterData = GameState.selected_character
@@ -155,6 +173,13 @@ func _on_display_text(text: String, node_id: String, tags: Array) -> void:
 	var header := node_id
 	if tags.size() > 0:
 		header += "   [ " + " · ".join(PackedStringArray(tags)) + " ]"
+	# Mentions de relecture : le passage courant est déjà compté, d'où le > 1.
+	if Progress.visit_count(node_id, GameState.character_type) > 1:
+		header += "   · déjà lu"
+	var others: Array = Progress.visitors(node_id).filter(
+		func(c: String) -> bool: return c != GameState.character_type)
+	if not others.is_empty():
+		header += "   · lu par " + ", ".join(PackedStringArray(others))
 	_header.text = header
 
 	_text_label.text = text
@@ -171,10 +196,32 @@ func _on_display_text(text: String, node_id: String, tags: Array) -> void:
 func _on_present_choices(choices: Array) -> void:
 	_clear_choices()
 	for i in choices.size():
+		var choice: Dictionary = choices[i]
 		var button := Button.new()
-		button.text = choices[i]["text"]
+		# Réponse déjà choisie (par n'importe quel personnage) : cochée et
+		# atténuée, pour que les réponses encore inexplorées ressortent.
+		var choosers: Array = Progress.choice_choosers(choice["node"], choice["text"])
+		if choosers.is_empty():
+			button.text = choice["text"]
+		else:
+			button.text = "✓ " + choice["text"]
+			button.modulate = Color(1, 1, 1, 0.55)
+			button.tooltip_text = "Déjà choisie avec : " + ", ".join(PackedStringArray(choosers))
 		button.pressed.connect(_runner.choose.bind(i))
 		_choices_box.add_child(button)
+
+
+func _on_node_visited(node_id: String) -> void:
+	Progress.record_visit(node_id)
+	var total := _story.nodes.size()
+	var seen: int = Progress.visited_count()
+	if total > 0:
+		_progress_label.text = "Progression : %d / %d nœuds (%d %%)" % [
+			seen, total, roundi(100.0 * seen / total)]
+
+
+func _on_choice_selected(node_id: String, choice: Dictionary) -> void:
+	Progress.record_choice(node_id, choice["text"])
 
 
 func _on_command(name: String, args: Array) -> void:

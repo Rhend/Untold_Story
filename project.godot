@@ -18,10 +18,12 @@ config/name="Untold (Godot)"
 config/description="Visual novel narratif — réécriture native Godot. Source narrative unique au format .untold."
 run/main_scene="res://scenes/character_selection.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
+config/icon="res://icon.svg"
 
 [autoload]
 
 GameState="*res://core/game/game_state.gd"
+Progress="*res://core/game/progress_tracker.gd"
 SettingsMenu="*res://core/game/settings_menu.gd"
 
 [display]

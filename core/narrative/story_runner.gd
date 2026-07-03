@@ -15,13 +15,26 @@ signal present_choices(choices: Array)
 signal command(name: String, args: Array)
 ## L'histoire a atteint une fin (-> END ou nœud sans suite).
 signal story_ended()
+## Un nœud vient d'être traversé — émis aussi pour les nœuds intermédiaires
+## enchaînés par des sauts (sert au suivi de progression, autoload Progress).
+signal node_visited(node_id: String)
+## Le joueur a validé une réponse : nœud d'où venait le choix, et le choix
+## lui-même {"text", "target", "node"}.
+signal choice_selected(node_id: String, choice: Dictionary)
 
 const END_NODE := "END"
+
+## Marqueur "glue" : une ligne terminée (ou débutée) par <> se colle à la
+## suivante sans saut de ligne — permet de composer une phrase à partir de
+## fragments conditionnels.
+const GLUE := "<>"
 
 var variables: Dictionary = {}
 
 var _story: Story
 var _pending_choices: Array = []
+## Nœuds déjà traversés (pour les conditions visited()).
+var _visited: Dictionary = {}
 
 ## Démarre une histoire. `initial_vars` écrase les variables par défaut
 ## (ex: {"character": "Nadîtum", "type": "Mystique"}).
@@ -30,15 +43,17 @@ func start(story: Story, initial_vars: Dictionary = {}) -> void:
 	variables = story.variables.duplicate(true)
 	for key in initial_vars:
 		variables[key] = initial_vars[key]
+	_visited = {}
 	_run_from(story.start_node)
 
 ## Le joueur sélectionne le choix d'index `index`.
 func choose(index: int) -> void:
 	if index < 0 or index >= _pending_choices.size():
 		return
-	var target: String = _pending_choices[index]["target"]
+	var choice: Dictionary = _pending_choices[index]
 	_pending_choices = []
-	_run_from(target)
+	choice_selected.emit(choice["node"], choice)
+	_run_from(choice["target"])
 
 ## Reprend l'histoire à un nœud précis (utile au retour d'un mini-jeu).
 func go_to(node_id: String) -> void:
@@ -67,9 +82,14 @@ func _run_from(start_id: String) -> void:
 
 		last_node = id
 		last_tags = node.tags
+		_visited[id] = true
+		node_visited.emit(id)
 		var jumped := false
 
 		for ins in node.instructions:
+			# Garde éventuelle : l'instruction est sautée si sa condition est fausse.
+			if ins.has("if") and not _check_conds(ins["if"]):
+				continue
 			match ins["type"]:
 				"text":
 					buffer = _append_line(buffer, ins["value"])
@@ -78,22 +98,26 @@ func _run_from(start_id: String) -> void:
 				"command":
 					command.emit(ins["name"], ins["args"])
 				"choice":
-					choices.append({"text": ins["text"], "target": ins["target"]})
+					choices.append({"text": ins["text"], "target": ins["target"], "node": id})
 				"cond":
-					if str(variables.get(ins["var"], "")) == ins["value"]:
+					# Un point de choix ouvert arrête le flux (sémantique Ink) :
+					# les sauts qui suivent des choix sont ignorés.
+					if choices.is_empty() and str(variables.get(ins["var"], "")) == ins["value"]:
 						id = ins["target"]
 						jumped = true
 						break
 				"divert":
-					id = ins["target"]
-					jumped = true
-					break
+					if choices.is_empty():
+						id = ins["target"]
+						jumped = true
+						break
 
 		if jumped:
 			continue  # On enchaîne sur le nœud cible en accumulant le texte.
 		break          # Fin naturelle du nœud : on s'arrête pour présenter la suite.
 
-	# Restitution de l'état accumulé.
+	# Restitution de l'état accumulé (une glue restée en suspens est purgée).
+	buffer = buffer.trim_suffix(GLUE).strip_edges()
 	if not buffer.is_empty():
 		display_text.emit(buffer, last_node, last_tags)
 
@@ -107,6 +131,36 @@ func _run_from(start_id: String) -> void:
 
 
 func _append_line(buffer: String, line: String) -> String:
+	var glue := line.begins_with(GLUE)
+	if glue:
+		line = line.trim_prefix(GLUE)
 	if buffer.is_empty():
 		return line
+	if buffer.ends_with(GLUE):
+		return buffer.trim_suffix(GLUE) + line
+	if glue:
+		return buffer + line
 	return buffer + "\n" + line
+
+
+## Évalue une garde en forme disjonctive : vraie si AU MOINS UN groupe a
+## TOUTES ses conditions vraies (les groupes viennent de "or", les conditions
+## d'un groupe de "and").
+func _check_conds(groups: Array) -> bool:
+	for conds in groups:
+		if _check_group(conds):
+			return true
+	return false
+
+
+func _check_group(conds: Array) -> bool:
+	for cond in conds:
+		match cond["kind"]:
+			"var":
+				var equal: bool = str(variables.get(cond["name"], "")) == cond["value"]
+				if (cond["op"] == "==") != equal:
+					return false
+			"visited":
+				if _visited.has(cond["id"]) == cond["neg"]:
+					return false
+	return true

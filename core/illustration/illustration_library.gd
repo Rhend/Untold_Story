@@ -22,6 +22,59 @@ const DEFS := {
 			["Illu_Village_Plan07.png", 7],
 		],
 	},
+	"La palmeraie": {
+		"template": IllustrationData.Template.LANDSCAPE,
+		"dir": "res://assets/illustrations/landscape/PalmGrove/",
+		"layers": [
+			["Illu_PalmGrove_Plan01.png", 1],
+			["Illu_PalmGrove_Plan02.png", 2],
+			["Illu_PalmGrove_Plan03.png", 3],
+			["Illu_PalmGrove_Plan04.png", 4],
+			["Illu_PalmGrove_Plan05.png", 5],
+			["Illu_PalmGrove_Plan06.png", 6],
+			["Illu_PalmGrove_Plan07.png", 7],
+			["Illu_PalmGrove_Plan08.png", 8],
+		],
+	},
+	"La rue": {
+		"template": IllustrationData.Template.LANDSCAPE,
+		"dir": "res://assets/illustrations/landscape/Street/",
+		"layers": [
+			["Illu_Street_Plan04.png", 4],
+			["Illu_Street_Plan05.png", 5],
+			["Illu_Street_Plan06.png", 6],
+			["Illu_Street_Plan07.png", 7],
+		],
+	},
+	"La cérémonie": {
+		"template": IllustrationData.Template.LANDSCAPE,
+		"dir": "res://assets/illustrations/landscape/Ceremony/",
+		"layers": [
+			["Illu_Ceremony_Plan2.png", 2],
+			["Illu_Ceremony_Plan3.png", 3],
+			["Illu_Ceremony_Plan5.png", 5],
+			["Illu_Ceremony_Plan6.png", 6],
+			["Illu_Ceremony_Plan7.png", 7],
+			["Illu_Ceremony_Plan8.png", 8],
+			["Illu_Ceremony_Plan9.png", 9],
+		],
+	},
+	"Démon": {
+		"template": IllustrationData.Template.PORTRAIT,
+		"dir": "res://assets/illustrations/portrait/Demon/",
+		"layers": [
+			["Illu_Demon_Plan06.png", 6],
+			["Illu_Demon_Plan07.png", 7],
+		],
+	},
+	"Orante": {
+		"template": IllustrationData.Template.PORTRAIT,
+		"dir": "res://assets/illustrations/portrait/Orante/",
+		"layers": [
+			["Illu_Orante_Plan06.png", 6],
+			["Illu_Orante_Plan07.png", 7],
+		],
+	},
 	"Statue de Sîn": {
 		"template": IllustrationData.Template.PORTRAIT,
 		"dir": "res://assets/illustrations/portrait/Sin/",

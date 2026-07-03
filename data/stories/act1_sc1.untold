@@ -1,0 +1,1341 @@
+// ============================================================
+//  Généré depuis Act1_sc1.ink par tools/ink2untold.mjs
+//  (regénérable — préférer corriger la source ou le convertisseur)
+// ============================================================
+
+@var character = ""
+@var type = ""
+
+:: start
+-> Prologue1
+// ------------------ Prologue ------------------
+
+:: Prologue1
+{ character == "Nadîtum" } -> Prologue1N
+{ character == "Marchand" } -> Prologue1M
+{ character == "Soldat" } -> Prologue1S
+{ character == "Danseuse" } -> Prologue1D
+{ character == "Exorciste" } -> Prologue1E
+{ character == "Prêtresse" } -> Prologue1P
+{ character != "Nadîtum" and character != "Marchand" and character != "Soldat" and character != "Danseuse" and character != "Exorciste" and character != "Prêtresse" } -> END
+
+:: Prologue1N
+Ton nom est Erešti-Aya (« réclamée par Aya [épouse de Šamaš] »). En clair, ton destin de nadîtum était fixé dès le moment de ta naissance. Il n’est pas rare que les familles de hauts dignitaires babyloniens offrent en mariage certaines de leurs filles au dieu solaire et juste, Šamaš. Épouse sacrée du dieu, tu n’as toi-même le droit de prendre un autre époux parmi les hommes que sous certaines conditions, et ne peux de toute façon pas procréer. Mais ce mariage spirituel t’accorde d’autres droits souvent interdits à tes sœurs. Ainsi as-tu ta propre demeure, peux-tu engager des contrats et te prêter à toutes formes de transactions. Grâce à ta dot de départ, tu as pu acquérir plusieurs maisons et champs que tu loues et même une taverne dont tu récoltes une partie des recettes. Tu es une femme puissante, et ce statut te convient très bien…
+* [Le dieu lunaire] -> Prologue2
+
+:: Prologue1M
+Ton nom est Ša-pî-kalbi (« tiré de la gueule du chien ») et rappelle le destin funeste qui aurait pu être le tien et le triste sort auquel ton père t’adoption t’a soustrait en te tirant de la rue et en faisant de toi son fils, lui qui n’avait pas d’héritier. En la belle-cité d’Aššur et à travers vos comptoirs de l’ouest, tu as su faire fructifier les affaires familiales. Aujourd’hui, c’est vers le sud que tu as dirigé tes pas, dans l’espoir de faire connaitre ton nom, de vendre quelques-unes de tes précieuses étoffes, et de dénicher de nouveaux marchés.
+* [Le dieu lunaire] -> Prologue2
+
+:: Prologue1S
+Ton nom est Warad-Ninurta (« serviteur de Ninurta »). Tu es le plus jeune de ta fratrie et ne souhaitais pas emprunter le même chemin que tes frères, notables ou médecins. Puisque ton père avait choisi de convoquer Ninurta en te nommant, tu as décidé de lui faire honneur en suivant la voie du dieu guerrier et de t’enrôler comme soldat. La guerre ne paie pas toujours et tu participes parfois à des missions de mercenariat en tant que protecteur.
+* [Le dieu lunaire] -> Prologue2
+
+:: Prologue1D
+Ton nom est Habaṣirtu (« la souris »). Aussi loin que tu t’en souviennes, tu as toujours été sur les routes en compagnie de ta troupe d’artistes. C’est le lot des musiciens, chanteurs, danseurs et acrobates : aller de demeure en demeure, de temple en palais, et amuser les notables de ce monde. Ea, dieu patron des arts et de la musique, veille sur toi depuis l’enfance. Il est aussi le dieu astucieux, l’ami des hommes, qui trouve toujours une solution. Telle une petite souris, tu te faufiles parmi la vie et les gens, tu creuses ton trou…
+* [Le dieu lunaire] -> Prologue2
+
+:: Prologue1E
+Ton nom est Išippu (« le conjurateur »). Issu d’une lignée plutôt commerçante, tu es le premier de ta famille à te tourner vers l’exorcisme, mais ton talent dans le domaine a fini par susciter l’intérêt d’un de tes maîtres d’école. Il a décidé de te prendre sous son aile, t’a permis d’accéder à toute une collection de textes exorcistiques et ainsi de parfaire ton art, qui jusqu’ici relevait plus de l’instinct. Tu devines ces choses que les autres ne voient pas, la présence des démons et des esprits, et par tes rituels et tes incantations, tu libères les humains de leur joug. Comme le discret Asalluhi, dieu patron des exorcistes, tu viens en aide à ceux qui en ont besoin sans désir de renom. Les malades, ceux tombés en disgrâce ou connaissant quelque mauvaise fortune font régulièrement appel à tes services.
+* [Le dieu lunaire] -> Prologue2
+
+:: Prologue1P
+Ton nom est Zakûtu (« la pure »). Tu es une prêtresse qadištu. À l’instar des riches et puissantes nadîtum, tu disposes de ta propre demeure et de tes propres biens et tu ne peux porter d’enfants. Mais contrairement aux nadîtum, tu n’es pas une simple épouse du dieu, mais une réelle prêtresse. C’est à toi qu’il revient de prier pour le sort des femmes enceintes, de les aider à accoucher ou de chasser la démone Lamaštu tueuse de nouveau-nés. C’est aussi toi qui chantes pour le dieu et assistes les prêtres dans les rites de purification par l’eau. Ton père, riche dignitaire de Larsa, t’as envoyée dans le temple du dieu Sîn à Ur, où il espérait que la proximité de la grande prêtresse Enanedu apporterait la fortune sur votre famille.
+* [Le dieu lunaire] -> Prologue2
+
+:: Prologue2
+@illustration("Statue de Sîn")
+Quatre hommes en pagne portent une lourde statue. Elle est massive, faite de bois de cèdre, recouverte de feuilles d’or. Les yeux de coquille nacrée, aux iris de lapis-lazuli, sont incrustés dans le visage grâce à un trait de bitume qui en dessine les contours. La statue représente un dieu sous forme humaine. Il a une longue barbe de boucles soignées, ses cheveux sont cachés sous une tiare massive faite d’une superposition de quatre paires d’authentiques cornes de taureau courbées. Son corps est couvert d’un vêtement précieux, une grande tunique bigarrée passée sur l’épaule gauche, teinte à la pourpre, aux franges nouées de fils d’or. Il porte des bracelets et des boucles d’oreille d’or, de lapis, de cornaline, de turquoise, de calcédoine… Le dieu Sîn est assis sur son trône sans dossier, en bois de genévrier, incrusté d’argent et de coquillages. Ses pieds reposent sur un petit taureau de bois, allongé, dont les cornes sont couvertes d’argent.
+Courbés sous le poids de la statue, les quatre hommes la déposent doucement sur une belle barque ouvragée, blanchie, polie, dont les pointes recourbées évoquent un croissant de lune.
+Le dieu lunaire Sîn quitte sa demeure en la cité d’Ur, l’Egišnugal, le Temple de la Grande Lumière. Il s’en va rendre visite à son père, Enlil, dans sa cité de Nippur. Rîm-Sîn, le roi de Larsa, qui porte en son nom l’amour du dieu de la lune, a voulu renouer avec les anciennes traditions. Aujourd’hui, afin de célébrer l’équinoxe d’automne, Sîn entame son voyage sur l’Euphrate, dans une formidable procession menée par la belle Enanedu, grande prêtresse du dieu de la lune, et sœur du roi Rîm-Sîn.
+* [Démarrer la procession] -> Prologue3
+
+:: Prologue3
+Les flots matinaux emportent la divine embarcation. Le soleil est encore bas sur l’horizon, les oiseaux s’envolent doucement depuis les roseaux et les joncs qui enlacent le fleuve. Sur les barques qui accompagnent celles du dieu, manœuvrées par des esclaves ou des bateleurs, voyagent les dignitaires et les personnes de haut rang. Sur la berge, les serviteurs, protecteurs, danseurs et musiciens complètent la procession. On transporte des moutons et des porcs, des chariots de denrées sont tractés par des ânes.
+* [Le début du voyage] -> A01S01N001
+// ------------------ Act 1 ------------------
+//Act 1 - Le voyage de Sîn à Nippur
+//Acte 1 - Scene 1 - Extérieur jour :
+
+:: A01S01N001
+{ character == "Nadîtum" } Tu es toi-même installée sur une grande embarcation avec tes gens, mais aussi d’autres nadîtum et des notables, des érudits, scribes et devins, ou de riches propriétaires terriens.
+{ character == "Marchand" } Toi-même, tu n’es pas encore assez puissant ou reconnu pour bénéficier d’une place sur une des embarcations, alors tu marches parmi le peuple, pressant tes mules qui portent tes ballots de marchandises. Les soldats non loin sont là pour t’assurer que personne n’ira essayer de te voler quoi que ce soit.
+{ character == "Soldat" } Quant à toi, on t’a demandé de veiller au bon déroulement de la cérémonie, en t’assurant qu’aucun fauteur de trouble ne vienne compromettre la procession. Tu es amené à faire de nombreux aller-retour entre les abords de la procession et le long du fleuve. Ici, la végétation est dense, douce, et la faune sauvage parfois dangereuse.
+{ character == "Danseuse" } Pour l’instant la procession est en marche, et tu n’as donc pas à danser. Tu marches alors avec tes compagnes et compagnons, musiciens, chanteurs, acrobates… Tu avances parmi la végétation luxuriante des berges, auprès de tous ceux qui ne peuvent bénéficier d’une place sur une barque.
+{ character == "Exorciste" } Toi-même, tu aurais pu bénéficier d’une place sur une des barques, mais tu as choisi la voie terrestre. De la même manière que les soldats veillent à l’intégrité physique des membres de la procession, tu te sens responsable de leur intégrité… disons spirituelle. Tu observes tout, à l’affut du moindre signe qui trahirait la présence d’une force démoniaque.
+{ character == "Prêtresse" } Étant toi-même prêtresse de Sîn, tu es assise à l’avant de l’embarcation de la princesse et grande prêtresse. Un esclave tient au-dessus de toi une ombrelle pour te protéger de la morsure du soleil.
+-> A01S01N002
+
+:: A01S01N002
+La première étape de la procession est la cité d’Ennegi, sous la protection de la déesse Ningirida, où le dieu Sîn fera sa première halte, quelque vingt kilomètres en aval d’Ur. Une petite journée de marche le long de l’Euphrate, sous la lumière de Šamaš, en ce mois de tešrit. Les fortes chaleurs étant passées, les eaux du fleuve sont basses, lentes, pas encore abreuvées des pluies et des fontes de la neige des lointains monts Taurus.
+La procession avance, les barques glissent, les chariots cahotent. Les protecteurs n’ont eu à repousser que quelques chiens sauvages, que cette agitation avait rendus curieux. Petit à petit, les plaines laissent deviner dans le lointain la silhouette de troupeaux, et alors que le soleil entame à peine sa descente, de la cité d’Ennegi.
+* [L’arrivée à Ennegi] -> A01S01N003
+
+:: A01S01N003
+@illustration("Le village")
+Ennegi est à peine plus qu’un grand village. L’empreinte de sa grandeur passée imprègne encore les murs vieillis, transparaît dans ce port fait pour accueillir trop d’embarcations. D’ailleurs, la barque divine et les autres approchent doucement des quais, tandis qu’une foule exaltée accueille les marcheurs de la procession. Lorsque le voyage de Sîn à Nippur était encore une fête annuelle, la cité jouissait d’un certain prestige. Aujourd’hui, les habitants s’enorgueillissent de souvenirs qu’ils aiment à convoquer, mais qui s’usent de saison en saison.
+{ type == "Social" } * [Sur le port] -> A01S01N004
+{ type == "Physique" } * [Sur le port] -> A01S01N079
+{ type == "Mystique" } * [Sur le port] -> A01S01N115
+
+:: A01S01N004
+{ character == "Nadîtum" } Tu descends de ton embarcation, tes gens déchargent tes affaires. Tu vois au loin les prêtres de Ningirida échanger quelques mots avec la grande prêtresse de Sîn, tandis que d’autres débarquent avec grand soin la statue du dieu. Un homme se présente à toi : « Bienvenue nadîtum, Ennegi n’est pas très grande, mais nous disposons d’une belle auberge. J’en suis le tenancier : soyez mon hôte. »
+{ character == "Marchand" } Tu t’empresses d’entraîner tes mules à l’écart de la foule des marcheurs, qui bifurquent vers l’arrière de la cité, où se trouvent probablement les jardins et les vergers. Toi, tu souhaites te rendre au port, voir la statue débarquer et commencer à prendre contact avec la population d’Ennegi. Là, les officiants de Sîn échangent quelques mots avec les prêtres de Ningirida. La statue du dieu est débarquée avec grand soin. Un homme se présente à toi : « Bienvenue ! Ennegi n’est pas très grande, mais nous disposons d’une belle auberge, avec une étable où vous pourrez laisser vos mules. J’en suis le tenancier : soyez mon hôte. »
+* [Accepter] -> A01S01N005
+* [Refuser] -> A01S01N006
+
+:: A01S01N005
+{ character == "Nadîtum" } Tu acceptes bien volontiers : l’homme présente bien et tu ne doutes pas que son établissement sera respectable. Et puis, tu n’as guère envie de finir dans une vulgaire étable. La chapelle de Ningirida n’est même pas un temple, il n’y aura probablement pas la place de t’accueillir : les lieux seront réservés pour Enanedu et sa suite.
+{ character == "Nadîtum" } Immédiatement, le tenancier fait signe à tes serviteurs de le suivre avec tes affaires. Il va installer ta chambre.
+{ character == "Marchand" } Après quelques échanges, tu acceptes bien volontiers : l’homme présente bien et te précise que son établissement est bien gardé. C’est une chance, tu ne pensais même pas trouver d’étable où reposer tes mules. Immédiatement, le tenancier te fait signe de le suivre, pour te montrer les lieux.
+* [Le suivre] -> A01S01N007
+* [Te promener dans la ville] -> A01S01N008
+
+:: A01S01N006
+Tu refuses poliment.
+{ character == "Nadîtum" } Tout d’abord, parce que tu sais très bien que l’homme recherche avant tout le prestige d’avoir pu accueillir une nadîtum dans son établissement. Et puis, tu as envie de suivre un peu la statue, de voir comment elle sera accueillie dans la chapelle de Ningirida. Peut-être ses prêtres auront-ils un meilleur logement à te proposer ? Tu aimerais aussi te promener par les rues d’Ennegi, tu ne te souviens pas avoir déjà mis les pieds dans une si petite ville.
+{ character == "Marchand" } Tu sais que le tenancier profite probablement de l’événement pour gonfler un peu ses prix et puis tu n’es pas sûr d’avoir envie de laisser tes mules loin de toi. Tu es habitué aux voyages à pied et aux nuits sous la tente ou contre le ventre chaud d’une de tes bêtes. Cela fera très bien l’affaire.
+* [Quitter le port et suivre la statue] -> A01S01N009
+* [Visiter Ennegi] -> A01S01N010
+
+:: A01S01N007
+Bien vite, tu te rends compte que d’autres personnes ont suivi ton exemple. Tu partageras les lieux avec des nadîtums, des scribes, des devins. En bref, tous ceux qui préfèrent le confort d’un lit propre aux rudiments de la toile de tente. Il est évident que le village d’Ennegi ne pourra pas accueillir tout le monde en ses murs et beaucoup seront obligés de dormir à la belle étoile. Ici, que du beau monde.
+{ character == "Nadîtum" } * [Entrer dans l’auberge] -> A01S01N011
+{ character == "Marchand" } * [Installer tes mules à l’étable] -> A01S01N012
+{ character == "Marchand" } * [Laisser tes mules et ne garder que quelques marchandises] -> A01S01N013
+
+:: A01S01N008
+{ !visited(A01S01N011) } Une fois assurée que tes affaires sont en lieu sûr, et après y avoir récupéré l’offrande que tu souhaites offrir, tu te mets en marche. Tu ne voudrais pas manquer la cérémonie qui s’annonce : les amours sacrées de Sîn et de sa première concubine, la déesse tutélaire d’Ennegi, Ningirida.
+{ visited(A01S01N011) } Tes affaires sont en lieu sûr et tu ne voudrais pas manquer la cérémonie qui s’annonce : les amours sacrées de Sîn et de sa première concubine, la déesse tutélaire d’Ennegi, Ningirida.
+Tu es une nadîtum : personne n’a à redire quoi que ce soit à tes faits et gestes, si ce n’est ton dieu. Or le soleil décline doucement à l’horizon, et ses raies d’or caressant les maisons d’argile te sont plus une invitation qu’autre chose.
+* [Dans les rues d’Ennegi] -> A01S01N014
+
+:: A01S01N009
+{ character == "Nadîtum" } Tu fais signe à tes serviteurs de rester près de tes affaires et observes les suivants d’Enanedu et les officiants du culte de Ningirida s’occuper de la statue du dieu Sîn. Ces derniers <>
+{ character == "Marchand" } Tu observes un instant les suivants de la grande prêtresse et les officiants du culte de Ningirida s’occuper de la statue du dieu Sîn. Elle est sortie de sa barque et l’on s’affaire à encastrer dans son socle deux grandes barres de bois afin de la soulever. Les prêtres dévolus au culte de Ningirida <>
+sont peu nombreux et probablement ne viennent-ils pas tous d’Ennegi, mais ont-ils été appelés en renfort depuis la proche ville de Larsa pour aider à la cérémonie. Tu aperçois un prêtre que tu vois en pleine conversation avec un commerçant.
+* [T’approcher] -> A01S01N015
+
+:: A01S01N010
+{ character == "Nadîtum" } Tu demandes à tes gens de t’attendre au port.
+Le tour de la cité est rapide : une petite rigole serpente, rectiligne, à travers les rues. De part et d’autre des rues en terre battue, des maisons montées en briques et enduites de terre, comme de grandes masses d’argile, mêlent leurs toits en terrasses ; presque toutes sont mitoyennes. Certaines façades sont décorées de motifs géométriques réalisés en briques. À certains endroits, les rigoles irriguent de petits jardins où l’on plante des oignons et des haricots. Assis sur le seuil d’une maison, un jeune homme modèle une plaquette d’argile entre ses doigts. C’est une des rares personnes à ne pas s’être encore rendue au lieu prévu pour la cérémonie.
+* [Lui parler] -> A01S01N016
+* [L’ignorer] -> A01S01N017
+
+:: A01S01N011
+L’auberge, conçue comme une grande maison, est organisée autour d’une cour centrale, pavée, pourvue d’un bassin qui recueille l’eau de pluie. Des chambres sont réparties autour de cette cour et surtout à l’étage, le long duquel s’ouvre une grande galerie de bois et de briques. Ton hôte t’indique ta chambre, <>
+{ character == "Nadîtum" } à l’étage <>
+{ character == "Marchand" } sur un côté de la cour <>
+, et la grande salle principale où tu pourras prendre repas. Les odeurs et l’agitation que l’on devine à l’intérieur révèlent que l’on cuisine depuis des heures déjà. Le passage de la procession est une aubaine pour Ennegi et son auberge : les fortunes que l’on s’apprête à gagner rendent tout le personnel guilleret et affable.
+{ character == "Nadîtum" } * [Ignorer la cérémonie et te reposer] -> A01S01N018
+{ character == "Nadîtum" } * [Te promener dans la ville] -> A01S01N008
+{ character == "Marchand" } * [Observer alentours] -> A01S01N029
+
+:: A01S01N012
+{ !visited(A01S01N017) } Tu n’es pas mécontent d’être arrivé, et tes deux mules également !
+Tu retires les paniers et les bâts de cuir. Tu gardes avec toi quelques échantillons des précieuses étoffes assyriennes que tu transportes. Pour le reste, tes paniers de marchandises sont couverts par un grossier tissu de laine, fermés par une corde qui en fait le tour. Le nœud de la corde est enveloppé d’une grossière boule d’argile sur laquelle on peut reconnaître l’empreinte de ton sceau.
+{ visited(A01S01N017) } Tu ne gardes avec toi que quelques échantillons des précieuses étoffes assyriennes que tu transportes.
+{ !visited(A01S01N017) } * [Entrer dans l’auberge] -> A01S01N011
+* [Sortir dans les rues] -> A01S01N019
+
+:: A01S01N013
+{ !visited(A01S01N017) } Tu n’es pas mécontent d’être arrivé, et tes deux mules également !
+Tu laisses l’homme qui semble faire office de palefrenier retirer les paniers de marchandises et les bâts de cuir. Tu ne gardes avec toi que quelques échantillons des précieuses étoffes assyriennes que tu transportes, avant de te fondre dans la foule. Tu ne voudrais pas manquer la cérémonie qui s’annonce : les amours sacrées de Sîn et de sa première concubine, la déesse tutélaire d’Ennegi, Ningirida. Le soleil décline doucement à l’horizon, et ses raies d’or caressant les maisons d’argile annoncent le début d’une soirée prometteuse.
+{ !visited(A01S01N017) } * [Dans les rues d’Ennegi] -> A01S01N014
+{ visited(A01S01N017) } * [Dans les rues d’Ennegi] -> A01S01N025
+
+:: A01S01N014
+Dehors, la voie de la chapelle t’est tout indiquée : il suffit de suivre la foule qui remonte la rue vers la palmeraie que tu devines un peu plus loin. Tout Ennegi ou presque foule la terre battue, les enfants pataugent dans la rigole creusée depuis le quai. On te propose des dattes ; ces fruits que l’homme est obligé de féconder à la main sont le symbole de la sexualité, de l’érotisme, du destin qui attend la statue lunaire lors de cette première cérémonie.
+{ character == "Marchand" } Tu as probablement de belles opportunités de vente devant toi !<>
+-> A01S01N020
+
+:: A01S01N015
+— « Non, ces bijoux ne conviennent pas ! s’emporte le prêtre. La déesse doit être parée d’or, d’argent… Ce que vous m’apportez n’est pas ce dont nous avions convenu.
+— C’est un métal d’une qualité incroyable ! rétorque l’autre, dont l’accent laisse clairement entendre les origines occidentales. Du fer le plus pur ! Le nouveau roi de Mari en utilise même pour sa cour… Vous m’avez demandé des bijoux fins et précieux, voilà ce dont nous avons convenu ! »
+— La discussion s’échauffe, le reste de la procession dédiée à la statue a déjà quitté le port, mais ici le ton monte. Le marchand qui s’estime floué lève un poing rageur.
+* [Intervenir physiquement] -> A01S01N021
+* [Intervenir verbalement] -> A01S01N022
+* [Demander de l’aide à un tiers] -> A01S01N023
+
+:: A01S01N016
+@illustration("Halî-Ammi")
+{ type == "Social" } « Vous n’allez pas voir le spectacle ? demandes-tu.
+{ type == "Social" } — Je vois que je ne suis pas le seul, répond l’homme.
+{ type == "Social" and character == "Nadîtum" } — J’y allais, mais j’avais besoin de marcher après ce long voyage en barque.
+{ type == "Social" and character == "Nadîtum" } — Au moins étiez-vous sur une barque. »
+{ type == "Social" and character == "Nadîtum" } Tu ne relèves pas la remarque un peu cynique. L’homme se saisit d’un calame et commence à tracer quelques signes.
+{ type == "Social" and character == "Nadîtum" } « Vous êtes scribe ?
+{ type == "Social" and character == "Nadîtum" } — De l’école de Larsa, oui. Je rends visite à mon oncle, pour la cérémonie.
+{ type == "Social" and character == "Nadîtum" } — J’avais justement besoin de rédiger une missive pour mon frère, mais je n’ai pas les connaissances d’un scribe. Sans doute sauriez-vous m’aider. »
+{ type == "Social" and character == "Nadîtum" } L’homme accepte. Tu n’es pas experte dans l’art délicat de l’écriture, mais tu as eu une éducation suffisante pour tracer quelques mots de ton calame de roseau : une lettre, pour ton frère occupé à gérer certaines de tes affaires pendant ton absence. Le scribe t’aide à retrouver certains signes complexes.
+{ type == "Social" and character == "Marchand" } — J’aurai d’autres occasions de voir la cérémonie ! Le voyage n’est pas terminé. Les affaires divines ne sont pas celles qui m’intéressent le plus. »
+{ type == "Social" and character == "Marchand" } L’autre jette un œil à tes mules de bât et à leurs paniers remplis. Il a probablement aussi relevé ton accent assyrien.
+{ type == "Social" and character == "Marchand" } « Je vois ça, dit-il.
+{ type == "Social" and character == "Marchand" } — Je pense qu’il y a fort à faire dans cette petite ville.
+{ type == "Social" and character == "Marchand" } — C’est possible, oui, acquiesce le scribe. Cela dépendra de tes marchandises.
+{ type == "Social" and character == "Marchand" } — Les meilleures ! Et toi alors, tu ne viens pas d’ici ?
+{ type == "Social" and character == "Marchand" } — Plus ou moins. Je travaille et vis à Larsa, mais je viens rendre visite à mon oncle. »
+{ type == "Social" and character == "Marchand" } Votre discussion se poursuit quelque temps. Il te parle en traçant méticuleusement de petits signes serrés sur sa tablette d’argile.
+{ type == "Social" } * [Lui demander ce qu’il pense de la procession] -> A01S01N024
+
+:: A01S01N017
+Tu continues ta promenade, mais tu te rends vite compte que tu n’as plus grand-chose à voir. À part peut-être l’auberge où l’on t’avait invité.e à te rendre. Là, une certaine agitation règne encore, puisqu’on prépare le repas du soir pour les hôtes qui remplissent certainement toutes les chambres. Les bruits et les odeurs de cuisine t’ouvrent l’appétit. Les derniers habitants d’Ennegi abondent dans la rue devant l’auberge, tous se pressent vers la palmeraie que tu discernes au-delà des maisons et qui accueillera vraisemblablement la cérémonie. <>
+{ character == "Nadîtum" } Peu de chance que tu puisses trouver un logement là-bas ! <>
+Tu interceptes une servante de l’auberge et lui demandes s’il reste finalement des chambres libres.  <>
+{ character == "Nadîtum" } Elle acquiesce, et tu l’envoies chercher tes gens qui t’attendent toujours au port.
+{ character == "Nadîtum" } * [Poursuivre ta route] -> A01S01N019
+{ character == "Marchand" } Elle te dit que tu devras t’établir à l’auberge avec tes bêtes, et cette solution de te convient.
+{ character == "Marchand" } * [Installer tes mules à l’étable] -> A01S01N012
+{ character == "Marchand" } * [Laisser tes mules et ne garder que quelques marchandises] -> A01S01N013
+
+:: A01S01N018
+@illustration("Orante")
+{ character == "Nadîtum" } Tes serviteurs ont installé les maigres biens que tu transportes avec toi. La majeure partie de tes affaires se compose d’offrandes destinées aux différents temples et différentes chapelles que vous croiserez lors du voyage du dieu Sîn. Mais cette première étape t’a fatiguée. Il faut dire que tu as déjà eu à faire le voyage depuis Sippar, en périphérie de Babylone, jusqu’à Ur pour le départ de la procession. Tu envoies un de tes serviteurs porter ton offrande à ta place : une petite figure d’orante gravée de ton nom.
+{ character == "Nadîtum" } * [Te reposer] -> A01S01N026
+
+:: A01S01N019
+#tag
+{ character == "Nadîtum" } En passant devant une ruelle minuscule longeant l’auberge, tu crois distinguer deux silhouettes dans l’ombre parler avec agitation.
+{ character == "Marchand" } Alors que tu t’assures que tes mules ont de quoi boire et manger, tu distingues, parmi les bruits de la foule qui envahit les rues, les bribes plus précises d’une conversation. Les voix semblent provenir d’un mince passage qui longe la façade de l’auberge où se trouve l’étable ; tu les perçois par la fine aération en haut du mur.
+* [Tendre l’oreille] -> mg_EpreuvePerception_A01S01N027_A01S01N028
+
+:: A01S01N020
+{ type == "Social" } Tu navigues parmi les têtes aux épais cheveux noirs des hommes et aux belles boucles ondulées des femmes.
+{ character == "Nadîtum" } Tu n’as rien pris avec toi, tu sais pertinemment qu’il ne faut pas transporter de biens précieux lors de ce genre de bains de foule. Et de toute façon, le bien le plus précieux dont tu disposes est le sceau-cylindre de cornaline que tu portes à ton cou et qui t’ouvre toutes les portes.
+{ type == "Social" } Mais enfin, la foule s’écarte et te laisse apparaître la chapelle de la déesse d’Ennegi. Ce n’est qu’une petite bâtisse d’argile décorée, qui ne contient guère plus qu’une niche où sont déposées en ce jour de nombreuses offrandes.
+{ character == "Nadîtum" } Tu vas d’ailleurs toi-même y poser la petite figurine d’orante en prière que tu as fait fabriquer spécialement pour l’occasion et qui porte ton nom et ta dédicace. En arrière du bâtiment, les tentes prestigieuses d’Enanedu et sa suite sont en train d’être montées.
+{ character == "Marchand" } Mais ce ne sont pas les chapelles et les préparatifs religieux qui t’intéressent le plus.
+* [Dans la palmeraie] -> A01S01N030
+
+:: A01S01N021
+{ type == "Social" } Sans réfléchir, tu saisis le bras de l’homme avant qu’il ne se referme sur le vêtement du prêtre.
+* [Le saisir] -> mg_EpreuveForce_A01S01N031_A01S01N032
+
+:: A01S01N022
+{ character == "Nadîtum" } « Messieurs, allons ! » t’exclames-tu avec calme et fermeté.
+{ character == "Marchand" } « Un problème, messieurs ? » demandes-tu innocemment.
+* [Les raisonner] -> mg_EpreuveEmpathie_A01S01N033_A01S01N032
+
+:: A01S01N023
+{ type == "Social" } Tu jettes un regard rapide autour de toi et avises un homme en armes, un des protecteurs du convoi. Alors que tu te précipites vers lui, tu entends derrière toi un juron étouffé et le bruit d’une chute. L’homme, te voyant arriver, comprend tout de suite ce que tu attends et s’empresse d’intervenir. Le prêtre est au sol, comme s’il avait été tiré par ses vêtements et lâché. Le soldat relève le prêtre sous le regard du commerçant qui semble se rendre compte qu’il est allé trop loin.
+{ type == "Social" } La situation est rapidement contrôlée et tu comprends que le marchand se sent floué de se voir refuser une marchandise qui correspond pourtant à ce qui a été demandé. Il s’éloigne en maugréant.
+* [Le rattraper] -> A01S01N034
+* [Le laisser partir et retourner voir le prêtre] -> A01S01N035
+
+:: A01S01N024
+« Pour Ennegi, c’est une bénédiction, t’assure-t-il. La ville est remplie, chacun y trouve son petit commerce à faire. Mais Ennegi est dans le royaume de Larsa. Dès lors que la procession s’approchera d’Uruk, les choses seront différentes. »
+{ character == "Nadîtum" } * [« Vous croyez ? »] -> A01S01N036
+{ character == "Marchand" } * [« Dis-m’en plus »] -> A01S01N036
+{ type == "Social" } * [« Il y a d’autres cités… »] -> A01S01N037
+{ type == "Physique" } * [« Tu crois ? »] -> A01S01N036
+{ type == "Physique" } * [« Il y a d’autres cités à visiter qu’Uruk. »] -> A01S01N037
+{ type == "Mystique" } * [« Tu serais donc devin ? »] -> A01S01N036
+{ type == "Mystique" } * [« Uruk n’est qu’une étape. »] -> A01S01N037
+
+:: A01S01N025
+{ character == "Nadîtum" } La voie de la chapelle de Ningirida t’est tout indiquée : il suffit de suivre la foule.
+{ character == "Marchand" } Dehors, la voie de la chapelle t’est tout indiquée : il suffit de suivre la foule qui remonte la rue vers la palmeraie que tu devines un peu plus loin.
+{ type == "Social" } Tu navigues parmi les têtes aux épais cheveux noirs des hommes et aux belles boucles ondulées des femmes. Mais enfin, la foule s’écarte et te laisse apparaître la chapelle de la déesse d’Ennegi. Ce n’est qu’une petite bâtisse d’argile décorée, qui ne contient guère plus qu’une niche où sont déposées en ce jour de nombreuses offrandes.
+{ character == "Nadîtum" } Tu enverras d’ailleurs quelqu’un ce soir y poser la petite figurine d’orante en prière que tu as fait fabriquer spécialement pour l’occasion et qui porte ton nom et ta dédicace.
+{ type == "Social" } En arrière du bâtiment, les tentes prestigieuses d’Enanedu et sa suite sont en train d’être montées.
+{ character == "Marchand" } Mais ce ne sont pas les chapelles et les préparatifs religieux qui t’intéressent le plus.
+* [Dans la palmeraie] -> A01S01N030
+
+:: A01S01N026
+{ character == "Nadîtum" } Une fois dans ta chambre, tu ne gardes avec toi qu’une suivante, une esclave du nom de Sâsu, et retires avec un soupir le tissu qui couvre ta tête. Sâsu s’occupe de démêler et d’oindre tes cheveux. Pendant ce temps, tu façonnes entre tes doigts une mince plaquette d’argile. Tu n’es pas experte dans l’art délicat de l’écriture, mais tu as eu une éducation suffisante pour tracer quelques mots de ton calame de roseau : une lettre, pour ton frère occupé à gérer certaines de tes affaires pendant ton absence.
+* [Dans la chambre] -> A01S01N038
+
+:: A01S01N027
+« Non, c’est trop tôt ! s’exclame une voix de femme.
+— Ne parle pas si fort ! Tu sais que partout les murs ont des oreilles, lui répond une voix d’homme.
+— Tu dois attendre le… » Tu n’arrives pas à entendre la suite. Plusieurs autres paroles sont échangées, mais tu ne peux que glaner quelques mots qui pour toi ne font pas sens.
+{ character == "Nadîtum" and !visited(A01S01N038) } Finalement, tu te sens poussée vers l’avant et n’y penses plus.
+{ character == "Nadîtum" and !visited(A01S01N038) } * [Dans les rues d’Ennegi] -> A01S01N025
+{ character == "Nadîtum" and visited(A01S01N038) } Finalement, il te semble que les deux intrigants ont déserté les lieux. Tu n’y penses déjà plus et te dévêts afin que Sâsu te lave et te parfume en prévision du repas.
+{ character == "Nadîtum" and visited(A01S01N038) } * [Dormir à l’auberge] -> A01S01N054
+{ character == "Marchand" } Finalement, il te semble que les deux intrigants ont déserté les lieux. Tu n’y penses déjà plus, jettes un œil à l’homme qui doit veiller sur ta marchandise, et quittes l’étable.
+{ character == "Marchand" } * [Dans les rues d’Ennegi] -> A01S01N014
+{ type == "Physique" } Finalement, les deux intrigants semblent s’apercevoir de ta présence et décampent. Tant pis, ce n’était sûrement rien d’autre que des amants profitant de l’agitation causée par la procession pour se retrouver.
+{ type == "Physique" } * [Dans les rues d’Ennegi] -> A01S01N111
+{ type == "Mystique" and character == "Prêtresse" } Finalement, tu te sens poussée vers l’avant et n’y penses plus.
+{ type == "Mystique" and character != "Prêtresse" } Finalement, tu te sens poussé vers l’avant et n’y penses plus.
+{ type == "Mystique" } * [Dans les rues d’Ennegi] -> A01S01N138
+
+:: A01S01N028
+{ type == "Social" } Le brouhaha de la foule est trop prononcé pour que tu puisses entendre distinctement quoi que ce soit. <>
+{ character == "Nadîtum" and !visited(A01S01N038) } Tu te sens poussée vers l’avant et n’y penses plus.
+{ character == "Nadîtum" and !visited(A01S01N038) } * [Dans les rues d’Ennegi] -> A01S01N025
+{ character == "Nadîtum" and visited(A01S01N038) } Tant pis, tu n’y penses déjà plus et te dévêts afin que Sâsu te lave et te parfume en prévision du repas.
+{ character == "Nadîtum" and visited(A01S01N038) } * [Dormir à l’auberge] -> A01S01N054
+{ character == "Marchand" } Tant pis, tu n’y penses déjà plus, jettes un œil à l’homme qui doit veiller sur ta marchandise, et quittes l’étable.
+{ character == "Marchand" } * [Dans les rues d’Ennegi] -> A01S01N014
+{ type == "Physique" } Mais ton arrivée précipitée dans la ruelle a immédiatement fait taire les personnes qui s’y trouvaient, pire, elles déguerpissent en te voyant. Tant pis, ce n’était sûrement rien d’autre que des amants profitant de l’agitation causée par la procession pour se retrouver.
+{ type == "Physique" } * [Dans les rues d’Ennegi] -> A01S01N111
+{ type == "Mystique" and character == "Prêtresse" } Le brouhaha de la foule est trop prononcé pour que tu puisses entendre distinctement quoi que ce soit. Tu te sens poussée vers l’avant et n’y penses plus.
+{ type == "Mystique" and character != "Prêtresse" } Le brouhaha de la foule est trop prononcé pour que tu puisses entendre distinctement quoi que ce soit. Tu te sens poussé vers l’avant et n’y penses plus.
+* [Dans les rues d’Ennegi] -> A01S01N138
+
+:: A01S01N029
+{ character == "Marchand" } De nombreux voyageurs arpentent encore la cour ou les couloirs. Tous, ou presque, semblent relativement fortunés. Tu avises deux personnes susceptibles d’être intéressées par tes marchandises, répètes intérieurement ton discours, et te lances. « Souhaitez-vous acquérir la plus belle laine assyrienne ? ». Tu t’adresses à…
+{ character == "Marchand" } * [… un homme d’un certain âge paré de bijoux] -> A01S01N039
+{ character == "Marchand" } * [… un jeune homme qui sort de son sac des tablettes en forme de foies] -> A01S01N040
+
+:: A01S01N030
+@illustration("La palmeraie")
+{ type == "Social" } Le premier mouton vient d’être saigné, pour le repas du dieu et afin que les devins en étudient le foie. Les prêtres officient, récitent, purifient, préparent. Les exorcistes aussi s’affairent. Ici et là on discute, on marchande, on s’accoste. Des hommes partagent la bière sous des auvents de toile, tirant sur les longues pailles de roseau plongées dans les jarres minces et profondes. D’autres jouent aux dés. Des femmes filent à l’ombre des palmiers dattiers. On attend que le soleil se couche et répande ses feux sur le théâtre de la future cérémonie.
+{ character == "Nadîtum" } * [Observer les préparatifs religieux] -> A01S01N041
+{ character == "Nadîtum" } * [Discuter avec d’autres nadîtum] -> A01S01N042
+{ character == "Marchand" } * [Commercer] -> A01S01N043
+{ character == "Marchand" } * [Boire de la bière] -> A01S01N044
+
+:: A01S01N031
+{ character == "Nadîtum" } Probablement est-ce en partie dû à la surprise de voir une femme s’interposer physiquement, mais ton geste arrête l’homme. Il se retourne vers toi, comme ahuri, lorgne rapidement sur tes vêtements précieux et la coiffure délicate qui orne tes cheveux. Il semble comprendre qui tu es. Le prêtre en profite pour repousser son bras qui s’était arrêté en chemin.
+{ character == "Nadîtum" } « Bien, tenons-en nous là », grogne le marchand, qui remballe sa marchandise et s’en va en maugréant.
+{ character == "Nadîtum" } Immédiatement, le prêtre se tourne vers toi, s’incline légèrement.
+{ character == "Nadîtum" } « Merci nadîtum, vous n’auriez pas dû avoir à intervenir. Venez, rejoignons la procession, vous êtes mon hôte, je vous suis redevable ».
+{ character == "Nadîtum" } * [Le suivre] -> A01S01N045
+{ character == "Marchand" } Peut-être le commerçant ne comptait-il pas réellement frapper le prêtre, quoiqu’il en soit ton geste l’arrête aussitôt. Il se retourne vers toi, comme ahuri. Le prêtre en profite pour repousser son bras qui s’était arrêté en chemin.
+{ character == "Marchand" } « T’es qui, toi ? s’échauffe le marchand.
+{ character == "Marchand" } — Un ami », réponds-tu.
+{ character == "Marchand" } L’autre plisse les yeux, comme s’il essayait d’identifier d’où venait ton accent. Tu enchaînes immédiatement :
+{ character == "Marchand" } « Aššur est mon dieu, je suis marchand. Peut-être que je peux vous être utile dans cette affaire ?
+{ character == "Marchand" } — Ah ! s’exclame le prêtre. Pourquoi vous ferais-je plus confiance à vous qu’à lui ?
+{ character == "Marchand" } — Je n’ai aucun intérêt dans cette affaire.
+{ character == "Marchand" } — Laisse tomber, maugrée l’homme de l’ouest. Mes bijoux sont trop bien pour ce chien. »
+{ character == "Marchand" } Il crache au sol et quitte les lieux. Le prêtre se tourne vers toi.
+{ character == "Marchand" } « Eh bien, dit-il, j’imagine que je vous suis redevable d’avoir fait fuir cette brute. Venez, rejoignons la procession. »
+{ character == "Marchand" } * [Accepter] -> A01S01N045
+{ character == "Marchand" } * [Refuser] -> A01S01N046
+
+:: A01S01N032
+{ type == "Social" and visited(A01S01N021) } Bien sûr tu n’es pas un guerrier et le commerçant ne semble même pas sentir ta main qui essaie de le retenir. <>
+{ type == "Social" and visited(A01S01N022) } Ta parole se perd tandis que le commerçant passe à l’action. <>
+{ type == "Social" } Il se saisit du prêtre et, tirant le tissu qui recouvre son épaule, arrache le vêtement et la fibule qui le retenait. Le prêtre vacille de surprise et chute. Finalement, la foule témoin de la scène s’énerve et intervient. Tu quittes les lieux avant que les choses ne s’enveniment encore. <>
+{ type == "Social" and character == "Nadîtum" } Ton but est de suivre la procession, pas de t’interposer dans ce genre de conflits.
+{ type == "Social" and character == "Marchand" } Ton but n’est pas de t’interposer dans ce genre de conflits.
+{ type == "Social" } Peu rassuré.e que ce genre d’événement ait lieu à peine débarqué.e sur le port, <>
+{ type == "Social" and character == "Nadîtum" } tu demandes à tes gens d’aller finalement installer tes affaires à l’auberge et de t’y attendre.
+{ type == "Social" and character == "Nadîtum" } * [Suivre la statue] -> A01S01N047
+{ type == "Social" and character == "Marchand" } tu te dis qu’il sera définitivement mieux de dormir ce soir près de tes bêtes… et de tes marchandises.
+{ type == "Social" and character == "Marchand" } * [Suivre la foule] -> A01S01N047
+{ type == "Social" and character == "Marchand" } * [Visiter Ennegi] -> A01S01N010
+
+:: A01S01N033
+{ type == "Social" } Le commerçant se tourne vers toi, <>
+{ type == "Social" and character == "Nadîtum" } semblant ne pas pouvoir résister à ton injonction.
+{ type == "Social" and character == "Nadîtum" } « Ma dame, dit-il en inclinant brièvement la tête.
+{ type == "Social" and character == "Nadîtum" } — Quel est le problème ? Le ton de ta voix est péremptoire.
+{ type == "Social" and character == "Marchand" } étonné par ton intervention.
+{ type == "Social" and character == "Marchand" } « Demandez donc à ce prêtre, dit-il en désignant l’autre d’un mouvement de tête, et le lâchant par la même occasion.
+{ type == "Social" and character == "Marchand" } — Je crois que tout est dit, répond le prêtre en réajustant son vêtement.
+{ type == "Social" } — Ce prêtre m’a demandé de lui fournir des bijoux précieux pour parer la déesse Ningirida, mais les bijoux que j’ai apportés ne lui conviennent pas ! Il ne veut pas payer la marchandise ! »
+{ type == "Social" } Tu coupes court aux justifications du prêtre d’un geste de la main <>
+{ type == "Social" and character == "Marchand" } et demandes à voir les bijoux.
+{ type == "Social" and character == "Nadîtum" } .
+{ type == "Social" and character == "Nadîtum" } « Prêtre si tu t’es engagé, tu dois payer la marchandise. Je parle au nom de mon dieu Šamaš, garant de la justice.
+{ type == "Social" and character == "Nadîtum" } — Le contrat est faussé ! rétorque le prêtre. Ces bijoux ne sont pas précieux. »
+{ type == "Social" } Tu observes avec minutie les anneaux qui sont effectivement de fer. Le fer n’a pas la brillance de l’or et de l’argent, mais il est moins mou, et plus difficile à obtenir. <>
+{ type == "Social" and character == "Nadîtum" } Ton frère qui possède des mines dit que ce métal remplacera un jour le cuivre et le bronze.
+{ type == "Social" and character == "Nadîtum" } « Prêtre ta demande n’est pas assez spécifique, réponds-tu avec calme. Ces bijoux sont précieux. »
+{ type == "Social" and character == "Nadîtum" } L’autre rumine et capitule finalement.
+{ type == "Social" and character == "Marchand" } Tu as déjà vu des bijoux semblables colportés dans la région du Suhûm.
+{ type == "Social" and character == "Marchand" } « Mmm, il ne vous ment pas, dis-tu. Ce que vous avez devant vous est aussi précieux que l’or ou l’argent. »
+{ type == "Social" and character == "Marchand" } L’autre Le prêtre rumine et capitule finalement.
+{ type == "Social" } Il retire le sceau-cylindre qui pend à son cou et le fait rouler sur la tablette d’argile fraîche que le commerçant lui tend avec un grand sourire comme preuve de la validité de la transaction. Il se saisit des bijoux.
+{ type == "Social" } « Alors suivez-moi, dit le prêtre à ton adresse. Nous verrons si la déesse les acceptera. »
+{ type == "Social" } Tu acquiesces et lui emboites le pas.
+{ character == "Nadîtum" } * [Le suivre] -> A01S01N048
+{ character == "Marchand" } * [Le suivre] -> A01S01N045
+
+:: A01S01N034
+{ character == "Nadîtum" } « Attendez ! » Le commerçant se retourne. « Faites-moi voir ces bijoux. »
+{ character == "Nadîtum" } Il te toise rapidement, avise tes vêtements précieux et ta coiffure délicate et sort finalement les bijoux de sa besace. Tu observes avec minutie les anneaux qui sont effectivement de fer. Le fer n’a pas la brillance de l’or et de l’argent, mais il est moins mou et plus difficile à obtenir. Ton frère qui possède des mines dit que ce métal remplacera un jour le cuivre et le bronze.
+{ character == "Nadîtum" } * [Acheter les bijoux] -> A01S01N049
+{ character == "Marchand" } « Attends ! » Le commerçant se retourne. « Fais-moi voir ces bijoux. »
+{ character == "Marchand" } Il te toise rapidement, jette un regard à tes mules de bât et à leurs paniers remplis, puis sort finalement les bijoux de sa besace. Tu observes avec minutie les anneaux qui sont, sans aucun doute, de fer. On en voit parfois de semblables commercés dans la région du Suhûm, à l’ouest d’Aššur.
+{ character == "Marchand" } « C’est vraiment du fer, grogne l’homme de son fort accent. Ce prêtre ne méritait même pas que je les lui vende.
+{ character == "Marchand" } — Oui, je vois que tu n’as pas menti. »
+{ character == "Marchand" } * [Acheter les bijoux pour toi] -> A01S01N050
+{ character == "Marchand" } * [Acheter les bijoux pour la déesse] -> A01S01N049
+
+:: A01S01N035
+Tu te retournes vers le prêtre, qui semblait attendre pour te remercier. « Merci <>
+{ character == "Nadîtum" } nadîtum <>
+{ character == "Marchand" } l’ami <>
+, vous n’auriez pas dû avoir à intervenir. Venez, rejoignons la procession, vous êtes mon hôte, je vous suis redevable. »
+{ character == "Nadîtum" } * [Le suivre] -> A01S01N045
+{ character == "Marchand" } * [Accepter] -> A01S01N051
+{ character == "Marchand" } * [Refuser] -> A01S01N046
+
+:: A01S01N036
+{ character == "Nadîtum" } « Bien sûr. Il suffit de tendre l’oreille. Il se murmure que le roi d’Uruk est en colère contre Larsa. Qu’il aurait préféré ne pas accepter de laisser passer la procession. Cependant, peut-il s’opposer à la volonté de Sîn ?
+{ character == "Nadîtum" } — Non, évidemment. Mais le roi d’Uruk ne fait pas peur à Rîm-Sîn, son royaume n’a aucune importance.
+{ character == "Nadîtum" } — Peut-être. En tout cas, je pense que l’ambiance sera différente lorsque nous aborderons le temple d’Ištar… »
+{ character == "Marchand" } « Il suffit de tendre l’oreille. Il se murmure que le roi d’Uruk est en colère contre Larsa. Qu’il aurait préféré ne pas accepter de laisser passer la procession. Cependant peut-il s’opposer à la volonté de Sîn ?
+{ character == "Marchand" } — Sans doute pas. Mais Uruk est une cité vieillissante. Que peut la colère de son roi face à la volonté de celui de Larsa ?
+{ character == "Marchand" } — Je n’en sais rien. En tout cas, je te garantis que l’ambiance sera différente lorsque nous aborderons le temple d’Ištar… »
+{ type == "Physique" } « Il suffit de tendre l’oreille. Il se murmure que le roi d’Uruk est en colère contre Larsa. Qu’il aurait préféré ne pas accepter de laisser passer la procession. Cependant peut-il s’opposer à la volonté de Sîn ?
+{ type == "Physique" } — Sans doute pas. Tu crois que le passage d’Uruk sera un danger ?
+{ type == "Physique" } — Je n’en sais rien. En tout cas, je te garantis que l’ambiance sera différente lorsque nous aborderons le temple d’Ištar… »
+{ type == "Mystique" } « Non, mais il suffit de tendre l’oreille. Il se murmure que le roi d’Uruk est en colère contre Larsa. Qu’il aurait préféré ne pas accepter de laisser passer la procession. Cependant peut-il s’opposer à la volonté de Sîn ?
+{ type == "Mystique" } — Non, évidemment. Mais le roi d’Uruk ne fait pas peur à Rîm-Sîn, son royaume n’a aucune importance.
+{ type == "Mystique" } — Peut-être. En tout cas, je pense que l’ambiance sera différente lorsque nous aborderons le temple d’Ištar… »
+{ type == "Physique" } * [La suite] -> A01S01N053
+{ type != "Physique" } * [La suite] -> A01S01N052
+
+:: A01S01N037
+« Oui, mais ce ne sont pas Tummal ou Šuruppak qui poseront problème. La première appartient au royaume d’Isin, il est vrai, mais Tummal n’a aucun intérêt à s’opposer à la procession. Comme pour Ennegi, ce sera l’occasion pour ces deux cités de retrouver un peu de leur gloire oubliée.
+{ character == "Nadîtum" } — Mais vous ne me dites pas ce que vous pensez, vous, de cette procession.
+{ character != "Nadîtum" } — Mais toi alors ? Qu’en penses-tu de ce voyage ?
+— Ce que j’en pense… Eh bien j’espère que le dieu de notre roi ne l’abandonnera pas, car il ne va pas se faire que des amis en exposant ainsi son faste et sa gloire à travers le territoire des royaumes d’Uruk et d’Isin ! »
+{ type == "Physique" } * [La suite] -> A01S01N053
+{ type != "Physique" } * [La suite] -> A01S01N052
+
+:: A01S01N038
+{ character == "Nadîtum" } Rapidement, tu entends s’élever les bruits de la foule dans la rue en contrebas, par la mince ouverture allongée et bardée de roseaux en croisillons qui s’ouvre au plus haut du mur de briques de ta chambre. Tu sais qu’une ruelle plus étroite longe la façade, à peine une venelle, un passage pour laisser s’écouler les eaux usagées. Pourtant, tu es certaine que des voix s’élèvent de cet endroit.
+{ character == "Nadîtum" } * [Tendre l’oreille] -> mg_EpreuvePerception_A01S01N027_A01S01N028
+
+:: A01S01N039
+{ character == "Marchand" } Tu comprends rapidement que l’homme est un riche propriétaire terrien de la ville voisine d’Ur.
+{ character == "Marchand" } * [Commercer] -> mg_EpreuveMarchandage_A01S01N055
+
+:: A01S01N040
+{ character == "Marchand" } Il est facile de comprendre qu’il est devin. Et les devins sont souvent issus de familles nobles, qui ont les moyens de payer leur éducation.
+{ character == "Marchand" } * [Commercer] -> mg_EpreuveMarchandage_A01S01N055
+
+:: A01S01N041
+{ character == "Nadîtum" } Les devins se penchent sur le foie encore chaud extrait du mouton. Tu sais qu’ils en analysent les moindres replis, mais c’est un art bien étrange, auquel tu n’entends rien. Certains préfèrent étudier les mouvements de l’huile de sésame dans l’eau, d’autres observent le vol des oiseaux qui s’envolent depuis les palmiers. Un ou deux exorcistes sont occupés à discerner la moindre présence démoniaque qui viendrait gâcher la cérémonie. Ils brûlent de petites touffes de laine rouge. Les prêtres lavent la statue, ses mains, sa bouche. D’autres chantent, récitent des prières. Les minutes défilent, et bientôt il est l’heure de la cérémonie.
+{ character == "Nadîtum" } * [Prendre place] -> A01S01N056
+
+:: A01S01N042
+{ character == "Nadîtum" } Tu t’installes à l’ombre d’un auvent où certaines de tes consœurs, toutes consacrées à Šamaš, se sont assises sur des coussins de paille d’orge pour partager la bière douce et sucrée. Vous passez ainsi quelque temps à boire et discuter. Distraitement, tu plonges ta paille dans la jarre, doucement pour ne pas remuer les dépôts, et les minutes défilent, jusqu’à l’heure de la cérémonie.
+{ character == "Nadîtum" and !visited(A01S01N016) } Tu en profites même pour mander un scribe afin qu’il rédige pour toi une courte missive à destination de ton frère, garant de tes affaires pendant ton absence.
+{ character == "Nadîtum" } * [Prendre place] -> A01S01N056
+
+:: A01S01N043
+{ character == "Marchand" } Tu as le choix. Tu jettes un œil vers les officiants. Les devins se penchent sur le foie encore chaud extrait du mouton. Un ou deux exorcistes sont occupés à brûler de petites touffes de laine rouge. Les prêtres lavent la statue, ses mains, sa bouche. Peut-être y a-t-il ici quelque personne susceptible d’être intéressée par tes étoffes ? De l’autre côté de la palmeraie, des nadîtum, de nobles religieuses, devisent en buvant de la bière. Enfin, tu distingues d’autres commerçants transportant leurs marchandises.
+{ character == "Marchand" and visited(A01S01N051) or character == "Marchand" and visited(A01S01N074) } Tu te souviens également que le prêtre t’a proposé de te présenter aux habilleurs du dieu. Ils sont probablement près des tentes d’Enanedu, en train de préparer la tenue divine de ce soir.
+{ character == "Marchand" } * [Commercer avec les officiants] -> mg_EpreuveMarchandage_A01S01N057
+{ character == "Marchand" } * [Commercer avec les nadîtū] -> mg_EpreuveMarchandage_A01S01N057
+{ character == "Marchand" } * [Commercer avec les autres commerçants] -> mg_EpreuveMarchandage_A01S01N057
+{ character == "Marchand" and visited(A01S01N051) or character == "Marchand" and visited(A01S01N074) } * [Commercer avec les habilleurs] -> mg_EpreuveMarchandage_A01S01N057
+
+:: A01S01N044
+{ character == "Marchand" } Tu t’installes à l’ombre d’un auvent où des hommes sont assis sur des coussins de paille d’orge, partageant la bière douce et sucrée. Ils ne sont pas timides et entament rapidement la conversation avec toi. Tous viennent d’Ennegi, et cette cérémonie est pour eux un événement exceptionnel.
+{ character == "Marchand" } « Mon grand-père me racontait souvent comme Ennegi était une grande cité autrefois, dit l’un d’eux. Il me disait qu’alors, le dieu Sîn entamait chaque année un voyage depuis son temple à Ur et visitait les plus belles villes jusqu’à Nippur.
+{ character == "Marchand" } — Je ne pensais pas voir ça un jour ! répond un autre. Notre roi souhaite renouer avec les vieilles traditions.
+{ character == "Marchand" } — C’est une bonne chose pour Ennegi, n’est-ce pas ? demandes-tu.
+{ character == "Marchand" } — Regarde, me dit un homme costaud, la peau tannée par le soleil. Au-delà de la palmeraie, tu vois ces endroits où la végétation est plus éparse ? Il y avait des maisons ici, auparavant. L’argile s’est effritée, il n’y avait plus personne pour les entretenir, plus personne pour y vivre. Nous avons récupéré ce qui était à récupérer, mais la terre est dure, tassée, les herbes y poussent difficilement. Les quartiers s’étendaient jusque-là, et partout autour de la ville, tu pourras voir ce genre de décombres. Ennegi, puissent Ningirida et Ninazu veiller sur elle, n’est plus une grande cité. Alors oui, un peu de passage de temps en temps, cela ne peut pas nous faire de mal. »
+{ character == "Marchand" } La conversation se poursuit et les minutes défilent. Tu te rends compte qu’ils ne sont probablement pas en mesure de t’acheter quelconque marchandise, mais tu te laisses aller à la boisson, à l’ombre, aux bavardages. Bientôt, il est l’heure de la cérémonie.
+{ character == "Marchand" } * [Prendre place] -> A01S01N056
+
+:: A01S01N045
+@illustration("La palmeraie")
+{ type == "Social" and visited(A01S01N031) and character == "Nadîtum" or type == "Social" and visited(A01S01N033) and character == "Nadîtum" or type == "Social" and visited(A01S01N034) and character == "Nadîtum" or type == "Social" and visited(A01S01N035) and character == "Nadîtum" } Tu fais signe à tes serviteurs de te suivre avec tes affaires et t’enfonces <>
+{ type == "Social" and visited(A01S01N031) and character == "Marchand" or type == "Social" and visited(A01S01N033) and character == "Marchand" or type == "Social" and visited(A01S01N034) and character == "Marchand" or type == "Social" and visited(A01S01N035) and character == "Marchand" } Tu guides tes mules <>
+{ type == "Social" and visited(A01S01N031) or type == "Social" and visited(A01S01N033) or type == "Social" and visited(A01S01N034) or type == "Social" and visited(A01S01N035) } dans les rues d’Ennegi à la suite du prêtre.
+{ type == "Social" and visited(A01S01N049) and character == "Nadîtum" } Tu fais signe à tes serviteurs de te suivre avec tes affaires et t’enfonces dans les rues.
+{ type == "Social" } Au-delà de la foule qui commence à encombrer les rues, tu distingues la statue divine portée par quatre hommes s’élevant au-dessus des têtes sombres ou voilées. Rapidement, la procession s’éloigne du port et s’éloigne des ruelles trop étroites de la ville. Une végétation se dessine au-delà des maisons d’argile : la palmeraie et les jardins de la cité. Après quelques moments de marche, la statue est posée là, et les curieux sont repoussés par les protecteurs du convoi.
+{ type == "Social" and visited(A01S01N031) and character == "Nadîtum" or type == "Social" and visited(A01S01N035) and character == "Nadîtum" } * [Aller vers la chapelle] -> A01S01N058
+{ type == "Social" and visited(A01S01N033) } * [Aller vers la chapelle] -> A01S01N048
+{ type == "Social" and visited(A01S01N049) and character == "Nadîtum" } * [Aller vers la chapelle] -> A01S01N063
+{ type == "Social" and visited(A01S01N031) and character == "Marchand" } * [Aller vers la chapelle] -> A01S01N051
+{ type == "Social" and visited(A01S01N034) and character == "Marchand" } * [Aller vers la chapelle] -> A01S01N064
+
+:: A01S01N046
+{ character == "Marchand" } « Je vous remercie, mais je préfère d’abord visiter la ville.
+{ character == "Marchand" } — Ennegi est petite, vous en aurez vite fait le tour, te répond le prêtre en haussant les épaules. Si vous me cherchez, je serai à la palmeraie. »
+{ character == "Marchand" } Tu le remercies et poursuis ton chemin.
+{ character == "Marchand" } * [Visiter Ennegi] -> A01S01N010
+
+:: A01S01N047
+{ character == "Nadîtum" } Au-delà de la foule qui commence à encombrer les rues, tu distingues la statue divine portée par quatre hommes s’élevant au-dessus des têtes sombres ou voilées. Rapidement, la procession s’éloigne du port et s’éloigne des ruelles trop étroites de la ville. Une végétation se dessine au-delà des maisons d’argile : la palmeraie et les jardins d’Ennegi. Après quelques moments de marche, la statue est posée là, et les curieux sont repoussés par les protecteurs du convoi.
+{ character == "Nadîtum" } * [Aller vers la chapelle] -> A01S01N059
+{ character == "Marchand" } Le chemin de la cérémonie t’est tout indiqué : il suffit de suivre la foule qui remonte la rue vers la palmeraie que tu devines un peu plus loin. Tout Ennegi ou presque foule la terre battue, les enfants pataugent dans la rigole creusée depuis le quai. Tu fais avancer tes mules parmi les rues étroites, des curieux lorgnent tes grands paniers couverts et essaient de deviner ce que tu peux bien transporter.
+{ character == "Marchand" } * [Dans les rues d’Ennegi] -> A01S01N059
+
+:: A01S01N048
+{ type == "Social" } Tu distingues la chapelle de la déesse Ningirida, une simple bâtisse d’argile décorée, qui ne contient guère plus qu’une niche pour y déposer les offrandes.
+{ type == "Social" } « Nous allons monter ici les tentes de la suite de la grande prêtresse, te dit le prêtre. La tente de la déesse est là-bas. Portez-lui donc les bijoux. »
+{ type == "Social" } Il pointe du doigt un autre endroit de la palmeraie où se dresse effectivement une lourde tente de feutre, richement décorée.
+{ type == "Social" } * [Te rendre à la tente] -> A01S01N060
+
+:: A01S01N049
+{ type == "Social" } « Je <>
+{ type == "Social" and character == "Nadîtum" } vous <>
+{ type == "Social" and character == "Marchand" } te <>
+{ type == "Social" } les achète, dis-tu finalement, je les mènerai à la déesse. »
+{ type == "Social" and character == "Nadîtum" } « Ma dame, soyez remerciée. » L’homme a un fort accent de l’ouest. Il te tend une tablette d’argile enroulée dans un linge.
+{ type == "Social" and character == "Marchand" } « L’ami, sois remercié. » L’homme te tend une tablette d’argile enroulée dans un linge.
+{ type == "Social" } Elle est encore fraîche. Tu jettes un œil rapide aux termes du contrat tracés en signes comptables grossiers et lis que le marchand porte le nom de Bêl-Amurru. Enfin, tu défais le sceau-cylindre passé autour de ton cou et le roules sur l’argile pour apposer ta signature.
+{ character == "Nadîtum" } « Vous inscrirez que la vente s’est conclue au nom d’Erešti-Aya, nadîtum. Mes serviteurs vous paieront », précises-tu avant de quitter le commerçant.
+{ character == "Nadîtum" } * [Aller remettre les bijoux à la déesse Ningirida] -> A01S01N045
+{ character == "Marchand" } « Tu pourras noter que la vente s’est conclue au nom de Ša-pî-kalbi, marchand assyrien », précises-tu avant de payer le commerçant puis de le quitter.
+{ character == "Marchand" } * [Suivre la foule] -> A01S01N045
+
+:: A01S01N050
+{ character == "Marchand" } Ces bijoux sont de belle qualité. Ici, au sud, il est assez rare d’en rencontrer. Le prêtre était idiot de ne pas en avoir voulu, mais toi, tu estimes que tu as un joli coup à jouer.
+{ character == "Marchand" } « Je te les achète », dis-tu finalement.
+{ character == "Marchand" } « L’ami, sois remercié. » L’homme te tend une tablette d’argile enroulée dans un linge. Elle est encore fraîche. Tu jettes un œil rapide aux termes du contrat tracés en signes comptables grossiers et lis que le marchand porte le nom de Bêl-Amurru. Le prix est tel que tu l’avais imaginé. Enfin, tu défais le sceau-cylindre passé autour de ton cou et le roules sur l’argile pour apposer ta signature.
+{ character == "Marchand" } « Tu pourras noter que la vente s’est conclue au nom de Ša-pî-kalbi, marchand assyrien », précises-tu avant de payer le commerçant puis de le quitter.
+{ character == "Marchand" } * [Suivre la foule] -> A01S01N045
+
+:: A01S01N051
+{ character == "Marchand" } Tu distingues la chapelle de la déesse Ningirida, une simple bâtisse d’argile décorée, qui ne contient guère plus qu’une niche pour y déposer les offrandes. Elle est remplie de figurines, de nourriture et de l’encens y brûle.
+{ character == "Marchand" } « Que vendez-vous ? te demande le prêtre.
+{ character == "Marchand" } — Des étoffes assyriennes, les plus belles qui soient. » Tu sors de ton sac tes échantillons de laine teinte.
+{ character == "Marchand" } « Pour vous remercier de votre aide, je parlerai en votre faveur aux habilleurs du dieu. Venez nous voir avec votre marchandise, si vous le souhaitez. Pour l’heure, je dois vous laisser. Rappelez-moi votre nom ?
+{ character == "Marchand" } — Ša-pî-kalbi.
+{ character == "Marchand" } — Mmmh, original », fait-il en haussant les épaules et tournant les talons.
+{ character == "Marchand" } * [Les préparatifs] -> A01S01N065
+
+:: A01S01N052
+Vous discutez encore un instant. Il te propose de t’accueillir pour la nuit <>
+{ character == "Nadîtum" } avec tes serviteurs <>
+dans la maison de son oncle, qui sera ravi de te recevoir. Tu acceptes avec plaisir, la maison a l’air grande et nantie, <>
+{ character == "Nadîtum" } le garçon éduqué <>
+{ character == "Marchand" } tu as remarqué une sorte d’étable <>
+{ type == "Mystique" } et le jeune scribe a de la conversation <>
+: ce sera sans doute plus confortable que <>
+{ type == "Social" } l’auberge pleine de monde <>
+{ type == "Mystique" } sous les tentes. <>
+Mais le silence <>
+{ type == "Social" } qui envahit désormais <>
+{ type == "Mystique" } qui commence à envahir <>
+les rues devient pressant et te rappelle la cérémonie qui se prépare en ce moment même. Ton interlocuteur, qui se présente enfin et te dit s’appeler Halî-Ammi, te propose de t’accompagner jusqu’à la palmeraie, où a été menée la statue de Sîn.
+{ character == "Nadîtum" } Avant de partir, le scribe envoie sa tante, occupée en cuisine, quérir tes serviteurs restés au port.
+{ type == "Social" } * [Dans la palmeraie] -> A01S01N066
+{ type == "Mystique" } * [Le suivre] -> A01S01N067
+
+:: A01S01N053
+{ type == "Physique" } Les clameurs de la foule, que vous entendiez jusqu’à lors à travers les rues d’Ennegi, se sont apaisées : quasiment toute la cité doit être à la palmeraie.
+{ type == "Physique" and !visited(A01S01N099) and character == "Soldat" } Tu ne voudrais pas <>
+{ type == "Physique" and !visited(A01S01N099) and character == "Danseuse" } Tu ne peux pas te permettre de <>
+{ type == "Physique" and !visited(A01S01N099) } manquer la cérémonie, et d’ailleurs, ton hôte <>
+{ type == "Physique" and !visited(A01S01N099) and character == "Danseuse" } ne le souhaite pas <>
+{ type == "Physique" and !visited(A01S01N099) } non plus.
+{ type == "Physique" and visited(A01S01N099) } Tu as bien repris tes esprits depuis le coup que tu as reçu, et tu ne peux pas te permettre de manquer la cérémonie. D’ailleurs, ton hôte ne le souhaite pas non plus.
+{ type == "Physique" } Avant de partir, <>
+{ type == "Physique" and character == "Soldat" } il te propose de dormir chez lui <>
+{ type == "Physique" and character == "Nadîtum" and !visited(A01S01N099) } Asu te propose de dormir chez eux <>
+{ type == "Physique" and character == "Nadîtum" and visited(A01S01N099) } Asu retire le miel souillé de ta poitrine et te propose de dormir chez eux <>
+{ type == "Physique" } pour la nuit, ce qui sera probablement plus confortable que sous une tente <>
+{ type == "Physique" and character == "Soldat" } , voire à la belle étoile.
+{ type == "Physique" and character == "Danseuse" } . Halî-Ammi lui jette un regard incertain, mais ne dit rien.
+{ type == "Physique" } * [Accepter] -> A01S01N068
+{ type == "Physique" } * [Refuser] -> A01S01N069
+
+:: A01S01N054
+{ character == "Nadîtum" } Alors que le soleil, ton dieu, a rejoint l’horizon et cédé la place à l’astre lunaire ; alors que la musique et les cris que tu entendais depuis la palmeraie à l’extérieur de la ville s’estompent, l’auberge se remplit. Une foule nouvelle investit bientôt les lieux restés calmes pendant toute la cérémonie. Le voyage t’a fatiguée, et tu ne regrettes pas d’être restée pour te reposer. On t’apporte le repas dans ta chambre et tu envoies quelqu’un déposer au temple de la déesse Ningirida l’offrande prévue pour elle. Demain, la procession entamera sa seconde étape, à Larsa : là, le spectacle sera autrement plus grandiose.
+{ character == "Nadîtum" } * [Le lendemain] -> A01S01N070
+
+:: A01S01N055
+{ character == "Marchand" } Les affaires ont leur importance, mais tu ne voudrais tout de même pas manquer la cérémonie ! Tu quittes l’auberge pour les rues bruyantes et encombrées.
+{ character == "Marchand" } * [Dans les rues d’Ennegi] -> A01S01N014
+
+:: A01S01N056
+{ character == "Nadîtum" } En tant que religieuse, tu viens naturellement te placer au plus proche de la statue, parmi les prêtres, les devins et les exorcistes, où un siège t’attend.
+{ character == "Marchand" } Tu n’es pas un officiant du culte, et rien ne justifie que tu sois placé au plus près du dieu, parmi les prêtres, les devins et les exorcistes, mais tu restes un marchand et jouis d’un statut privilégié. Tu es suffisamment bien installé pour voir le spectacle correctement.
+{ character == "Exorciste" } En tant qu’exorciste, tu viens naturellement te placer au plus proche de la statue, parmi les prêtres et les devins, où un siège t’attend.
+{ character == "Prêtresse" } En tant que prêtresse, tu viens naturellement te placer au plus proche de la statue, parmi les devins et les exorcistes, où un siège t’attend.
+Le dieu Sîn a été placé sur une estrade d’argile moulée spécialement pour l’occasion. Il surplombe la foule installée dans la palmeraie. À ses pieds, la grande prêtresse Enanedu attend. La lumière rouge du couchant inonde la place.
+{ character == "Danseuse" } Les musiciens entament leur œuvre et tes consœurs et toi vous élancez. <>
+{ character != "Danseuse" } Les musiciens et danseurs entament leur œuvre. <>
+Enanedu chante, exaltée. Les mots sumériens s’élèvent. Tu n’en comprends pas exactement le sens <>
+{ type == "Mystique" and character == "Prêtresse" } ; bien que tu aies étudié la langue ancienne et sacrée, tu n’y es pas aussi versée que les scribes, <>
+{ type == "Mystique" and character != "Prêtresse" } ; bien que tu aies étudié la langue ancienne et sacrée, tu n’y es pas aussi versé que les scribes, <>
+{ type != "Mystique" } , car seuls les scribes savent les arcanes de la langue ancienne et sacrée, <>
+mais tu en comprends la teneur, tu en ressens l’émotion. Enanedu chante pour le dieu de la lune : Sîn évoque son projet, celui de rendre visite à son père, et salue la déesse Ningirida qui, ce soir, accepte de l’accueillir chez elle. Un instant, la musique se tait et les danseuses se figent. Enfin, sortie d’une tente jusqu’ici restée close, la déesse apparaît.
+* [L’arrivée de la prêtresse] -> A01S01N071
+
+:: A01S01N057
+{ character == "Marchand" } Toutes ces palabres ont pris du temps ! Déjà, le soleil décline et il est l’heure de s’installer pour la cérémonie.
+{ character == "Marchand" } * [Prendre place] -> A01S01N056
+
+:: A01S01N058
+{ character == "Nadîtum" } Tu distingues la chapelle de la déesse Ningirida, une simple bâtisse d’argile décorée, qui ne contient guère plus qu’une niche pour y déposer les offrandes.
+{ character == "Nadîtum" } « Nous allons monter ici les tentes de la suite de la grande prêtresse, te dit le prêtre. Malheureusement, la cité est trop petite pour que nous puissions installer tout ce monde dans le temple. Comme vous le voyez, la chapelle ne peut accueillir que des présents. J’ai cru comprendre que vos sœurs nadîtū s’étaient majoritairement établies à l’auberge, mais si vous voulez dormir ici, vous êtes la bienvenue. »
+{ character == "Nadîtum" } * [Accepter] -> A01S01N061
+{ character == "Nadîtum" } * [Refuser] -> A01S01N062
+
+:: A01S01N059
+{ character == "Nadîtum" } Tu distingues la chapelle de la déesse Ningirida, une simple bâtisse d’argile décorée, qui ne contient guère plus qu’une niche pour y déposer les offrandes. Tu enverras ce soir quelqu’un y déposer la tienne, qui pour l’instant a été menée à l’auberge avec le reste de tes affaires. Au bout de quelque temps, tu distingues le prêtre qui s’était disputé avec le commerçant.
+{ character == "Marchand" } Tu navigues parmi les têtes aux épais cheveux noirs des hommes et aux belles boucles ondulées des femmes. Mais enfin, la foule s’écarte et te laisse apparaître la chapelle de la déesse d’Ennegi. Ce n’est qu’une petite bâtisse d’argile décorée, qui ne contient guère plus qu’une niche où sont déposées en ce jour de nombreuses offrandes. En arrière du bâtiment, les tentes prestigieuses d’Enanedu et sa suite sont en train d’être montées. Tu finis par apercevoir le prêtre qui s’était disputé avec le commerçant.
+{ type == "Social" } Il rejoint le groupe d’officiants <>
+{ type == "Social" and character == "Marchand" } de Sîn <>
+{ type == "Social" } , non sans te jeter un regard perplexe, comme s’il te reconnaissait pour le secours que tu avais essayé de lui porter.
+{ type == "Social" } * [Parler au prêtre] -> A01S01N072
+{ type == "Social" } * [Flâner] -> A01S01N065
+
+:: A01S01N060
+{ type == "Social" } Tu approches <>
+{ type == "Social" and character == "Marchand" } avec tes mules <>
+{ type == "Social" } et des officiants t’arrêtent immédiatement. Tu expliques que tu as en ta possession des bijoux précieux venus de l’ouest, et que tu aimerais les offrir à la déesse pour la cérémonie de ce soir. Une femme revêtue de lin blanc pénètre un instant dans la tente où tu perçois les murmures d’une conversation. Enfin, un bras lisse et pâle, un bras de femme, peint de motifs au henné, passe par l’ouverture de la tente, paume tendue. Tu hésites un instant, puis y déposes les anneaux de fer. Le bras pénètre de nouveau dans la tente, non sans laisser échapper de lourds effluves d’huile parfumée au bois de cèdre et de roseau aromatique. La femme en blanc sort de la tente et t’adresse un léger mouvement de tête.
+{ type == "Social" and !visited(A01S01N063) or type == "Social" and visited(A01S01N064) } « La déesse vous remercie <>
+{ type == "Social" and !visited(A01S01N063) and character == "Nadîtum" or type == "Social" and visited(A01S01N064) and character == "Nadîtum" } , nadîtum <>
+{ type == "Social" and !visited(A01S01N063) or type == "Social" and visited(A01S01N064) } . »
+{ type == "Social" and visited(A01S01N063) and character == "Nadîtum" } « La déesse vous remercie, nadîtum. Votre suite est invitée à rejoindre celle de la grande prêtresse de Sîn. Une tente vous y sera réservée pour la nuit. »
+{ type == "Social" and visited(A01S01N064) and character == "Marchand" } « La déesse vous remercie. Vous êtes invité à rejoindre la suite de la grande prêtresse de Sîn. Une place en tente vous sera réservée pour la nuit. »
+Tu approches avec tes mules et des officiants t’arrêtent immédiatement. Tu expliques que tu as en ta possession des bijoux précieux venus de l’ouest, et que tu aimerais les offrir à la déesse pour la cérémonie de ce soir. Une femme revêtue de lin blanc pénètre un instant dans la tente où tu perçois les murmures d’une conversation. Enfin, un bras lisse et pâle, un bras de femme, peint de motifs au henné, passe par l’ouverture de la tente, paume tendue. Tu hésites un instant, puis y déposes les anneaux de fer. Le bras pénètre de nouveau dans la tente, non sans laisser échapper de lourds effluves d’huile parfumée au bois de cèdre et de roseau aromatique. La femme en blanc sort de la tente et t’adresse un léger mouvement de tête.
+{ !visited(A01S01N063) and character == "Nadîtum" } * [Retourner voir le prêtre] -> A01S01N073
+{ visited(A01S01N063) and type == "Social" or visited(A01S01N064) and type == "Social" } * [Retourner à la palmeraie] -> A01S01N030
+{ !visited(A01S01N064) and character == "Marchand" } * [Retourner voir le prêtre] -> A01S01N074
+{ visited(A01S01N064) } * [Retourner à la palmeraie] -> A01S01N030
+
+:: A01S01N061
+{ character == "Nadîtum" } « Ce serait un grand honneur, réponds-tu. Vous indiquerez à mes gens où ils peuvent installer mes affaires. En attendant, permettez-moi d’offrir à la déesse le don que j’ai prévu pour elle. »
+{ character == "Nadîtum" } Le prêtre acquiesce et te laisse. Il part aider à l’installation.
+{ character == "Nadîtum" } -> A01S01N075
+
+:: A01S01N062
+{ character == "Nadîtum" } « Merci, mais j’irai aussi m’établir à l’auberge. La tente à son charme, mais je lui préfère celui d’une chambre.
+{ character == "Nadîtum" } — Libre à vous, répond le prêtre.
+{ character == "Nadîtum" } — Permettez-moi pour l’instant d’offrir à la déesse le don que j’ai prévu pour elle.
+{ character == "Nadîtum" } — Faites, bien sûr ! »
+{ character == "Nadîtum" } Le prêtre te laisse et tu récupères dans ta malle l’offrande prévue avant d’envoyer tes serviteurs à l’auberge où ils devront installer tes affaires.
+-> A01S01N075
+
+:: A01S01N063
+{ character == "Nadîtum" } Tu distingues la chapelle de la déesse Ningirida, une simple bâtisse d’argile décorée, qui ne contient guère plus qu’une niche pour y déposer les offrandes. Tu en profites pour y déposer la tienne : une petite figurine d’orante portant ton nom. En arrière du bâtiment, les tentes prestigieuses d’Enanedu et sa suite sont en train d’être montées. À un autre endroit de la palmeraie se dresse effectivement une lourde tente de feutre, richement décorée.
+{ character == "Nadîtum" } * [Te rendre à la tente] -> A01S01N060
+
+:: A01S01N064
+{ character == "Marchand" } Tu distingues la chapelle de la déesse Ningirida, une simple bâtisse d’argile décorée, qui ne contient guère plus qu’une niche où sont déposées en ce jour de nombreuses offrandes : des figurines, de la nourriture ou de l’encens. En arrière du bâtiment, les tentes prestigieuses d’Enanedu et sa suite sont en train d’être montées.
+{ character == "Marchand" and visited(A01S01N050) } Mais ce ne sont pas les chapelles et les préparatifs religieux qui t’intéressent le plus. <>
+{ character == "Marchand" and visited(A01S01N050) } * [Les préparatifs] -> A01S01N065
+{ character == "Marchand" and visited(A01S01N049) } À un autre endroit de la palmeraie se dresse une lourde tente de feutre, richement décorée.
+{ character == "Marchand" and visited(A01S01N049) } * [Te rendre à la tente] -> A01S01N060
+
+:: A01S01N065
+Bientôt, un mouton est amené devant les prêtres. Il est assommé et saigné<>
+{ type == "Social" } . Un spectacle qui ne t’émeut guère et sera répété à chaque étape du voyage du dieu.
+{ type != "Social" } .
+La foule a commencé à envahir la palmeraie, quelques tentes se montent ici et là, ainsi que des auvents. Des hommes portent d’immenses jarres que tu sais remplies de bière.
+La bête est étripée, on en commence la préparation tandis que les devins en étudient le foie. Les prêtres officient, récitent, purifient, préparent. Les exorcistes aussi s’affairent. Ici et là on discute, on marchande, on s’accoste. <>
+{ character == "Soldat" } Toi, tu te postes en faction, prêt à intervenir au moindre trouble.
+{ character == "Danseuse" } Toi, tu révises tes pas de danse, au son des instruments de tes compagnons musiciens.
+Des hommes partagent la bière sous des auvents de toile, tirant sur les longues pailles de roseau plongées dans les jarres minces et profondes. D’autres jouent aux dés. Des femmes filent à l’ombre des palmiers dattiers. On attend que le soleil se couche et répande ses feux sur le théâtre de la future cérémonie.
+{ character == "Nadîtum" } * [Observer les préparatifs religieux] -> A01S01N041
+{ character == "Nadîtum" } * [Discuter avec d’autres nadîtum] -> A01S01N042
+{ character == "Marchand" } * [Commercer] -> A01S01N043
+{ character == "Marchand" } * [Boire de la bière] -> A01S01N044
+{ character == "Soldat" } * [Te mettre en place] -> A01S01N108
+{ character == "Danseuse" } * [Te préparer] -> A01S01N109
+
+:: A01S01N066
+{ type == "Social" } Tenue à l’écart de la foule qui a encombré la palmeraie, tu distingues la chapelle de la déesse Ningirida, une simple bâtisse d’argile décorée, qui ne contient guère plus qu’une niche pour y déposer les offrandes. <>
+{ type == "Social" and character == "Nadîtum" } Tu enverras ce soir quelqu’un y déposer la tienne. <>
+{ type == "Social" } Halî-Ammi t’informe qu’il va saluer son oncle et te laisse.
+{ type == "Social" } * [Dans la palmeraie] -> A01S01N030
+
+:: A01S01N067
+{ type == "Mystique" } Tenue à l’écart de la foule qui a encombré la palmeraie, tu distingues la chapelle de la déesse Ningirida, une simple bâtisse d’argile décorée, qui ne contient guère plus qu’une niche pour y déposer les offrandes. Halî-Ammi t’informe qu’il va saluer son oncle et te laisse. Ta main droite enroulant ton poing gauche levé au niveau de ta poitrine, tu prends le temps de réciter une courte prière en salutation à la déesse. Cette nuit, l’épouse du dieu Ninazu se défait de l’influence de son époux, comme le veut la tradition. En arrière du bâtiment, les tentes prestigieuses d’Enanedu et sa suite sont en train d’être montées.
+{ type == "Mystique" } * [Dans la palmeraie] -> A01S01N076
+
+:: A01S01N068
+{ type == "Physique" } Tu hésites…
+{ type == "Physique" and character == "Soldat" } Ne serait-ce pas un peu abuser de la permission que t’es octroyée ? Mais après tout, tu n’auras peut-être que peu d’occasions comme celle-ci, et puis, rien n’est précisé dans ton contrat concernant l’endroit où tu dois dormir.
+{ type == "Physique" and character == "Danseuse" } Il te faudra te lever tôt demain pour aider au rangement, mais après tout, pourquoi pas ? Ce n’est pas tous les jours que tu es accueillie dans une maison où on ne te demande ni de danser ni de chanter.
+{ type == "Physique" } * [Te rendre à la palmeraie] -> A01S01N077
+
+:: A01S01N069
+{ type == "Physique" } L’offre est alléchante, <>
+{ type == "Physique" and character == "Soldat" } mais tu es ici pour accomplir un travail : veiller à la sécurité de la procession, pas t’offrir du bon temps. Tu prendras un moment de repos lorsque tout ceci sera terminé.
+{ type == "Physique" and character == "Danseuse" } mais tu préfères refuser. Demain dès l’aube il y aura fort à faire, et tu as tendance à ne pas te sentir rassurée loin de tes camarades de danse. Depuis toutes ces années, vous avez pris l’habitude de vivre entre vous.
+{ type == "Physique" } * [Te rendre à la palmeraie] -> A01S01N077
+
+:: A01S01N070
+{ type == "Social" and visited(A01S01N005) or type == "Social" and visited(A01S01N032) or type == "Social" and visited(A01S01N062) or type == "Social" and visited(A01S01N017) } Le lendemain, l’agitation qui environne l’auberge te réveille alors que le soleil est déjà levé depuis une ou deux heures. Tu comprends rapidement que toute la procession se prépare à repartir. Avant cela, <>
+{ type == "Social" and visited(A01S01N060) or type == "Social" and visited(A01S01N061) or type == "Social" and visited(A01S01N074) } Le lendemain, l’agitation qui règne près des tentes te réveille presque à l’aube. Les différents officiants s’affairent à replier les tentes et empaqueter les affaires du dieu et de sa suite. Au matin, <>
+{ visited(A01S01N068) and character != "Danseuse" or visited(A01S01N052) and character != "Danseuse" } Le lendemain, <>
+{ visited(A01S01N068) and character != "Danseuse" and character == "Nadîtum" or visited(A01S01N052) and character != "Danseuse" and character == "Nadîtum" } la tante de <>
+{ visited(A01S01N068) and character != "Danseuse" or visited(A01S01N052) and character != "Danseuse" } Halî-Ammi vient te réveiller <>
+{ visited(A01S01N068) and character != "Danseuse" and character == "Nadîtum" or visited(A01S01N052) and character != "Danseuse" and character == "Nadîtum" } en frappant timidement à la porte de ta chambre.
+{ visited(A01S01N068) and character != "Danseuse" and character != "Nadîtum" or visited(A01S01N052) and character != "Danseuse" and character != "Nadîtum" } en te proposant quelques dattes pour le déjeuner.
+{ visited(A01S01N068) and character != "Danseuse" or visited(A01S01N052) and character != "Danseuse" } Tu as dormi <>
+{ visited(A01S01N068) and character != "Danseuse" and character == "Nadîtum" or visited(A01S01N052) and character != "Danseuse" and character == "Nadîtum" } longtemps et tes gens ont déjà commencé à empaqueter tes maigres affaires.
+{ visited(A01S01N068) and character != "Danseuse" and character == "Marchand" or visited(A01S01N052) and character != "Danseuse" and character == "Marchand" } longtemps et tu apprécies l’accueil de ton hôte.
+{ visited(A01S01N068) and character != "Danseuse" and character == "Soldat" or visited(A01S01N052) and character != "Danseuse" and character == "Soldat" } longtemps et tu apprécies l’accueil de ton hôte.
+{ visited(A01S01N068) and character != "Danseuse" and type == "Mystique" or visited(A01S01N052) and character != "Danseuse" and type == "Mystique" } plus longtemps que tu ne le voulais, mais apprécies l’accueil de ton hôte.
+{ visited(A01S01N068) and character != "Danseuse" or visited(A01S01N052) and character != "Danseuse" } Avant de quitter les lieux, tu remercies chaleureusement Halî-Ammi et sa famille. Au matin, <>
+{ character == "Danseuse" and visited(A01S01N068) } Le lendemain, Asu te réveille à l’aube. Elle a compris que tu faisais partie de la troupe des artistes et veille à ce que tu sois de retour au plus vite à la palmeraie.
+{ visited(A01S01N032) or !visited(A01S01N068) } Le lendemain, l’agitation qui règne dans la ville te réveille tôt. Tu comprends rapidement que toute la procession se prépare à repartir. Avant cela, <>
+{ !visited(A01S01N068) and character == "Danseuse" } Le lendemain, l’agitation qui règne près des tentes te réveille presque à l’aube. Les différents officiants s’affairent à replier les tentes et empaqueter les affaires du dieu et de sa suite, tandis que les musiciens remballent costumes et instruments. Au matin, <>
+{ !visited(A01S01N052) and type == "Mystique" } Le lendemain, l’agitation qui règne près des tentes te réveille presque à l’aube. <>
+{ !visited(A01S01N052) and type == "Mystique" and character == "Exorciste" } Les différents officiants s’affairent <>
+{ !visited(A01S01N052) and type == "Mystique" and character == "Prêtresse" } Tout le monde s’affaire <>
+{ !visited(A01S01N052) and type == "Mystique" } à replier les tentes et empaqueter les affaires du dieu et de sa suite. Au matin, <>
+on festoie encore un peu en Ennegi : quelques nouveaux chants, quelques nouvelles danses, quelques nouvelles offrandes. Puis, la statue de Sîn est de nouveau prête à embarquer, et toi <>
+{ character == "Nadîtum" } avec.
+{ character == "Prêtresse" } avec.
+{ character == "Marchand" } à reprendre la route.
+{ character == "Exorciste" } La prêtresse ne t’a pas fait appeler. Tout semble pour le mieux.
+{ type == "Physique" } à reprendre la route.
+La procession repart en direction de Larsa !
+-> END
+
+:: A01S01N071
+@illustration("La cérémonie")
+Une prêtresse joue ce soir le rôle de Ningirida. Elle est parée d’une longue robe de lin à volants qui lui couvre les jambes, le torse et l’épaule droite. Sur sa tête, un voile est posé et descend dans son dos, faisant sur son crâne une forme bizarre à cause de la tiare qu’elle porte en dessous. Des bijoux en perles et métaux précieux ornent ses bras et son cou.
+La musique a repris : lyres, tambours, flûtes et sistres. Enanedu s’est reculée, laissant seule face à la prêtresse l’impassible statue de bois au masque d’or. Ningirida danse, et d’autres danseuses se joignent à elles, lascives, suggestives : elles veulent séduire le dieu de la lune. Ningirida, d’un geste, retire le voile qui couvrait ses cheveux magnifiques. Une tiare est posée sur son front de laquelle émerge une paire de cornes de taureaux, la parure des divinités. Ningirida danse et chante et semble vouloir dire : Ô Sîn, dieu à la barque brillante, quelle joie de t’accueillir ici ! Ô Sîn, me feras-tu l’honneur d’une halte ? Viens, viens, mes bras sont ouverts pour toi. Viens, Sîn, reste avec moi. Dois-tu repartir ? N’es-tu pas heureux ici ? Ne suis-je pas belle ? Viens, ne poursuis pas ton voyage. Ne retourne pas sur la barque, ne pars pas. Ne pars pas Sîn. Ne pars pas.
+Encore estompée, inéluctablement, la lune se dessine dans le ciel.
+* [Le lendemain] -> A01S01N070
+
+:: A01S01N072
+{ type == "Social" } Il s’arrête comme il te voit approcher de lui.
+{ type == "Social" } « Excusez-moi pour tout à l’heure, dis-tu. Je n’ai pas su vous aider.
+{ type == "Social" } — Vous n’avez pas à vous excuser ! Ce n’était pas à vous d’intervenir. Ces foutus marchands se croient tout permis, ils profitent qu’Ennegi n’est qu’une petite ville et n’a plus accueilli de cérémonie de cette ampleur depuis des années pour essayer de nous entourlouper ! Et puis, je n’ai pas confiance en ces hommes de l’Ouest…
+{ type == "Social" } — Les hommes de l’Ouest ?
+{ type == "Social" } — Tous des sauvages si vous voulez mon avis… Alors comme ça il y a un nouveau roi à Mari ? J’attends de voir ce que ça va donner… Mais si vous voulez bien m’excuser, j’ai à faire, je dois rattraper le retard de ce contretemps.
+{ type == "Social" } — Faites, bien entendu. »
+{ type == "Social" } * [Les préparatifs] -> A01S01N065
+
+:: A01S01N073
+{ character == "Nadîtum" } « Malheureusement, t’annonce-t-il en te voyant revenir, la cité est trop petite pour que nous puissions installer tout ce monde dans le temple. Comme vous le voyez, la chapelle ne peut accueillir que des présents. J’ai cru comprendre que vos sœurs nadîtū s’étaient majoritairement établies à l’auberge, mais si vous voulez dormir ici, vous êtes la bienvenue. »
+{ character == "Nadîtum" } * [Accepter] -> A01S01N061
+{ character == "Nadîtum" } * [Refuser] -> A01S01N062
+
+:: A01S01N074
+{ character == "Marchand" } « Mmh, alors la déesse a accepté les bijoux ? Une chance... Mais puisque vous avez ses faveurs, installez-vous donc avec nous pour cette nuit, l’auberge doit être pleine à craquer.
+{ character == "Marchand" } — Ce serait un grand honneur, réponds-tu. Je n’ai besoin que d’un coin de tente et d’un abri pour mes bêtes.
+{ character == "Marchand" } — D’ailleurs, que vendez-vous ? te demande le prêtre.
+{ character == "Marchand" } — Des étoffes assyriennes, les plus belles qui soient. »
+{ character == "Marchand" } Tu sors de ton sac tes échantillons de laine teinte.
+{ character == "Marchand" } « Pour vous remercier de votre aide, je parlerai en votre faveur aux habilleurs du dieu. Venez nous voir avec votre marchandise, si vous le souhaitez. Pour l’heure, je dois vous laisser. Rappelez-moi votre nom ?
+{ character == "Marchand" } — Ša-pî-kalbi.
+{ character == "Marchand" } — Mmmh, original », fait-il en haussant les épaules et tournant les talons.
+{ character == "Marchand" } * [Les préparatifs] -> A01S01N065
+
+:: A01S01N075
+{ character == "Nadîtum" } Tu déposes dans la chapelle la petite figurine d’orante en prière que tu as fait fabriquer spécialement pour l’occasion et qui porte ton nom et ta dédicace. En arrière du bâtiment, les tentes prestigieuses d’Enanedu et sa suite sont en train d’être montées.
+{ character == "Nadîtum" } * [Les préparatifs] -> A01S01N065
+
+:: A01S01N076
+@illustration("La palmeraie")
+{ type == "Mystique" } Pour vous, <>
+{ type == "Mystique" and character == "Exorciste" } exorcistes <>
+{ type == "Mystique" and character == "Prêtresse" } prêtresses et prêtres purificateurs <>
+{ type == "Mystique" } , l’instant est capital : vous allez devoir <>
+{ type == "Mystique" and character == "Exorciste" } vous assurer, par vos observations, que la cérémonie de ce soir n’est compromise par aucune influence démoniaque. Le mouton sacrificiel a été mené devant les devins et commence à être dépecé. La viande servira pour le repas du dieu et des prêtres, mais le foie, lui, est réservé à l’étude divinatoire. Tandis que les prêtres officient, récitent, purifient, préparent, et que devins plongent les mains dans les entrailles encore chaudes de la bête, ici et là on discute, on marchande, on s’accoste. Des hommes partagent la bière sous des auvents de toile, d’autres jouent aux dés. Des femmes filent à l’ombre des palmiers dattiers. On attend que le soleil se couche.
+{ type == "Mystique" and character == "Exorciste" } * [En observant les alentours] -> A01S01N122
+{ type == "Mystique" and character == "Prêtresse" } tout faire pour que la cérémonie de ce soir soit placée sous les meilleurs auspices. Il est essentiel de respecter scrupuleusement chaque étape des rituels de purification, sans quoi le mal pourrait s’infiltrer et corrompre la cérémonie. Chacun a son rôle : grande prêtresse, administrateur, lamentateurs, purificateurs, chantres et échansons, mais aussi exorcistes, dont le statut est souvent proche de celui des prêtres. Ton rôle à toi est de préserver les lieux et les outils du culte de toute souillure, de veiller à la pureté du dieu et de tous ses officiants. Alors que tu commandes à deux esclaves de venir déposer près de toi une immense jarre d’eau, un cri retentit non loin de la chapelle de Ningirida : « Au serpent ! ».
+{ type == "Mystique" and character == "Prêtresse" } * [Ignorer le cri] -> A01S01N130
+{ type == "Mystique" and character == "Prêtresse" } * [Te précipiter vers la chapelle] -> A01S01N131
+
+:: A01S01N077
+{ type == "Physique" } Halî-Ammi t’accompagne ensuite à la palmeraie. Vous vous hâtez, car le silence qui envahit les rues, les bruits qui s’élèvent depuis l’extérieur de la ville et le soleil couchant vous informent que la cérémonie va bientôt commencer.
+{ type == "Physique" } * [Dans la palmeraie] -> A01S01N078
+
+:: A01S01N078
+@illustration("La palmeraie")
+{ type == "Physique" } Vous pénétrez dans la palmeraie alors que les plus hauts dignitaires prennent place près de la statue de Sîn, et que la population d’Ennegi et les processionnaires s’installent sous les palmiers ou les auvents pour admirer le spectacle à venir.
+{ type == "Physique" and character == "Soldat" } Toi, tu te places un peu en retrait, de sorte à pouvoir observer la cérémonie et surveiller tous ceux qui essaieraient de la gâcher.
+{ type == "Physique" and character == "Soldat" } * [Admirer la cérémonie] -> A01S01N056
+{ type == "Physique" and character == "Danseuse" } * [La cérémonie] -> A01S01N056
+
+:: A01S01N079
+{ type == "Physique" } Doucement, la barque de la prêtresse accoste, accueillie par les prêtres de Ningirida. Quant à toi, tu suis le groupe des musiciens et des prêtres, qui bifurquent vers l’arrière de la cité. Du coin de l’œil, tu remarques que la grande prêtresse Enanedu quitte le refuge de sa tente flottante et descend sur le quai, suivie par une esclave qui tient au-dessus d’elle une ombrelle richement ouvragée. La statue de Sîn est déchargée, et bientôt toute une foule autour d’elle encombre le port. Mais tu as déjà quitté les lieux.
+{ type == "Physique" } * [Dans la palmeraie] -> A01S01N080
+
+:: A01S01N080
+@illustration("La palmeraie")
+{ type == "Physique" } Sans passer par le cœur de la petite ville d’Ennegi, <>
+{ type == "Physique" and character == "Soldat" } tu contournes <>
+{ type == "Physique" and character == "Danseuse" } tu rejoins les autres danseurs et musiciens qui contournent <>
+{ type == "Physique" } les bâtiments d’argile en direction des jardins et vergers. Pendant que la statue du dieu est promenée à travers la cité, <>
+{ type == "Physique" and character == "Soldat" } dans la palmeraie, on décharge les affaires, on monte les tentes, sous ton œil sécurisant.
+{ type == "Physique" and character == "Danseuse" } vous déchargez vos tentes, vos instruments, vos costumes.
+{ type == "Physique" } La palmeraie est belle, verte, ponctuée çà et là des traces d’anciennes habitations qui ont laissé dans l’herbe leur empreinte d’argile. Les habitants d’Ennegi terminent de parquer les volailles et les quelques chèvres qui ont investi les lieux, tandis que le gros de la procession, de ses marcheurs et de ses chariots inonde la palmeraie. La petite chapelle semble poser un regard bienveillant sur toute cette agitation.
+//TODO interaction image
+{ type == "Physique" } * [Clique sur la foule] -> A01S01N081
+{ type == "Physique" } * [Clique sur la chapelle] -> A01S01N082
+{ type == "Physique" } -> END
+
+:: A01S01N081
+{ character == "Soldat" } Alors que les prêtres et les artistes s’installent non loin de la petite chapelle de briques qui fait office de lieu de culte pour Ningirida, la déesse tutélaire de la ville, tu proposes ton aide à qui en voudra. Cela te permet également de garder un œil sur les éventuels voleurs qui auraient envie de venir fouiner dans les affaires du culte.
+{ character == "Danseuse" } Alors que les prêtres s’installent de leur côté, tu aides les autres danseuses à monter les tentes qui vous serviront de loge et de dortoirs. Vous n’êtes pas très loin de la petite chapelle de briques qui fait office de lieu de culte pour la déesse tutélaire de la ville : Ningirida.
+{ type == "Physique" } Le soleil décline doucement à l’horizon, et il fait encore chaud.
+{ type == "Physique" } * [Soudain…] -> A01S01N083
+
+:: A01S01N082
+{ character == "Soldat" } Tu t’installes tout près de la chapelle, en fait une simple bâtisse en brique décorée. Tu jettes un regard aux offrandes déjà déposées, certaines datant visiblement de plusieurs mois. De la nourriture, de l’encens, certaines petites figurines… Alors qu’un jeune esclave est envoyé par les prêtres de Sîn pour y déposer à son tour quelques présents, agenouillé dans la poussière pour faire un peu de place, tu le vois sursauter brusquement.
+{ character == "Danseuse" } Tu retires d’un baluchon la mince offrande que tu souhaites offrir à la déesse tutélaire de la ville : une petite figurine d’argile que tu as modelée toi-même. Dans la chapelle, en fait une simple bâtisse en brique décorée, quelques présents ont déjà été déposés, certains semblent dater de plusieurs mois. Tu mets de côté les objets anciens et balaies les cendres d’encens d’un geste de la main pour déposer à ton tour ton présent à Ningirida. Un mouvement dans la poussière te fait sursauter.
+{ type == "Physique" } Un serpent file d’entre les briques de la chapelle et glisse à toute vitesse dans l’herbe de la palmeraie. À quelques pas de là, un homme peine à retenir un onagre sauvage rétif à la corde. Tu vois arriver le désastre : le serpent se dirige droit vers la bête.
+{ type == "Physique" } * [Arrêter le serpent] -> A01S01N084
+{ type == "Physique" } * [Alerter l’homme] -> A01S01N085
+
+:: A01S01N083
+{ type == "Physique" } Soudain, un braiment tonitruant résonne dans la palmeraie, rapidement suivi de cris et chocs. Tu repères immédiatement l’animal : un onagre émerge sur la place, traînant derrière lui la corde qui devait le retenir, les yeux révulsés, les oreilles en arrière. Rendu fou par la peur, il fait de grands bonds, cabre, saute, et fonce vers la chapelle.
+{ type == "Physique" } * [Le maîtriser] -> A01S01N086
+{ type == "Physique" } * [Le calmer] -> A01S01N087
+
+:: A01S01N084
+{ type == "Physique" } Tu bondis à la suite du reptile, bien décidé à l’aplatir sous ta semelle.
+{ type == "Physique" } * [Bondir] -> mg_EpreuveAthlétisme_A01S01N088_A01S01N089
+
+:: A01S01N085
+{ type == "Physique" } « Au serpent ! » cries-tu. Plusieurs têtes se retournent vers toi, et l’homme entraîne son onagre loin du reptile qu’il voit onduler dans l’herbe. La bête ne comprend pas trop pourquoi elle est ainsi tirée et renâcle de mécontentement. L’homme te remercie d’un geste de la main et s’éloigne. En revanche, un autre s’approche de toi. Tu le reconnais pour l’avoir vu sur les barques des plus hauts dignitaires.
+{ type == "Physique" } * [Discuter avec l’homme] -> A01S01N090
+
+:: A01S01N086
+{ type == "Physique" } Sans réfléchir, tu bondis vers l’animal et tentes de le détourner de la chapelle et des offrandes qu’elle contient.
+{ type == "Physique" } * [Le maîtriser] -> mg_EpreuveForce_A01S01N091_A01S01N092
+
+:: A01S01N087
+{ type == "Physique" } « Ola ! Ola ! » fais-tu en écartant les bras. « Tout doux ! »
+{ type == "Physique" } * [Le calmer] -> mg_EpreuveEmpathie_A01S01N093_A01S01N094
+
+:: A01S01N088
+{ type == "Physique" } Le serpent se faufile à toute vitesse, mais tu as de plus grandes jambes. Tu lui sautes presque dessus, écrases sa tête sous ton talon. Ta course t’a fait arriver tout près de l’homme et de son onagre, quelque peu agité par ton arrivée précipitée. « Un couteau ! Un bâton ! » ordonnes-tu. L’homme sursaute, voit le corps du serpent qui s’agite sous ton pied et te passe le bâton qu’il utilise pour faire avancer sa bête. Il amène l’onagre un peu plus loin afin que la vue du reptile ne le rende pas fou de terreur et tu tues le serpent d’un savant coup de bâton.
+{ type == "Physique" } * [Discuter avec le propriétaire de l’onagre] -> A01S01N095
+
+:: A01S01N089
+{ type == "Physique" } Le serpent se faufile à toute vitesse, il va bien trop vite pour toi et la catastrophe redoutée arrive : l’onagre aperçoit le serpent qui semble vouloir le narguer et passe tout près de lui. L’équidé émet un braiment puissant, se cabre, se défait de l’emprise de son maître et saute en tous sens. Enfin, il galope droit vers la chapelle.
+{ type == "Physique" } * [Le maîtriser] -> A01S01N086
+{ type == "Physique" } * [Le calmer] -> A01S01N087
+
+:: A01S01N090
+{ type == "Physique" } « Tu as vu un serpent ? te demande-t-il. Comment était-il ? Qu’a-t-il fait ? Il est très important que tu me dises en détail ce que tu as vu, afin que j’interprète au mieux ce présage. » Tu sais que certains devins tirent des prédictions de l’attitude des bêtes sauvages et notamment des serpents. L’homme verse probablement dans la divination. Tu donnes toutes les précisions dont tu disposes.
+{ type == "Physique" } « Mmm, fait le devin, visiblement inquiet. Un serpent qui sort d’une chapelle ne saurait être un bon présage. Je vais devoir en entretenir mes confrères, pour savoir s’ils ont déjà été confrontés à un cas similaire. Si la déesse Ningirida est inquiétée, nous devrons prendre toutes les précautions pour que cette funeste prédiction ne se réalise pas. Sois remercié, <>
+{ type == "Physique" and character == "Soldat" } l’ami, tu peux retourner à tes bêtes. »
+{ type == "Physique" and character == "Danseuse" } jeune femme, retourne donc filer à l’ombre, mais gare aux serpents ! »
+{ type == "Physique" } L’homme n’a vraisemblablement pas compris que tu n’étais pas un.e habitant.e d’Ennegi, mais tu ne relèves pas la remarque.
+{ type == "Physique" } « Merci devin, réponds-tu simplement.
+{ type == "Physique" } — Appelle-moi Šamaš-šum-uṣur. »
+{ type == "Physique" } Tu acquiesces poliment tandis que le dénommé s’éloigne à grands pas vers les autres devins et exorcistes de la procession.
+{ type == "Physique" } * [Te promener dans la cité] -> A01S01N096
+{ type == "Physique" } * [Rester dans la palmeraie] -> A01S01N097
+
+:: A01S01N091
+{ type == "Physique" } Tes bras se referment autour du cou puissant de l’onagre, tes doigts empoignent sa crinière. D’un pied, tu prends appui contre la façade de la chapelle et pousse de toutes tes forces pour détourner l’animal. Ton geste le surprend et le fait basculer, t’entraînant dans sa chute. Tu tombes sur son flanc et le retiens au sol pendant quelques secondes tandis que ses sabots fendent l’air et qu’il s’agite pour se relever. Ces secondes suffisent pour que trois ou quatre hommes se précipitent à ton secours et maîtrisent avec toi l’animal.
+{ type == "Physique" } * [Un peu de répit] -> A01S01N098
+
+:: A01S01N092
+{ type == "Physique" } Tes bras se referment autour du cou puissant de l’animal, tes doigts empoignent sa crinière. L’onagre cabre alors, te décochant un méchant coup de genou qui te fauche le menton, tandis que son sabot heurte ta poitrine. La douleur te coupe le souffle. Au moins, ton geste l’a détourné de la chapelle ; gisant sur le sol, tu remarques que des hommes l’ont rattrapé et s’apprêtent à le maîtriser. Tu te relèves en massant ton menton douloureux. Une forte chaleur envahit ta mâchoire crispée. Un peu de sang s’écoule de ta poitrine. Tu auras un bel hématome.
+{ type == "Physique" } * [Un peu de répit] -> A01S01N099
+
+:: A01S01N093
+{ type == "Physique" } L’animal semble hésiter une seconde et freine sa course. Il donne au sol un coup de sabot rageur et tu en profites pour attraper la corde qui pend à son côté, tout en continuant à murmurer d’une voix apaisante. Tu ne tires pas sur la corde, tu la tiens simplement fermement pour lui rappeler qui est le maître et qu’il n’y a plus de danger. Bientôt, trois ou quatre hommes se précipitent pour t’aider et éloignent l’animal de la chapelle.
+{ type == "Physique" } * [Un peu de répit] -> A01S01N098
+
+:: A01S01N094
+{ type == "Physique" } L’animal semble hésiter une seconde et modifie sa course. Au lieu de foncer vers la chapelle, il court droit sur toi ! Tu n’as que le temps de te jeter au sol pour l’éviter, saisissant au passage la corde qui pend à son côté. Celle-ci t’écorche méchamment les paumes, et l’élan de l’onagre te fait glisser dans la poussière. Tu lâches immédiatement. Au moins a-t-il été ralenti et trois ou quatre hommes se précipitent bientôt pour le maîtriser. La chapelle est saine est sauve, mais tu as dû accuser de douloureuses blessures.
+{ type == "Physique" } * [Un peu de répit] -> A01S01N099
+
+:: A01S01N095
+{ type == "Physique" } « Eh bien ! » dit l’homme en revenant vers toi, ramenant sans cesse à lui l’équidé qui essaie de se dégager de son étreinte. « Tu m’as évité un sacré problème. Si ma bête avait vu ce serpent… Je ne suis pas sûr que j’aurais pu la retenir !
+{ type == "Physique" } — Ce n’est rien, dis-tu en lui rendant son bâton.
+{ type == "Physique" } — Ce n’est pas rien ! Je te suis redevable. Mon nom est Ammi ; je dois m’occuper de la vente de cet onagre, mais tu es le.la bienvenu.e chez moi. Mon neveu et ma femme t’accueilleront. Vas-y de ma part ! Quel est ton nom ?
+{ type == "Physique" and character == "Soldat" } — Warad-Ninurta.
+{ type == "Physique" and character == "Danseuse" } — Habaṣirtu.
+{ type == "Physique" } — Eh bien <>
+{ type == "Physique" and character == "Soldat" } Warad-Ninurta <>
+{ type == "Physique" and character == "Danseuse" } Habaṣirtu <>
+{ type == "Physique" } , je t’offre quelques heures de réconfort avant la cérémonie de ce soir. Libre à toi d’en profiter ! Moi, j’ai un onagre à vendre ! »
+{ type == "Physique" } Tu le remercies d’un signe de tête.
+{ type == "Physique" } * [Te rendre chez Ammi] -> A01S01N100
+{ type == "Physique" } * [Te promener dans la cité] -> A01S01N096
+{ type == "Physique" } * [Rester à la palmeraie] -> A01S01N101
+
+:: A01S01N096
+{ type == "Physique" and visited(A01S01N090) } Puisque le devin te l’a demandé si gentiment, tu comptes bien profiter de quelques instants de liberté.
+{ type == "Physique" and visited(A01S01N095) } Aux alentours, personne ne semble faire attention à toi, tout le monde est très affairé. Quelques heures de libre, est-ce si répréhensible ?
+{ type == "Physique" and visited(A01S01N103) } Tu es reconnaissant.e des paroles du dénommé Ammi, mais tu ne peux t’empêcher de penser que tout cela ne serait pas arrivé sans lui, ou s’il avait réussi à tenir sa bête. D’ailleurs, il est déjà parti la retrouver.
+{ type == "Physique" and character == "Soldat" } Tu jettes un regard aux alentours : la palmeraie est plutôt tranquille, et tu n’es pas le seul à avoir été engagé pour assurer sa tranquillité. Tant qu’il n’y a pas d’incidents majeurs à déplorer, et tu viens d’en éviter un, tu auras ta ration d’orge et de bière. Sans pour autant accepter l’offre qui t’a été faite, tu peux te permettre une petite promenade !
+{ type == "Physique" and character == "Danseuse" } Tu jettes un regard en arrière : il y a bien assez de monde pour s’occuper des préparatifs, et puis, tu n’as pas à danser tout de suite ! Les autres danseuses ne te jettent pas un regard et tu quittes donc la palmeraie.
+{ type == "Physique" } * [Quitter la palmeraie] -> A01S01N102
+
+:: A01S01N097
+{ type == "Physique" } La tentation est là de jouer le jeu et retourner vaquer à quelque fausse occupation, <>
+{ type == "Physique" and character == "Soldat" } mais tu n’es pas venu ici pour rien, et si tu as envie que ta ration d’orge et de bière tombe, tu n’as pas intérêt à ce que le moindre incident se produise. Tu en as déjà évité un, mais cela ne veut pas dire qu’il ne peut y en avoir d’autres.
+{ type == "Physique" and character == "Danseuse" } mais tu n’as guère envie de faire faux bond à tes sœurs danseuses. Et puis Ennegi est une toute petite ville, tu auras bien mieux à voir plus tard !
+{ type == "Physique" } * [Les préparatifs] -> A01S01N065
+
+:: A01S01N098
+{ type == "Physique" and visited(A01S01N091) } L’onagre est relevé, maintenu, calmé.
+{ type == "Physique" and visited(A01S01N093) } L’onagre est calmé.
+{ type == "Physique" } Ces espèces d’ânes sauvages sont réputés pour leur caractère farouche et indomptable, mais, croisés avec des ânes domestiques, ils donnent naissance à des mulets plus robustes et endurants que la moyenne. Il n’est pas rare d’en voir parfois acheminés comme marchandise, tolérant alors la corde et la présence de l’homme. Celui-ci aura été effrayé par quelque chose. Tu remarques qu’un homme se précipite vers toi, l’air à la fois affolé et soulagé.
+{ type == "Physique" } * [Entamer la discussion] -> A01S01N103
+
+:: A01S01N099
+{ type == "Physique" } Un homme se précipite vers toi, l’air à la fois affolé et soulagé.
+{ type == "Physique" and visited(A01S01N092) } « J’ai vu ce que tu as fait ! dit-il, essoufflé. Sauter comme ça au cou d’une bête sauvage, il faut être sacrément courageu<>
+{ type == "Physique" and visited(A01S01N092) and character == "Soldat" } x !
+{ type == "Physique" and visited(A01S01N092) and character == "Danseuse" } se !
+{ type == "Physique" and visited(A01S01N092) } — Ou stupide, réponds-tu, amer.
+{ type == "Physique" and visited(A01S01N094) } « J’ai vu ce que tu as fait ! dit-il, essoufflé. C’était bien tenté, mais raisonner une bête effrayée… Cela est presque impossible. Tu aurais pu finir bien pire.
+{ type == "Physique" and visited(A01S01N094) } — Je m’en souviendrai, réponds-tu, amer.
+{ type == "Physique" } — Au moins la chapelle de notre déesse est-elle sauve ! Mon nom est Ammi, cette bête est à moi. Je comptais profiter de toute cette foule pour la vendre, mais un serpent l’a effrayée et elle s’est sauvée. Regarde-toi ! Je dois m’occuper de cette vente, mais si tu vas chez moi, ma femme et mon neveu t’accueilleront et s’occuperont de toi.
+{ type == "Physique" } — Merci, mais… J’ai à faire ici. »
+{ type == "Physique" and visited(A01S01N092) } Ton crâne bourdonne douloureusement et ton souffle est toujours court.
+{ type == "Physique" and visited(A01S01N094) } Ton dos te fait mal et tu sens le sang qui palpite à tes paumes.
+{ type == "Physique" and character == "Soldat" } « Vraiment ? répond l’homme. Tu ne seras pas bon à grand-chose dans cet état. Quel est ton nom ? demande-t-il.
+{ type == "Physique" and character == "Soldat" } — Warad-Ninurta.
+{ type == "Physique" and character == "Danseuse" } « Vraiment ? » répond l’homme. Il semble comprendre que tu es une danseuse.
+{ type == "Physique" and character == "Danseuse" } « Tu ne seras pas bonne à grand-chose dans cet état. Quel est ton nom ? demande-t-il.
+{ type == "Physique" and character == "Danseuse" } — Habaṣirtu.
+{ type == "Physique" } — Eh bien <>
+{ type == "Physique" and character == "Soldat" } Warad-Ninurta <>
+{ type == "Physique" and character == "Danseuse" } Habaṣirtu <>
+{ type == "Physique" } je t’offre quelques heures de réconfort avant la cérémonie de ce soir. Libre à toi d’en profiter ! Moi, j’ai un onagre à vendre ! »
+{ type == "Physique" } Tu le remercies d’un signe de tête.
+{ type == "Physique" } * [Te rendre chez Ammi] -> A01S01N104
+{ type == "Physique" } * [Rester à la palmeraie] -> A01S01N105
+
+:: A01S01N100
+{ type == "Physique" } Ammi t’explique rapidement comment te rendre chez lui et court auprès de sa bête, relativement apaisée.
+{ type == "Physique" and character == "Soldat" } Tu jettes un regard aux alentours : la palmeraie est plutôt tranquille, et tu n’es pas le seul à avoir été engagé pour assurer sa tranquillité. Tant qu’il n’y a pas d’incidents majeurs à déplorer, et tu viens d’en éviter un, tu auras ta ration d’orge et de bière. Tu peux te permettre une petite promenade !
+{ type == "Physique" and character == "Danseuse" } Tu jettes un regard en arrière : il y a bien assez de monde pour s’occuper des préparatifs, et puis, tu n’as pas à danser tout de suite ! Les autres danseuses ne te jettent pas un regard et tu quittes donc la palmeraie.
+{ type == "Physique" } * [Dans les rues d’Ennegi] -> A01S01N106
+
+:: A01S01N101
+{ character == "Soldat" } Tu n’es pas venu ici pour rien, et si tu as envie que ta ration d’orge et de bière tombe, tu n’as pas intérêt à ce que le moindre incident se produise. Tu en as déjà évité un, mais cela ne veut pas dire qu’il ne peut y en avoir d’autres.
+{ character == "Soldat" } « Je te remercie l’ami, mais je ne suis pas ici pour ça », réponds-tu.
+{ character == "Danseuse" and !visited(A01S01N103) } Ce que te propose Ammi est tentant. Une ou deux petites heures de liberté… Tu ne les aurais pas volées ! Néanmoins, n’as guère envie de faire faux bond à tes sœurs danseuses, de plus, tu ne sais pas quelles sont les réelles intentions de cet Ammi.
+{ character == "Danseuse" and visited(A01S01N103) } Tu n’as guère envie de faire faux bond à tes sœurs danseuses, de plus, tu ne sais pas quelles sont les réelles intentions de cet Ammi.
+{ character == "Danseuse" } Depuis toutes ces années, tu as appris à être méfiante, véritablement à l’aise qu’en compagnie de tes camarades de musique et de danse. Et puis Ennegi est une toute petite ville, tu auras bien mieux à voir plus tard !
+{ character == "Danseuse" } « Il y a beaucoup à faire avant la cérémonie de ce soir », rétorques-tu.
+{ type == "Physique" } Le dénommé Ammi hausse les épaules et part s’occuper de l’onagre apaisé. <>
+{ type == "Physique" and character == "Soldat" } Quant à toi, tu entames une ronde de surveillance.
+{ type == "Physique" and character == "Danseuse" } Quant à toi, tu retournes à tes préparatifs au rythme des chants des musiciens et des musiciennes.
+{ type == "Physique" } * [Les préparatifs] -> A01S01N065
+
+:: A01S01N102
+{ type == "Physique" } De fait, tu avances à contre-courant de la foule qui remonte les rues, suivant la lourde statue divine. Tout Ennegi ou presque foule la terre battue, les enfants pataugent dans la rigole creusée depuis le quai. On offre et on mange des dattes ; ces fruits que l’homme est obligé de féconder à la main sont le symbole de la sexualité, de l’érotisme, du destin qui attend la statue lunaire lors de cette première cérémonie.
+{ type == "Physique" and character == "Soldat" } Tu attrapes quelques fruits, si dodus que leur peau se craquèle. Adossé à une des maisons de briques crues, suçotant les noyaux sucrés, tu observes le spectacle des gens joyeux.
+{ type == "Physique" and character == "Danseuse" } Tu aurais presque envie d’esquisser quelques mouvements, simplement pour le plaisir de n’être pas obligée de le faire. Adossée à une des maisons de briques crues, tu observes le spectacle des gens joyeux.
+{ type == "Physique" } * [Près de l’auberge] -> A01S01N107
+
+:: A01S01N103
+{ type == "Physique" } « J’ai vu ce que tu as fait ! dit-il, essoufflé. <>
+{ type == "Physique" and visited(A01S01N091) and character == "Soldat" } Sauter comme ça au cou d’une bête sauvage, il faut être sacrément courageux ! <>
+{ type == "Physique" and visited(A01S01N091) and character == "Danseuse" } Une jeune femme, sauter comme ça au cou d’une bête sauvage… ! <>
+{ type == "Physique" and visited(A01S01N093) } Sans toi, je ne sais pas si j’aurais rattrapé cette bête un jour !
+{ type == "Physique" } — Je n’allais pas le laisser dévaster la chapelle, réponds-tu simplement.
+{ type == "Physique" and character == "Danseuse" } (En ton for intérieur, tu penses surtout que tu n’aurais pas voulu qu’il piétine vos tentes et vos instruments.)
+{ type == "Physique" } — Certes, mais cela ne m’empêche pas de te remercier. Mon nom est Ammi, cette bête est à moi. Je comptais profiter de toute cette foule pour la vendre, mais un serpent l’a effrayée et elle s’est sauvée.
+{ type == "Physique" and visited(A01S01N091) } L’ami <>
+{ type == "Physique" and visited(A01S01N091) and character == "Danseuse" } Là <>
+{ type == "Physique" and visited(A01S01N091) } , tu es plein.e de poussière et de contusions ! <>
+{ type == "Physique" and visited(A01S01N093) } Sans toi, elle serait sans doute déjà en train de courir la steppe !
+{ type == "Physique" } Je dois m’occuper de cette vente, mais si tu vas chez moi, ma femme et mon neveu t’accueilleront et s’occuperont de toi. »
+{ type == "Physique" and character == "Danseuse" } — Merci, mais… J’ai à faire ici.
+{ type == "Physique" and character == "Danseuse" } — Bah ! » répond l’homme.
+{ type == "Physique" and character == "Danseuse" } Il semble comprendre que tu es une danseuse à la vue de ton corps svelte et musclé.
+{ type == "Physique" and character == "Danseuse" } « Quel est ton nom ? demande-t-il.
+{ type == "Physique" and character == "Danseuse" } — Habaṣirtu.
+{ type == "Physique" and character == "Danseuse" } — Eh bien Habaṣirtu je t’offre quelques heures de réconfort avant la cérémonie de ce soir. Libre à toi d’en profiter ! Moi, j’ai un onagre à vendre ! »
+{ type == "Physique" and character == "Soldat" } Tu le remercies d’un signe de tête.
+{ type == "Physique" } * [Te rendre chez Ammi] -> A01S01N100
+{ type == "Physique" } * [Te promener dans la cité] -> A01S01N096
+{ type == "Physique" } * [Rester dans la palmeraie] -> A01S01N101
+
+:: A01S01N104
+{ type == "Physique" } Ammi t’explique rapidement comment te rendre chez lui et court auprès de sa bête, relativement apaisée.
+{ type == "Physique" and character == "Soldat" } Tu jettes un regard aux alentours : la palmeraie est plutôt tranquille, et tu n’es pas le seul à avoir été engagé pour assurer sa tranquillité. Tant qu’il n’y a pas d’incidents majeurs à déplorer, et tu viens d’en éviter un, tu auras ta ration d’orge et de bière. Tu peux te permettre une petite promenade, même si tu es encore étourdi par les événements, <>
+{ type == "Physique" and character == "Danseuse" } Tu jettes un regard en arrière : il y a bien assez de monde pour s’occuper des préparatifs, et puis, tu n’as pas à danser tout de suite ! Les autres danseuses ne te jettent pas un regard et tu quittes donc la palmeraie, encore étourdie par les événements, <>
+{ type == "Physique" and visited(A01S01N092) } ta poitrine et ton menton toujours douloureux.
+{ type == "Physique" and visited(A01S01N094) } tes mains et ton dos toujours douloureux.
+{ type == "Physique" } * [Dans les rues d’Ennegi] -> A01S01N106
+
+:: A01S01N105
+{ type == "Physique" } Tu refuses malgré la douleur.
+{ type == "Physique" and character == "Soldat" } Tu n’es pas venu ici pour rien, et si tu as envie que ta ration d’orge et de bière tombe, tu n’as pas intérêt à ce que le moindre incident se produise. Tu en as déjà évité un, mais cela ne veut pas dire qu’il ne peut y en avoir d’autres.
+{ type == "Physique" and character == "Soldat" } « Je te remercie l’ami, mais je ne suis pas ici pour ça », réponds-tu.
+{ type == "Physique" and character == "Soldat" } Le dénommé Ammi hausse les épaules et part s’occuper de l’onagre apaisé. Quant à toi, tu entames une ronde de surveillance.
+{ type == "Physique" and character == "Danseuse" } Tu n’as guère envie de faire faux bond à tes sœurs danseuses, de plus, tu ne sais pas quelles sont les réelles intentions de cet Ammi. Depuis toutes ces années, tu as appris à être méfiante, véritablement à l’aise qu’en compagnie de tes camarades de musique et de danse.
+{ type == "Physique" and character == "Danseuse" } « Il y a beaucoup à faire avant la cérémonie de ce soir », rétorques-tu.
+{ type == "Physique" and character == "Danseuse" } Le dénommé Ammi hausse les épaules et part s’occuper de l’onagre apaisé. Quant à toi, tu retournes à tes préparatifs au rythme des chants des musiciens et des musiciennes.
+{ type == "Physique" and visited(A01S01N092) } Ta mâchoire te fait terriblement souffrir et tu passes fréquemment la main sur ton menton afin d’estimer les dégâts. Tu puises également un peu d’eau d’une outre pour laver l’hématome saignant qui rougit ta poitrine. Tu as de la chance de n’avoir aucune côte cassée <>
+{ type == "Physique" and visited(A01S01N092) and character == "Danseuse" } , car tu ne sais pas si un médecin aurait pu s’occuper de toi <>
+{ type == "Physique" and visited(A01S01N092) } .
+{ type == "Physique" and visited(A01S01N094) } Tu laves rapidement tes paumes écorchées et les enroules du linge que tu as utilisé pour cela. Tu tâches de ne pas penser à ton dos ankylosé. Tu as de la chance de n’avoir rien de cassé <>
+{ type == "Physique" and visited(A01S01N094) and character == "Nadîtum" } , car tu ne sais pas si un médecin aurait pu s’occuper de toi <>
+{ type == "Physique" and visited(A01S01N094) } .
+{ type == "Physique" } * [Les préparatifs] -> A01S01N065
+
+:: A01S01N106
+{ type == "Physique" } Tu remontes de quelques pas le long de la palmeraie, à l’extérieur de la ville, avant de t’enfoncer dans une petite ruelle. Aucune des rues n’est très large, à vrai dire, mais les plus larges sont traversées d’une petite rigole de briques qui remonte probablement depuis le port. Des maisons montées en briques et enduites de terre, comme de grandes masses d’argile, mêlent leurs toits en terrasses ; presque toutes sont mitoyennes. Certaines façades sont décorées de motifs géométriques réalisés en briques. À certains endroits, les rigoles irriguent de petits jardins où l’on plante des oignons et des haricots. Enfin, il te semble reconnaître la maison d’Ammi.
+{ type == "Physique" } * [Approcher] -> A01S01N110
+
+:: A01S01N107
+Petit à petit, la foule te repousse aux abords de ce qui semble être une auberge, la seule d’Ennegi. Tu te réfugies dans une minuscule venelle annexe à la façade, à peine plus qu’un chemin pour les eaux usées. Tu perçois alors derrière toi des voix murmurant et tends l’oreille pour essayer d’en capter les paroles.
+* [Tendre l’oreille] -> mg_EpreuvePerception_A01S01N027_A01S01N028
+
+:: A01S01N108
+{ character == "Soldat" } Enfin, il est l’heure. Les plus hauts dignitaires prennent place près de la statue de Sîn, et la population d’Ennegi et les processionnaires s’installent sous les palmiers ou les auvents pour admirer le spectacle à venir. Toi, tu te places un peu en retrait, de sorte à pouvoir observer la cérémonie et surveiller tous ceux qui essaieraient de la gâcher.
+{ character == "Soldat" } * [La cérémonie] -> A01S01N056
+
+:: A01S01N109
+{ character == "Danseuse" } Enfin, il est l’heure. Les plus hauts dignitaires prennent place près de la statue de Sîn, et la population d’Ennegi et les processionnaires s’installent sous les palmiers ou les auvents pour admirer le spectacle à venir. Quant à toi, tu es déjà sous la tente, te vêtant de tes habits de danse et de tes bijoux.
+{ character == "Danseuse" } * [La cérémonie] -> A01S01N056
+
+:: A01S01N110
+@illustration("Halî-Ammi")
+{ type == "Physique" } Assis sur le seuil, un jeune homme, probablement le neveu qu’il a mentionné, modèle une plaquette d’argile entre ses doigts. Tu entends que l’on s’agite à l’intérieur, en cuisine probablement. Le jeune homme lève la tête en te voyant approcher.
+{ type == "Physique" and visited(A01S01N091) or type == "Physique" and visited(A01S01N093) or type == "Physique" and visited(A01S01N095) } « Tu es perdu ? demande-t-il. La cérémonie, c’est de l’autre côté.
+{ type == "Physique" and visited(A01S01N091) and character == "Danseuse" or type == "Physique" and visited(A01S01N093) and character == "Danseuse" or type == "Physique" and visited(A01S01N095) and character == "Danseuse" } « Qu’est-ce que tu veux jeune fille ?
+{ type == "Physique" and visited(A01S01N091) or type == "Physique" and visited(A01S01N093) or type == "Physique" and visited(A01S01N095) } — Ton oncle m’envoie, réponds-tu.
+{ type == "Physique" and visited(A01S01N091) or type == "Physique" and visited(A01S01N093) or type == "Physique" and visited(A01S01N095) } — Ammi ? Qu’est-ce qu’il veut ?
+{ type == "Physique" and visited(A01S01N099) and character == "Soldat" } « Eh bien ! Qu’est-ce qui t’arrive ? s’étonne-t-il en voyant ton état.
+{ type == "Physique" and visited(A01S01N099) and character == "Danseuse" } « Qu’est-ce qui t’arrive jeune fille ? s’étonne-t-il en voyant ton état.
+{ type == "Physique" and visited(A01S01N099) } — Ton oncle m’envoie, réponds-tu.
+{ type == "Physique" and visited(A01S01N099) } — Ammi ? Qu’est-ce qu’il veut ? Ne me dis pas que c’est lui qui t’a fait ça ?
+{ type == "Physique" and visited(A01S01N099) } — Non, non. Il a eu quelques problèmes avec son onagre. La bête s’est détachée et c’est moi qui l’ai empêchée de saccager la chapelle de Ningirida.
+{ type == "Physique" and visited(A01S01N099) and character == "Soldat" } — Bel exploit, te dit le garçon qui s’est désintéressé de sa tablette. <>
+{ type == "Physique" and visited(A01S01N099) and character == "Danseuse" } — Bel exploit, te dit le garçon qui semble pourtant perplexe. <>
+{ type == "Physique" and visited(A01S01N099) } Mais peut-être un peu inconscient. <>
+{ type == "Physique" and visited(A01S01N091) or type == "Physique" and visited(A01S01N093) } — Il a eu quelques problèmes avec son onagre. La bête s’est détachée et c’est moi qui l’ai empêchée de saccager la chapelle de Ningirida.
+{ type == "Physique" and visited(A01S01N091) and visited(A01S01N091) and character == "Soldat" or type == "Physique" and visited(A01S01N093) and visited(A01S01N091) and character == "Soldat" } — Bel exploit, te dit le garçon qui s’est désintéressé de sa tablette. Qui explique la poussière et les bleus.
+{ type == "Physique" and visited(A01S01N091) and visited(A01S01N091) and character == "Danseuse" or type == "Physique" and visited(A01S01N093) and visited(A01S01N091) and character == "Danseuse" } — Eh bien… te dit le garçon qui ne sait pas s’il doit croire à ton histoire. Voilà qui explique la poussière et les bleus.
+{ type == "Physique" and visited(A01S01N091) and visited(A01S01N093) and character == "Soldat" or type == "Physique" and visited(A01S01N093) and visited(A01S01N093) and character == "Soldat" } — Bel exploit, te dit le garçon qui s’est désintéressé de sa tablette. Tu es donc un dompteur d’ânes ?
+{ type == "Physique" and visited(A01S01N091) and visited(A01S01N093) and character == "Danseuse" or type == "Physique" and visited(A01S01N093) and visited(A01S01N093) and character == "Danseuse" } — Eh bien… te dit le garçon qui ne sait pas s’il doit croire à ton histoire. Tu es donc une dompteuse d’ânes ?
+{ type == "Physique" and visited(A01S01N091) or type == "Physique" and visited(A01S01N093) or type == "Physique" and visited(A01S01N099) } J’avais dit à mon oncle de faire attention avec ces bêtes à moitié sauvages, il ne m’a pas écouté. Mais c’est un bel onagre, avec le monde qui afflue à Ennegi aujourd’hui, il trouvera certainement de quoi le vendre. Asu ! »
+{ type == "Physique" and visited(A01S01N095) } — Il aurait pu avoir des soucis avec un serpent qui a failli rendre fou son onagre. <>
+{ type == "Physique" and visited(A01S01N095) and character == "Soldat" } J’ai tué le serpent et il m’a offert de me rendre ici.
+{ type == "Physique" and visited(A01S01N095) and character == "Danseuse" } J’ai tué le serpent et… eh bien, me voilà.
+{ type == "Physique" and visited(A01S01N095) } — Bel exploit <>
+{ type == "Physique" and visited(A01S01N095) and character == "Danseuse" } , te dit le garçon qui semble pourtant perplexe <>
+{ type == "Physique" and visited(A01S01N095) } . J’ai toujours dit à mon oncle de faire attention avec ces bêtes à moitié sauvages, mais il n’en fait qu’à sa tête. Il ne pense qu’à l’argent de la vente. C’est vrai que c’est un bel onagre, avec le monde qui afflue à Ennegi aujourd’hui, il trouvera certainement de quoi le vendre. Il y a toujours des éleveurs qui cherchent à faire saillir leurs ânesses avec une bête plus grande et plus robuste. Mais passons, Asu ! »
+{ type == "Physique" } * [L’arrivée d’Asu] -> A01S01N112
+
+:: A01S01N111
+{ type == "Physique" } Finalement, les rues se désemplissent et tu continues ta marche à contresens. Tu traverses de petites rues aux maisons serrées, parfois décorées de briques en motifs géométriques. Tu passes devant des potagers individuels, où poussent en rangs serrés des oignons, des haricots ou du fenouil, parfois envahis de branches de cumin et de thym. Enfin, tu débouches sur le port.
+{ type == "Physique" } * [Profiter du calme] -> A01S01N113
+
+:: A01S01N112
+{ type == "Physique" } Une femme d’un certain âge, probablement sa tante, accourt à cet appel. Le jeune homme lui explique toute l’affaire, te présente, se présente par la même occasion. Il se nomme Halî-Ammi et est scribe à Larsa, en visite à Ennegi.
+{ type == "Physique" and visited(A01S01N091) or type == "Physique" and visited(A01S01N092) or type == "Physique" and visited(A01S01N093) or type == "Physique" and visited(A01S01N095) } Asu et lui <>
+{ type == "Physique" and visited(A01S01N091) and character == "Soldat" or type == "Physique" and visited(A01S01N092) and character == "Soldat" or type == "Physique" and visited(A01S01N093) and character == "Soldat" or type == "Physique" and visited(A01S01N095) and character == "Soldat" } te lavent les mains comme le veut la coutume et te font pénétrer dans la demeure, <>
+{ type == "Physique" and visited(A01S01N091) and character == "Danseuse" or type == "Physique" and visited(A01S01N092) and character == "Danseuse" or type == "Physique" and visited(A01S01N093) and character == "Danseuse" or type == "Physique" and visited(A01S01N095) and character == "Danseuse" } te lavent les mains en signe d’hospitalité. Ont-ils seulement remarqué que tu n’es qu’une danseuse ? Ils te font pénétrer dans la demeure, <>
+{ type == "Physique" and visited(A01S01N091) or type == "Physique" and visited(A01S01N092) or type == "Physique" and visited(A01S01N093) or type == "Physique" and visited(A01S01N095) } par ailleurs assez grande.
+{ type == "Physique" and visited(A01S01N094) } Asu et lui te lavent les mains, d’une part pour les débarrasser du sang, mais aussi pour respecter la coutume d’hospitalité. Ils te font pénétrer dans la demeure, par ailleurs assez grande.
+{ type == "Physique" and visited(A01S01N091) and character == "Soldat" or type == "Physique" and visited(A01S01N093) and character == "Soldat" or type == "Physique" and visited(A01S01N095) and character == "Soldat" } Asu t’offre des dattes et du lait de chèvre, <>
+{ type == "Physique" and visited(A01S01N091) and character == "Danseuse" or type == "Physique" and visited(A01S01N093) and character == "Danseuse" or type == "Physique" and visited(A01S01N095) and character == "Danseuse" } Asu est douce. Elle t’offre des dattes et du lait de chèvre, <>
+{ type == "Physique" and visited(A01S01N091) or type == "Physique" and visited(A01S01N093) or type == "Physique" and visited(A01S01N095) } tandis que tu échanges quelques mots avec son neveu.
+{ type == "Physique" and visited(A01S01N092) and character == "Soldat" } Ils t’offrent des dattes et du lait de chèvre. Puis, Asu applique un peu de miel sur l’hématome sanglant qui rougit ta poitrine, tandis que tu échanges quelques mots avec son neveu.
+{ type == "Physique" and visited(A01S01N092) and character == "Danseuse" } Elle t’offre des dattes et du lait de chèvre. Puis, elle demande à son neveu de déguerpir et applique un peu de miel sur l’hématome sanglant qui rougit ta poitrine. Lorsque Halî-Ammi revient, tu échanges quelques mots avec lui.
+{ type == "Physique" and visited(A01S01N094) and character == "Soldat" } Ils t’offrent des dattes et du lait de chèvre. Puis, Asu applique un peu de miel sur tes paumes écorchées, tandis que tu échanges quelques mots avec son neveu.
+{ type == "Physique" and visited(A01S01N094) and character == "Danseuse" } Asu t’offre des dattes et du lait de chèvre. Puis, elle applique un peu de miel sur tes paumes écorchées, tandis que tu échanges quelques mots avec son neveu.
+{ type == "Physique" } Tu lui demandes…
+{ type == "Physique" } * [… ce qu’il pense de la procession] -> A01S01N024
+
+:: A01S01N113
+{ type == "Physique" } Toutes les embarcations sont soigneusement amarrées et se balancent imperceptiblement sur le canal. Les lieux sont quasiment vides de toute présence humaine, hormis quelques bateleurs. Au loin sur le canal, une barque porte un unique passager, qui pousse sur sa perche comme s’il était pris d’une urgente envie de quitter les lieux.
+{ type == "Physique" and character == "Soldat" } Tu plisses les yeux : ce spectacle est bien étrange. <>
+{ type == "Physique" } Qu’a-t-il de si pressant à faire quand tout Ennegi est en fête pour un spectacle oublié depuis tant d’années ?
+{ type == "Physique" and character == "Soldat" } Tu observes un instant le navigateur, pourrait-il s’agir d’une des personnes que tu as surprises un peu plus tôt dans la ruelle ? Les minutes passent, mais tu ne le vois pas reparaître, tandis que le soleil de Šamaš décline à l’horizon.
+{ type == "Physique" and character == "Danseuse" } Toi, en revanche, tu pourrais rester seule ici des heures. Dans le silence des berges du canal, tu danses un peu, doucement, sans personne pour te voir. Tu profites de ce calme trop rare dans ton métier, tandis que le soleil de Šamaš décline à l’horizon.
+{ type == "Physique" } * [Retourner à la palmeraie] -> A01S01N114
+
+:: A01S01N114
+{ type == "Physique" } Au bout de longues minutes, tu te décides enfin à regagner la palmeraie. Tu as tout de même un rôle à tenir dans le spectacle des amours de Sîn et Ningirida ! Tu traverses Ennegi dans l’autre sens et déboules sur la place alors que les plus hauts dignitaires prennent place près de la statue de Sîn, et que la population d’Ennegi et les processionnaires s’installent sous les palmiers ou les auvents pour admirer le spectacle à venir.
+{ type == "Physique" and character == "Soldat" } Toi, tu te places un peu en retrait, de sorte à pouvoir observer la cérémonie et surveiller tous ceux qui essaieraient de la gâcher.
+{ type == "Physique" and character == "Danseuse" } Toi, tu te hâtes vers les tentes des danseuses, qui, te voyant venir, te jettent un regard interrogateur. Mais pas le temps pour les explications ; tu passes tes habits de danse et tes bijoux.
+{ type == "Physique" } * [La cérémonie] -> A01S01N056
+
+:: A01S01N115
+{ type == "Mystique" and character == "Exorciste" } Tu t’empresses de te détacher de la foule des marcheurs : certains bifurquent vers l’arrière de la cité, où se trouvent probablement les jardins et les vergers, mais toi, tu souhaites te rendre au port, voir la statue mise à terre, commencer à prendre contact avec la population d’Ennegi. Là, un aubergiste accueille les riches dignitaires descendus des barques pour leur vanter son établissement, mais cela ne t’intéresse pas. Les officiants de Sîn échangent quelques mots avec les prêtres de la déesse Ningirida, tandis que la statue du dieu est débarquée avec grand soin. Tu les rejoins.
+{ type == "Mystique" and character == "Prêtresse" } Tu descends de ton embarcation, toujours suivi de la jeune esclave qui porte à bout de bras sa lourde ombrelle. T’inclinant avec déférence, tu laisses descendre les autres suivants du dieu et surtout la grande prêtresse en personne. Depuis d’autres bateaux débarquent des devins, des nadîtū et autres riches dignitaires. Ils sont bien vite arrêtés par quelque aubergiste cherchant à remplir son établissement. Quant à vous, officiants du culte, vous êtes abordés par les prêtres de Ningirida. Ils conversent avec Enanedu afin de s’accorder sur quelques affaires pratiques dans le but de préparer l’arrivée de Sîn et la cérémonie. Pendant ce temps, la statue du dieu est mise à terre avec grand soin.
+{ type == "Mystique" } * [En marche vers les préparatifs] -> A01S01N116
+
+:: A01S01N116
+{ type == "Mystique" and character == "Exorciste" } Les prêtres, qu’ils soient au service du dieu ou de la déesse, discutent quelques instants de la marche à suivre. <>
+{ type == "Mystique" and character == "Prêtresse" } On discute quelques instants de la marche à suivre. La personne que tu protégeais du soleil de ton ombrelle en profite pour te signifier que tu peux te reposer. <>
+{ type == "Mystique" } La statue sera portée à travers les rues d’Ennegi, parmi la foule enthousiaste qui encombre déjà le port. <>
+{ type == "Mystique" and character == "Exorciste" } Quant à toi, quant aux autres exorcistes, aux devins et aux prêtres de toutes sortes, <>
+{ type == "Mystique" and character == "Prêtresse" } Quant à toi, quant aux autres prêtres, aux exorcistes et aux devins, <>
+{ type == "Mystique" } vous êtes conviés à contourner la petite ville pour vous rendre directement à la palmeraie où se déroulera la cérémonie avant laquelle vous avez fort à faire.
+{ type == "Mystique" } * [Te rendre directement à la palmeraie] -> A01S01N117
+{ type == "Mystique" } * [Suivre la statue divine parmi la foule] -> A01S01N118
+
+:: A01S01N117
+@illustration("La palmeraie")
+{ type == "Mystique" } Sans passer par le cœur de la petite ville d’Ennegi, tu intègres donc le groupe de serviteurs et autres processionnaires qui contournent les bâtiments d’argile en direction de la palmeraie. Celle-ci est belle, verte, ponctuée çà et là des traces d’anciennes habitations qui ont laissé dans l’herbe leur empreinte d’argile. Tandis que les habitants d’Ennegi terminent de parquer les volailles et les quelques chèvres qui ont investi les lieux, les esclaves et certains prêtres de la suite d’Enanedu montent <>
+{ type == "Mystique" and character == "Exorciste" } leurs <>
+{ type == "Mystique" and character == "Prêtresse" } vos <>
+{ type == "Mystique" } tentes en arrière de la petite chapelle de la déesse de la ville, une simple bâtisse en brique décorée.
+{ type == "Mystique" } * [Prier à la chapelle] -> A01S01N119
+
+:: A01S01N118
+{ type == "Mystique" } Bien sûr tu as à faire afin de préparer au mieux la cérémonie, <>
+{ type == "Mystique" and character == "Prêtresse" } mais tu es trop heureuse de pouvoir participer au premier voyage de ton dieu depuis bien longtemps. Tu as envie de t’enivrer de l’enthousiasme de la procession, alors que Sîn déambule dans la première cité étape de son périple, ou encore de découvrir Ennegi, cette ville où tu n’avais jamais mis le pied.
+{ type == "Mystique" and character == "Exorciste" } mais tu sais que les démons ne s’accrochent pas uniquement au corps des malades : des indices subtils sont à trouver sur le chemin de l’exorciste qui pénètre une nouvelle cité. Qu’il s’agisse de la présence de malades ou de malformés, du comportement de certains animaux, de l’observation d’une lueur, d’un éclair, d’un feu particulier. Et bien sûr, il y a ces indices propres aux démons : des empreintes particulières, un bruissement de plumes, une plainte comme le cri d’un oiseau en cage, un froid soudain. Voir tout à fait un démon, de manière fortuite, est assez rare en revanche.
+{ type == "Mystique" } * [Suivre la statue de Sîn] -> A01S01N120
+{ type == "Mystique" } * [Te promener à travers la cité] -> A01S01N121
+
+:: A01S01N119
+{ character == "Exorciste" } Pour vous, exorcistes, l’instant est capital, puisque vous allez devoir vous assurer, par vos observations, que la cérémonie de ce soir n’est compromise par aucune influence démoniaque. Avant toute chose, tu pars offrir une courte prière à Ningirida, patronne d’Ennegi, en sa chapelle.
+{ character == "Prêtresse" } Pour vous, prêtresses et prêtres purificateurs, l’instant est capital : vous allez devoir tout faire pour que la cérémonie de ce soir soit placée sous les meilleurs auspices. Il est essentiel de respecter scrupuleusement chaque étape des rituels de purification, sans quoi le mal pourrait s’infiltrer et corrompre la cérémonie. En attendant que tout le matériel dont tu as besoin soit déchargé, tu pars offrir une courte prière à Ningirida, patronne d’Ennegi, en sa chapelle.
+{ type == "Mystique" } Quelques offrandes y sont déjà déposées, plus ou moins anciennes, et de nombreuses autres y seront encore placées d’ici ce soir. Ta main droite enroulant ton poing gauche levé au niveau de ta poitrine, tu prends le temps d’une salutation à la déesse. Cette nuit, l’épouse du dieu Ninazu se défait de l’influence de son époux, comme le veut la tradition.
+{ character == "Exorciste" } * [Aux alentours] -> A01S01N122
+{ character == "Prêtresse" } * [Commencer les rites de purifications] -> A01S01N123
+
+:: A01S01N120
+{ type == "Mystique" } Marchant parmi les habitants de cité, trop heureux d’accueillir chez eux l’incarnation même du dieu de la lune, il te suffit de suivre la foule qui remonte la rue vers la palmeraie que tu devines un peu plus loin. Tout Ennegi ou presque foule la terre battue, les enfants pataugent dans la rigole creusée depuis le quai. On te propose des dattes ; ces fruits que l’homme est obligé de féconder à la main sont le symbole de la sexualité, de l’érotisme, du destin qui attend la statue lunaire lors de cette première cérémonie.
+{ character == "Exorciste" } * [Dans les rues d’Ennegi] -> A01S01N124
+{ character == "Prêtresse" } * [Dans les rues d’Ennegi] -> A01S01N125
+
+:: A01S01N121
+@illustration("La rue")
+{ type == "Mystique" } Le tour de la cité est rapide : une petite rigole serpente, rectiligne, à travers les rues. De part et d’autre des rues en terre battue, des maisons montées en briques et enduites de terre, comme de grandes masses d’argile, mêlent leurs toits en terrasses ; presque toutes sont mitoyennes. Certaines façades sont décorées de motifs géométriques réalisés en briques. À certains endroits, les rigoles irriguent de petits jardins où l’on plante des oignons et des haricots. Assis sur le seuil d’une maison, un jeune homme modèle une plaquette d’argile entre ses doigts : tu reconnais à sa gestuelle précise qu’il est scribe.
+{ type == "Mystique" } * [Clique sur le personnage] -> A01S01N126
+{ type == "Mystique" } * [Clique sur la rue] -> A01S01N127
+
+:: A01S01N122
+{ character == "Exorciste" } Tu remarques qu’à un autre endroit de la palmeraie une tente solitaire est également installée. Tout autour s’agitent quelques officiants, hommes et femmes. Une silhouette féminine est cachée sous un long voile de lin écru. Probablement la prêtresse qui jouera ce soir le rôle de la déesse de la ville d’Ennegi. Malgré la chaleur de l’après-midi, tu frissonnes. Ce courant froid qui te parcourt te trompe rarement, et tu approches de la tente de laine feutrée.
+{ character == "Exorciste" } * [Parler à la prêtresse] -> A01S01N128
+{ character == "Exorciste" } * [Observer la tente] -> A01S01N129
+
+:: A01S01N123
+{ character == "Prêtresse" } Enfin, on t’appelle pour te dire que tout est prêt et tu rejoins les autres prêtres. Chacun a son rôle : grande prêtresse, administrateur, lamentateurs, purificateurs, chantres et échansons, mais aussi exorcistes, dont le statut est souvent proche de celui des prêtres. Ton rôle à toi est de préserver les lieux et les outils du culte de toute souillure, de veiller à la pureté du dieu et de tous ses officiants. Alors que tu commandes à deux esclaves de venir déposer près de toi une immense jarre d’eau, un cri retentit non loin de la chapelle de Ningirida : « Au serpent ! ».
+{ character == "Prêtresse" } * [Ignorer le cri] -> A01S01N130
+{ character == "Prêtresse" } * [Te précipiter vers la chapelle] -> A01S01N131
+
+:: A01S01N124
+{ character == "Exorciste" } Il ne te semble rien relever d’anormal, mais tu consignes mentalement tout ce que tu vois, afin d’en discuter plus tard avec tes confrères. L’exorcisme ne se pratique pas toujours seul : il repose parfois sur l’échange des observations, sur la mise en commun des pratiques. Il t’arrive de devoir vérifier dans des tablettes consignant divers événements et leur interprétation pour t’aider dans tes rituels.
+{ character == "Exorciste" } * [Suivre la foule] -> A01S01N132
+
+:: A01S01N125
+{ character == "Prêtresse" } Tu navigues parmi les têtes aux épais cheveux noirs des hommes et aux belles boucles ondulées des femmes. Mais enfin, la foule s’écarte et te laisse apparaître la chapelle de la déesse d’Ennegi. Ce n’est qu’une petite bâtisse d’argile décorée, qui ne contient guère plus qu’une niche où sont déposées en ce jour de nombreuses offrandes. Ta main droite enroulant ton poing gauche levé au niveau de ta poitrine, tu prends le temps de réciter une courte prière en salutation à la déesse. Cette nuit, l’épouse du dieu Ninazu se défait de l’influence de son époux, comme le veut la tradition. En arrière du bâtiment, les tentes prestigieuses d’Enanedu et sa suite sont en train d’être montées.
+{ character == "Prêtresse" } * [Dans la palmeraie] -> A01S01N119
+
+:: A01S01N126
+{ type == "Mystique" } « Tu ne vas pas voir le spectacle ? demandes-tu.
+{ type == "Mystique" } — Je vois que je ne suis pas le seul, répond l’homme.
+{ type == "Mystique" and character == "Exorciste" } — J’y allais, mais j’aime connaître la cité où je mets les pieds.
+{ type == "Mystique" and character == "Exorciste" } — Je vois. »
+{ type == "Mystique" and character == "Exorciste" } Il a très certainement remarqué la robe rouge que tu portes et qui est celle des exorcistes.
+{ type == "Mystique" and character == "Prêtresse" } — J’y allais, mais j’avais besoin de marcher après ce long voyage en barque.
+{ type == "Mystique" and character == "Prêtresse" } — Au moins étais-tu sur une barque. »
+{ type == "Mystique" and character == "Prêtresse" } Tu ne relèves pas la remarque un peu cynique.
+{ type == "Mystique" } L’homme se saisit d’un calame et commence à tracer quelques signes.
+{ type == "Mystique" } « Tu viens de quelle école ?
+{ type == "Mystique" } — De l’école de Larsa, répond l’autre après une brève hésitation. Je rends visite à mon oncle, pour la cérémonie.
+{ type == "Mystique" } — Ennegi doit te sembler bien petite par rapport à une ville comme Larsa. Mais je vois que tu ne souhaites pas forcément te noyer parmi la foule. »
+{ type == "Mystique" } Votre discussion se poursuit quelque temps. Il continue à tracer des signes serrés, faisant basculer d’une main experte la pointe du calame pour imprimer dans l’argile de petits clous. Signes sumériens et mots akkadiens se mêlent.
+{ type == "Mystique" } * [Lui demander ce qu’il pense de la procession] -> A01S01N024
+
+:: A01S01N127
+{ type == "Mystique" } Tu continues ta promenade, mais tu te rends vite compte que tu n’as plus grand-chose à voir. À part peut-être l’auberge que tu n’avais pas encore vue. Là, une certaine agitation règne encore, puisqu’on prépare le repas du soir pour les hôtes qui remplissent certainement toutes les chambres. Les bruits et les odeurs de cuisine t’ouvrent l’appétit. Les derniers habitants d’Ennegi abondent dans la rue devant l’auberge, tous se pressent vers la palmeraie que tu discernes au-delà des maisons.
+{ type == "Mystique" } * [Près de l’auberge] -> A01S01N133
+
+:: A01S01N128
+{ character == "Exorciste" } La femme cachée sous son voile tient ses mains serrées devant elle, dans l’attente. Des suivantes mènent sous la tente de petits tabourets de roseaux, des coffrets d’huiles parfumées et d’encens, probablement des écrins d’onguent, de khôl et de henné. La robe rouge que tu portes, tenue traditionnelle des exorcistes en fonction, t’octroie quelques œillades, mais te laisse ouvertes toutes les portes. Personne ne te retient tandis que tu t’approches de la prêtresse.
+{ character == "Exorciste" } * [Dialoguer] -> A01S01N134
+
+:: A01S01N129
+{ character == "Exorciste" } La femme cachée sous son voile tient ses mains serrées devant elle, dans l’attente. Des suivantes mènent sous la tente de petits tabourets de roseaux, des coffrets d’huiles parfumées et d’encens, probablement des écrins d’onguent, de khôl et de henné. La robe rouge que tu portes, tenue traditionnelle des exorcistes en fonction, t’octroie quelques œillades, mais te laisse ouvertes toutes les portes. Personne ne te retient tandis que tu fais irruption sous la tente.
+{ character == "Exorciste" } * [Dans la tente] -> A01S01N135
+
+:: A01S01N130
+{ character == "Prêtresse" } Tu lèves la tête en direction du cri et constates une certaine agitation : un conducteur d’âne ou peut-être d’onagre, alerté, entraîne sa bête à l’écart avant qu’elle ne rue de frayeur à la vue du reptile ; une autre personne frappe ce qui doit être le serpent à coup de bâton. L’observation des serpents permet aux devins de faire des présages intéressants, et tu vois déjà l’un d’eux se rendre sur place. Cela n’est pas de ton ressort, et puis, tu as encore à faire ici.
+{ character == "Prêtresse" } * [Poursuivre ton ouvrage] -> A01S01N136
+
+:: A01S01N131
+{ character == "Prêtresse" } Immédiatement, tu te précipites. Un serpent dans une chapelle, cela n’est pas souvent bon augure. Certes, ce sera au devin que tu vois déjà s’élancer de comprendre le sens de cette intrusion comme un présage. Mais il y a d’autres choses que tu peux repérer. En arrivant sur place, tu constates que c’est une esclave de la suite d’Enanedu qui a lancé l’alerte ; le serpent, lui, a disparu. Un homme entraîne son onagre à l’écart de la scène : si la bête, à moitié sauvage, avait vu le serpent, elle serait probablement devenue folle de terreur.
+{ character == "Prêtresse" } * [Déceler la souillure] -> A01S01N137
+
+:: A01S01N132
+{ character == "Exorciste" } Tu navigues parmi les têtes aux épais cheveux noirs des hommes et aux belles boucles ondulées des femmes. Mais enfin, la foule s’écarte et te laisse apparaître la palmeraie. Celle-ci est belle, verte, ponctuée çà et là des traces d’anciennes habitations qui ont laissé dans l’herbe leur empreinte d’argile. Tu distingues la chapelle de la déesse d’Ennegi. Ce n’est qu’une petite bâtisse d’argile décorée, qui ne contient guère plus qu’une niche où sont déposées en ce jour de nombreuses offrandes. Derrière elle, les tentes prestigieuses d’Enanedu et sa suite sont en train d’être montées.
+{ character == "Exorciste" } * [Dans la palmeraie] -> A01S01N119
+
+:: A01S01N133
+{ character == "Exorciste" } En passant devant une ruelle minuscule longeant l’auberge, tu crois distinguer deux silhouettes dans l’ombre parler avec agitation. Un courant d’air froid, malgré la chaleur étouffante qui règne entre les maisons, s’engouffre jusqu’à toi.
+{ character == "Prêtresse" } En passant devant une ruelle minuscule longeant l’auberge, tu crois distinguer deux silhouettes dans l’ombre parler avec agitation.
+* [Tendre l’oreille] -> mg_EpreuvePerception_A01S01N027_A01S01N028
+
+:: A01S01N134
+{ character == "Exorciste" } « Ma dame, dis-tu, c’est donc vous qui serez l’incarnation ce soir de la déesse Ningirida ?
+{ character == "Exorciste" } — Exorciste, répond la voix douce sous le voile, c’est bien cela. Mais ne vous ne faites pas pour moi, certains de vos confrères ont déjà pris soin de se renseigner sur ma santé, sur mes rêves… Il semble que la main d’aucun démon ne se soit saisie de moi.
+{ character == "Exorciste" } — Bien, bien… » fais-tu machinalement, mais le froid ne te quitte pas.
+{ character == "Exorciste" } Un roucoulement sinistre t’alerte et te fait lever la tête. Ce stridulement glacial qui évoque le chant contrefait de quelque colombe est le chant des morts, qui traînent dans la poussière des enfers leurs ailes sombres et inutiles. Ni la prêtresse, ni personne, bien sûr, n’a rien entendu. Ils n’ont jamais appris à connaître les manifestations des démons et des esprits. Le froid, progressivement, disparaît. L’esprit est parti, sans que tu n’aies pu le voir.
+{ character == "Exorciste" } — Un problème ? demande la prêtresse.
+{ character == "Exorciste" } — Pas encore, réponds-tu. Je ne remets pas en question la parole de mes confrères, s’ils disent que la main d’aucun spectre ou démon n’est sur vous. Mais ni vous ni moi n’aimerions que cela arrive. Qui est votre déesse ?
+{ character == "Exorciste" } — Ningirida est la déesse d’Ennegi mais elle est aussi la mienne.
+{ character == "Exorciste" } — Priez-la. Demandez sa protection, employez les mots magiques, les mots sumériens, vous les connaissez. Et permettez-moi… »
+{ character == "Exorciste" } * [Poursuivre] -> A01S01N139
+
+:: A01S01N135
+@illustration("Démon")
+{ character == "Exorciste" } Le frisson est brusque, intense, il te parcourt des pieds à la tête. Dans l’obscurité relative de la toile de tente, une silhouette se tient, ou plutôt disparaît à ton arrivée. Tout va très vite. Tu perçois le bruissement qu’elle fait en s’éclipsant, comme le frottement d’immenses plumes sur le sol. Tu entends le roucoulement sinistre de pigeon, qui est la supplique d’agonie des spectres des enfers. Tu vois un visage blanc et glacial darder sur toi ses yeux immenses et sombres. Et déjà, l’esprit a disparu, évanoui à travers la toile de tente, envolé vers tu ne sais quelle dimension.
+{ character == "Exorciste" } * [Sortir] -> A01S01N140
+
+:: A01S01N136
+{ character == "Prêtresse" } Tu purifies à grande eau, mais aussi à grande voix : tu chantes, accompagnée d’autres prêtres ou prêtresses, les paroles sumériennes rituelles. Non loin, le mouton sacrificiel est mis à mort et dépecé. La viande servira pour le repas du dieu et des prêtres, mais le foie, lui, est réservé à l’étude divinatoire. Les devins plongent leurs mains dans les entrailles encore chaudes de la bête, les exorcistes aussi s’affairent. Ici et là on discute, on marchande, on s’accoste. Des hommes partagent la bière sous des auvents de toile, d’autres jouent aux dés. Des femmes filent à l’ombre des palmiers dattiers. On attend que le soleil se couche.
+{ character == "Prêtresse" } * [La purification] -> A01S01N141
+
+:: A01S01N137
+{ character == "Prêtresse" and visited(A01S01N131) or character == "Prêtresse" and visited(A01S01N146) } S’il est un savoir secret que les purificateurs se transmettent, c’est bien celui de percevoir la souillure. Celle-ci peut prendre différentes formes : un objet sacré qui n’est pas à sa place, une amulette brisée, un propos déplacé, la porte d’un temple mal close, l’empreinte d’un intrus dans un sanctuaire, le froid là où doit souffler le chaud…
+{ character == "Prêtresse" and visited(A01S01N131) } Tu pénètres dans la chapelle. Tu n’y avais pas fait attention la première fois, mais tu sens dans ta bouche le goût de cendre et d’argile caractéristique de la présence de la souillure.
+{ character == "Prêtresse" and visited(A01S01N146) } Ici, tu en es certaine, la souillure est sur les instruments du culte. Tu sens dans ta bouche le goût de cendre et d’argile caractéristique de sa présence.
+{ character == "Prêtresse" } Tu essaies d’en déterminer l’origine.
+{ character == "Prêtresse" and visited(A01S01N131) and visited(A01S01N146) } Cela est certain, la souillure est sur les instruments du culte. De nouveau, ta bouche est sèche d’une cendre qui te couvre la langue. Décidément ! Tu essaies de déterminer l’origine de la souillure.
+{ character == "Prêtresse" and visited(A01S01N131) } * [Déceler la souillure] -> mg_EpreuvePurification_A01S01N142
+{ character == "Prêtresse" and visited(A01S01N146) } * [Déceler la souillure] -> mg_EpreuvePurification_A01S01N150
+
+:: A01S01N138
+{ type == "Mystique" } Tu navigues parmi les têtes aux épais cheveux noirs des hommes et aux belles boucles ondulées des femmes. Enfin, la foule s’écarte et te laisse apparaître la palmeraie et la chapelle de la déesse d’Ennegi. Ce n’est qu’une petite bâtisse d’argile décorée, qui ne contient guère plus qu’une niche où sont déposées en ce jour de nombreuses offrandes. Derrière elle, les tentes prestigieuses d’Enanedu et sa suite sont en train d’être montées.
+{ character == "Exorciste" } * [Dans la palmeraie] -> A01S01N076
+{ character == "Prêtresse" } * [Prier à la chapelle] -> A01S01N143
+
+:: A01S01N139
+{ character == "Exorciste" } Tu tends la main vers la cordelette qui lui enserre la taille. Elle la défait et te la confie. Avec la cordelette, tu réalises un nœud.
+{ character == "Exorciste" } « Si un lien sombre vous lie à quelque créature ou sorcier, nous allons le dénouer. Je crois, pour l’instant, que vous êtes en sécurité. Si vous vous sentez malade, si vous ne dormez pas… faites-moi mander. »
+{ character == "Exorciste" } Elle opine d’un signe de tête, visiblement inquiète. Tu pars en emportant avec toi la cordelette nouée.
+{ character == "Exorciste" and !visited(A01S01N118) } * [Dans la palmeraie] -> A01S01N144
+{ character == "Exorciste" and visited(A01S01N118) } * [Dans la palmeraie] -> A01S01N145
+
+:: A01S01N140
+{ character == "Exorciste" } La rencontre a été brutale, choquante. Il est rare que les spectres se laissent ainsi voir. Évidemment, les suivantes qui étaient avec toi dans la tente n’ont rien vu. Elles n’ont jamais reçu l’enseignement des exorcistes. Le froid a disparu. Tu sors immédiatement, te précipites vers la prêtresse.
+{ character == "Exorciste" } « Un problème ? demande la prêtresse.
+{ character == "Exorciste" } — Pas encore, réponds-tu.
+{ character == "Exorciste" } — Je sais ce que vous faites ici, mais rassurez-vous, certains de vos confrères ont déjà pris soin de se renseigner sur ma santé, sur mes rêves… Il semble que la main d’aucun démon ne se soit saisie de moi.
+{ character == "Exorciste" } — Je ne remets pas en question la parole de mes confrères, s’ils disent que la main d’aucun spectre ou démon n’est sur vous. Mais ni vous ni moi n’aimerions que cela arrive. Qui est votre déesse ?
+{ character == "Exorciste" } — Ningirida est la déesse d’Ennegi mais elle est aussi la mienne.
+{ character == "Exorciste" } — Priez-la. Demandez sa protection, employez les mots magiques, les mots sumériens, vous les connaissez. Et permettez-moi… »
+{ character == "Exorciste" } * [Poursuivre] -> A01S01N139
+
+:: A01S01N141
+{ character == "Prêtresse" } Psalmodiant toujours, tu en appelles à Sîn, ton dieu, mais aussi le principal concerné aujourd’hui. Tu fais venir à toi chaque officiant et verses sur ses mains l’eau que tu consacres par ta parole. Enfin, après avoir fait couler l’eau purificatrice sur les mains des suivants de Sîn, voici que la statue du dieu émerge dans la palmeraie. La foule enthousiaste qui l’accompagne est rapidement dispersée et la statue vous est menée.
+{ character == "Prêtresse" } * [La fin des préparatifs] -> A01S01N146
+
+:: A01S01N142
+{ character == "Prêtresse" } La manière dont sont déposées les offrandes à la déesse Ningirida te laisse penser que certaines ont été déplacées par quelqu’un qui n’avait pas de bonnes intentions.
+{ character == "Prêtresse" } L’une d’elles est complètement renversée. C’était une coupelle qui devait contenir de l’huile, désormais complètement disparue dans l’argile du sol où elle a laissé une trace sombre. Ce n’est certainement pas le serpent qui a fait ça, en plus, cela semble plus ancien.
+{ character == "Prêtresse" } C’est une certitude : il y a eu profanation, mais celle-ci a été brève, comme… interrompue.
+{ character == "Prêtresse" } * [Purifier la chapelle] -> A01S01N147
+
+:: A01S01N143
+{ character == "Prêtresse" } Ta main droite enroulant ton poing gauche levé au niveau de ta poitrine, tu prends le temps de réciter une courte prière en salutation à la déesse. Cette nuit, l’épouse du dieu Ninazu se défait de l’influence de son époux, comme le veut la tradition. En arrière du bâtiment, les tentes prestigieuses d’Enanedu et sa suite sont en train d’être montées.
+{ character == "Prêtresse" } * [Dans la palmeraie] -> A01S01N076
+
+:: A01S01N144
+{ character == "Exorciste" } Alors que tu quittes la prêtresse et les officiants de Ningirida qui murmurent à ton départ, tu constates que la statue de Sîn, sur les épaules de ses quatre porteurs, émerge depuis les rues d’Ennegi dans la palmeraie. Cet avertissement spectral ne t’a pas plu, mais rien n’indique qu’il s’agisse d’un esprit voulant compromettre la cérémonie. Un spectre qui n’aurait pas trouvé le repos peut en vouloir à n’importe quel habitant ou n’importe quel processionnaire. Par sécurité, tu aimerais pousser plus loin ton inspection.
+{ character == "Exorciste" } * [Retourner à la chapelle] -> A01S01N148
+{ character == "Exorciste" } * [Aller à la rencontre de la statue] -> A01S01N149
+
+:: A01S01N145
+{ character == "Exorciste" } Cet avertissement spectral ne t’a pas plu, mais rien n’indique qu’il s’agisse d’un esprit voulant compromettre la cérémonie. Un spectre qui n’aurait pas trouvé le repos peut en vouloir à n’importe quel habitant ou n’importe quel processionnaire. Par sécurité, tu aurais voulu pousser plus loin ton inspection, mais tu n’en as pas le temps, tu es attendu.
+{ character == "Exorciste" } * [Préparer l’exorcisme] -> A01S01N158
+
+:: A01S01N146
+{ character == "Prêtresse" } Doucement, le dieu Sîn est déposé sur une estrade d’argile. Devant toi des serviteurs amènent les coffres qui renferment tous les outils du culte : la vaisselle du dieu, ses habits, ses bijoux, ses instruments de musique, son sceptre, sa tiare, mais aussi les amulettes que toi et les autres prêtres et prêtresses passerez à votre cou, des brûloirs à encens, des pots remplis d’huile parfumée, de miel sacré, de lait de chèvre. La purification est un acte long, mais tu es confiante : tu connais par cœur les gestes rituels, où placer la main, où placer le regard, quel chant entonner, quand marquer un silence, quand inspirer et expirer. Pourtant, quelque chose te glace et te fait douter.
+{ character == "Prêtresse" } * [Déceler la souillure] -> A01S01N137
+
+:: A01S01N147
+{ character == "Prêtresse" } Étant donné que la chapelle de Ningirida est trop petite pour accueillir en son sein la cérémonie, l’impureté du lieu n’entacherait probablement pas les rituels de ce soir. Cependant, tu ne peux laisser la souillure dans un lieu sacré. La jeune esclave qui a vu le serpent est toujours là, t’observant en silence.
+{ character == "Prêtresse" } « Fais venir un prêtre de Ningirida, commandes-tu. Dis-lui que la chapelle doit être purifiée avant la cérémonie. »
+{ character == "Prêtresse" } La jeune fille acquiesce sans un mot et part en direction d’un autre endroit de la palmeraie où une tente isolée a été montée pour la prêtresse qui incarnera ce soir la déesse de la ville et pour sa suite.
+{ character == "Prêtresse" } * [Retourner à ton ouvrage] -> A01S01N151
+
+:: A01S01N148
+{ character == "Exorciste" } Tu reviens sur tes pas, vers la chapelle que tu as quittée. Des offrandes se sont ajoutées aux premières, d’ailleurs, plusieurs personnes en déposent justement de nouvelles.
+{ character == "Exorciste" } * [Déceler les influences démoniaques] -> mg_EpreuveExorcisme_A01S01N152
+
+:: A01S01N149
+{ character == "Exorciste" } La statue est suivie par une foule enthousiaste qui se déverse dans la palmeraie, bien vite chassée des abords des installations dévolues à la grande prêtresse Enanedu : la statue du dieu a besoin d’être préparée. Avant même que l’on procède aux purifications rituelles, tu t’approches de la statue de Sîn. Si le dieu a traversé la ville et la foule, peut-être une main démoniaque s’est-elle agrippée à son vêtement ?
+{ character == "Exorciste" } * [Déceler les influences démoniaques] -> mg_EpreuveExorcisme_A01S01N153
+
+:: A01S01N150
+{ character == "Prêtresse" } Quelqu’un n’a pas respecté les rites, les choses n’ont pas été rangées à leur place, ou dans le bon ordre, ou avec les bons mots.
+{ character == "Prêtresse" } D’ailleurs, ton inspection assidue te révèle des empreintes laissées sur la vaisselle du dieu. Son sceptre, également, lorsque tu le scrutes, te laisse voir des traces terreuses.
+{ character == "Prêtresse" } Quelqu’un qui n’a rien à voir avec le culte de Sîn a touché les instruments sacrés. Comment cela a-t-il pu arriver ? Tu n’en sais rien.
+{ character == "Prêtresse" } Quoiqu’il en soit, il est heureux que tu aies repéré cette anomalie : sans cela, tout le bon déroulement du rituel aurait pu être compromis au regard de ton dieu. Tu lèves vers lui les yeux : son regard de lapis-lazuli te pénètre, te laissant un mauvais pressentiment.
+{ character == "Prêtresse" } * [Terminer les préparatifs de purifications] -> A01S01N155
+
+:: A01S01N151
+{ character == "Prêtresse" } Tu retournes au travail que tu as laissé sur place, près de l’endroit qui doit accueillir la statue de Sîn. Tu purifies à grande eau, mais aussi à grande voix : tu chantes, accompagné d’autres prêtres ou prêtresses, les paroles sumériennes rituelles. Non loin, le mouton sacrificiel est mis à mort et dépecé. La viande servira pour le repas du dieu et des prêtres, mais le foie, lui, est réservé à l’étude divinatoire. Les devins plongent leurs mains dans les entrailles encore chaudes de la bête, les exorcistes aussi s’affairent. Ici et là on discute, on marchande, on s’accoste. Des hommes partagent la bière sous des auvents de toile, d’autres jouent aux dés. Des femmes filent à l’ombre des palmiers dattiers. On attend que le soleil se couche.
+{ character == "Prêtresse" } * [La purification] -> A01S01N141
+
+:: A01S01N152
+{ character == "Exorciste" } Si l’esprit qu’il te semble avoir perçu en a après la déesse, peut-être a-t-il traîné ses ailes jusqu’ici. Pourtant, aucun frisson ne te saisit.
+{ character == "Exorciste" } La chapelle est ancienne et pourrait être mieux entretenue, mais tu ne remarques aucun signe de profanation démoniaque.
+{ character == "Exorciste" } Le mystère reste entier…
+{ character == "Exorciste" } * [La fin des préparatifs] -> A01S01N154
+
+:: A01S01N153
+{ character == "Exorciste" } Tu sens, en plongeant tes yeux dans ceux de lapis-lazuli de la statue, qu’elle est investie de présence divine. Évidemment, la main de Sîn est sur elle.
+{ character == "Exorciste" } L’or qui forme son visage est brillant sous le soleil, ses vêtements sont en ordre, tu ne perçois aucune altération physique…
+{ character == "Exorciste" } … qui aurait pu être la preuve d’une marque néfaste. Pourtant, quelque chose (la présence divine peut-être ?) te semble vacillant. Sans que tu ne puisses réellement l’expliquer.
+{ character == "Exorciste" } * [La fin des préparatifs] -> A01S01N154
+
+:: A01S01N154
+{ character == "Exorciste" } Le mouton sacrificiel a été mené devant les devins et commence à être dépecé. La viande servira pour le repas du dieu et des prêtres, mais le foie, lui, est réservé à l’étude divinatoire. Tandis que les prêtres officient, récitent, purifient, préparent, et que devins plongent les mains dans les entrailles encore chaudes de la bête, ici et là on discute, on marchande, on s’accoste. Des hommes partagent la bière sous des auvents de toile, d’autres jouent aux dés. Des femmes filent à l’ombre des palmiers dattiers. On attend que le soleil se couche.
+{ character == "Exorciste" } * [Préparer l’exorcisme] -> A01S01N156
+
+:: A01S01N155
+{ character == "Prêtresse" } Suite à cet incident, tu redoubles d’efforts. Eau, encens, formules incantatoires. Chaque instrument est purifié, un par un, selon un ordre bien précis. Le miel est versé, le lait est versé aux pieds du dieu. Après toi, d’autres prêtres vêtent le dieu, le parent de bijou, le couvrent de parfums. Le soleil répand ses feux rouges sur la palmeraie lorsque toi et tes confrères terminez vos œuvres. Tu asperges, de nouveau, tes mains et tes bras et bientôt, il est l’heure de la cérémonie.
+{ character == "Prêtresse" } * [Prendre place] -> A01S01N056
+
+:: A01S01N156
+{ character == "Exorciste" } Pendant ce temps, tu as rejoint les autres exorcistes autour d’un autel de roseau. Un feu brûle non loin, consacré par Girra, dieu des flammes. Vous récitez les paroles rituelles, qui visent à préserver les lieux et les outils de la cérémonie de toute souillure. Vous poursuivez par des rites ušburrudû qui servent à protéger vous-mêmes et tout officiant du mauvais sort, invoquant Asaluhhi, patron des exorcistes, mais aussi son père Ea, Gula, la déesse guérisseuse et son fils, Damu, qui chasse les démons. Enfin, tu entames, solitaire, la récitation d’un rituel namburbû. Pour cela tu en appelles à Šamaš, le dieu juge, lui demandant d’intercéder en ta faveur auprès d’Ereškigal, déesse des enfers : qu’elle rappelle à elle le spectre qui rôde peut-être auprès de la prêtresse. Tu défais le lien que tu avais réalisé avec sa cordelette, que tu jettes ensuite dans le feu purificateur de Girra.
+{ character == "Exorciste" } * [La cérémonie] -> A01S01N157
+
+:: A01S01N157
+{ character == "Exorciste" } L’exorcisme est un art difficile et long, le soleil répand ses feux rouges sur la palmeraie lorsque toi et tes confrères terminez vos rituels. Tout est en place : il est l’heure de la cérémonie.
+{ character == "Exorciste" } * [Prendre place] -> A01S01N056
+
+:: A01S01N158
+{ character == "Exorciste" } Tu rejoins les autres exorcistes autour d’un autel de roseau. Un feu brûle non loin, consacré par Girra, dieu des flammes. Vous récitez les paroles rituelles, qui visent à préserver les lieux et les outils de la cérémonie de toute souillure. Vous poursuivez par des rites ušburrudû qui servent à protéger vous-mêmes et tout officiant du mauvais sort, invoquant Asaluhhi, patron des exorcistes, mais aussi son père Ea, Gula, la déesse guérisseuse et son fils, Damu, qui chasse les démons. Enfin, tu entames, solitaire, la récitation d’un rituel namburbû. Pour cela tu en appelles à Šamaš, le dieu juge, lui demandant d’intercéder en ta faveur auprès d’Ereškigal, déesse des enfers : qu’elle rappelle à elle le spectre qui rôde peut-être auprès de la prêtresse. Tu défais le lien que tu avais réalisé avec sa cordelette, que tu jettes ensuite dans le feu purificateur de Girra.
+{ character == "Exorciste" } * [La cérémonie] -> A01S01N157
+
+:: mg_EpreuvePerception_A01S01N027_A01S01N028
+// Mini-jeu « EpreuvePerception » — mécanique à venir : on suit la branche succès.
+@minigame("EpreuvePerception", "A01S01N027", "A01S01N028")
+-> A01S01N027
+
+:: mg_EpreuveForce_A01S01N031_A01S01N032
+// Mini-jeu « EpreuveForce » — mécanique à venir : on suit la branche succès.
+@minigame("EpreuveForce", "A01S01N031", "A01S01N032")
+-> A01S01N031
+
+:: mg_EpreuveEmpathie_A01S01N033_A01S01N032
+// Mini-jeu « EpreuveEmpathie » — mécanique à venir : on suit la branche succès.
+@minigame("EpreuveEmpathie", "A01S01N033", "A01S01N032")
+-> A01S01N033
+
+:: mg_EpreuveMarchandage_A01S01N055
+// Mini-jeu « EpreuveMarchandage » — mécanique à venir : on suit la branche succès.
+@minigame("EpreuveMarchandage", "A01S01N055", "A01S01N055")
+-> A01S01N055
+
+:: mg_EpreuveMarchandage_A01S01N057
+// Mini-jeu « EpreuveMarchandage » — mécanique à venir : on suit la branche succès.
+@minigame("EpreuveMarchandage", "A01S01N057", "A01S01N057")
+-> A01S01N057
+
+:: mg_EpreuveAthlétisme_A01S01N088_A01S01N089
+// Mini-jeu « EpreuveAthlétisme » — mécanique à venir : on suit la branche succès.
+@minigame("EpreuveAthlétisme", "A01S01N088", "A01S01N089")
+-> A01S01N088
+
+:: mg_EpreuveForce_A01S01N091_A01S01N092
+// Mini-jeu « EpreuveForce » — mécanique à venir : on suit la branche succès.
+@minigame("EpreuveForce", "A01S01N091", "A01S01N092")
+-> A01S01N091
+
+:: mg_EpreuveEmpathie_A01S01N093_A01S01N094
+// Mini-jeu « EpreuveEmpathie » — mécanique à venir : on suit la branche succès.
+@minigame("EpreuveEmpathie", "A01S01N093", "A01S01N094")
+-> A01S01N093
+
+:: mg_EpreuvePurification_A01S01N142
+// Mini-jeu « EpreuvePurification » — mécanique à venir : on suit la branche succès.
+@minigame("EpreuvePurification", "A01S01N142", "A01S01N142")
+-> A01S01N142
+
+:: mg_EpreuvePurification_A01S01N150
+// Mini-jeu « EpreuvePurification » — mécanique à venir : on suit la branche succès.
+@minigame("EpreuvePurification", "A01S01N150", "A01S01N150")
+-> A01S01N150
+
+:: mg_EpreuveExorcisme_A01S01N152
+// Mini-jeu « EpreuveExorcisme » — mécanique à venir : on suit la branche succès.
+@minigame("EpreuveExorcisme", "A01S01N152", "A01S01N152")
+-> A01S01N152
+
+:: mg_EpreuveExorcisme_A01S01N153
+// Mini-jeu « EpreuveExorcisme » — mécanique à venir : on suit la branche succès.
+@minigame("EpreuveExorcisme", "A01S01N153", "A01S01N153")
+-> A01S01N153

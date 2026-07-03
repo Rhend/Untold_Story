@@ -12,31 +12,40 @@ fait sous Unity avec Ink. **Aucun plugin tiers** : tout est reconstruit nativeme
   sauts conditionnels, tags, commandes). Source unique jeu + future visualisation.
 - [x] **L2 (amorce) — UI dialogue** : affichage texte avec effet machine à écrire,
   boutons de choix, en-tête de nœud.
-- [ ] L3 — Sélection de personnages (pilote le filtrage par tags)
-- [ ] L4 — Illustrations à calques + parallaxe + zones interactives
-- [ ] L5 — (mini-jeux : hors périmètre pour l'instant, simple hook prévu)
-- [ ] L6 — Sauvegarde
+- [x] **L3 — Sélection de personnages** : écran de choix (type + attribut), pilote
+  le filtrage par tags.
+- [x] **L4 — Illustrations à calques + parallaxe** — ⚠ la parallaxe n'est pas
+  encore fidèle à la référence (cadrage trop zoomé), à retravailler.
+- ~~L5 — Mini-jeux~~ : **abandonné** (hors périmètre).
+- [x] **L6 — Progression narrative persistante** (autoload `Progress`,
+  `user://progress.json`) : pour chaque nœud, quels personnages l'ont visité et,
+  pour chaque point de choix, quelles réponses ont déjà été choisies (et par qui)
+  ou pas encore. Affiché en jeu : compteur de nœuds découverts, mention
+  « déjà lu / lu par X », réponses déjà choisies cochées et atténuées.
 - [ ] L7 — Plugin de visualisation de l'histoire (Phase 2, lit le `.untold`)
+  — **prochaine étape**.
 
 ## Lancer
-Ouvrir le dossier `Godot_Untold/` dans Godot 4.x et lancer (F5).
-La scène `scenes/main.tscn` joue `data/stories/sample.untold`.
-
-Pour tester les embranchements, modifier dans `core/game/game_state.gd` :
-`character_type` (`"Nadîtum"`, `"Soldat"`, `"Prêtresse"`) et
-`character_attribute` (`"Physique"`, `"Social"`, `"Mystique"`).
+Ouvrir le dossier du projet dans Godot 4.x et lancer (F5).
+La scène principale est `scenes/character_selection.tscn` (choix du personnage
+et de l'attribut), qui enchaîne sur `scenes/story.tscn` jouant
+`data/stories/act1_sc1.untold`.
 
 ## Architecture
 ```
 core/
-  narrative/   story.gd, story_node.gd, story_choice.gd  (modèle de données)
-               story_parser.gd                           (.untold -> Story)
-               story_runner.gd                           (moteur d'exécution)
-  game/        game_state.gd                              (autoload état global)
+  narrative/     story.gd, story_node.gd, story_choice.gd  (modèle de données)
+                 story_parser.gd                           (.untold -> Story)
+                 story_runner.gd                           (moteur d'exécution)
+  game/          game_state.gd        (autoload GameState : état global)
+                 progress_tracker.gd  (autoload Progress : progression persistante)
+                 settings_menu.gd     (autoload SettingsMenu : menu Échap)
+                 character_data.gd    (données d'un personnage jouable)
+  illustration/  illustration_*.gd    (calques, parallaxe, bibliothèque)
 data/
-  stories/     sample.untold                              (contenu)
+  stories/       act1_sc1.untold, sample.untold            (contenu)
 scenes/
-  main.tscn / main.gd                                     (démo jouable)
+  character_selection.tscn / story.tscn                    (jeu)
 ```
 
 Découplage strict : le moteur ne connaît pas l'UI, il ne fait qu'émettre des
