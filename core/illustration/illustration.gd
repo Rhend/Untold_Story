@@ -90,8 +90,10 @@ func _process(_delta: float) -> void:
 
 	var look := look_source.sample(get_viewport())
 	# Overscan commun = juste assez pour couvrir le décalage max du calque le
-	# plus mobile (mode plein cadre uniquement). Garde le zoom minimal.
-	var overscan := 0.0 if _contain else (_max_distance * parallax_gain + EDGE_MARGIN)
+	# plus mobile. Dépend du parallax (pas du gabarit) : une illustration en
+	# mode contain avec parallax rogne donc un peu son cadrage — compromis
+	# assumé (parallax + contain), pas un bug. Sans parallax, aucun overscan.
+	var overscan := (_max_distance * parallax_gain + EDGE_MARGIN) if _parallax_enabled else 0.0
 	var layer_size := size + Vector2(overscan * 2.0, overscan * 2.0)
 	var base := Vector2(-overscan, -overscan)
 
