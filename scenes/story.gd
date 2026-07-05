@@ -28,6 +28,11 @@ const BADGE_CLEARANCE := 340
 ## Bordure autour de l'illustration (px de réf.) pour aérer et faciliter la lecture.
 const BORDER := 56.0
 
+## Gabarit Character : petit portrait carré ancré en haut à gauche. Valeurs
+## PROVISOIRES non validées par le design — à ajuster visuellement.
+const CHARACTER_SIDE := 288.0    # ~15 % de 1920 (largeur de référence)
+const CHARACTER_MARGIN := 24.0
+
 
 func _ready() -> void:
 	_build_ui()
@@ -300,23 +305,33 @@ func _show_illustration(illustration_name: String) -> void:
 
 
 ## Place l'illustration et la zone de texte selon le gabarit :
-##  - PAYSAGE : illustration plein écran, texte par-dessus (voile sombre).
 ##  - PORTRAIT : mise en page « livre » — illustration sur la moitié gauche,
 ##    texte sur la moitié droite.
+##  - CHARACTER : petit portrait carré en haut à gauche, texte plein écran à
+##    côté (dimensions PROVISOIRES, cf. CHARACTER_SIDE).
+##  - LANDSCAPE (défaut) : illustration plein écran, texte par-dessus (voile).
 func _apply_illustration_layout(template: int) -> void:
-	if template == IllustrationData.Template.PORTRAIT:
-		# Livre : texte sur la demi-page droite, loin de la pastille → marge normale.
-		_set_rect_anchors(_illustration, 0.0, 0.0, 0.5, 1.0, BORDER)
-		_set_rect_anchors(_content, 0.5, 0.0, 1.0, 1.0)
-		_content.add_theme_constant_override("margin_left", 56)
-		_scrim.visible = false
-	else:
-		# Plein cadre : illustration encadrée d'une bordure (meilleure lecture),
-		# texte par-dessus ; on dégage la pastille à gauche.
-		_set_rect_anchors(_illustration, 0.0, 0.0, 1.0, 1.0, BORDER)
-		_set_rect_anchors(_content, 0.0, 0.0, 1.0, 1.0)
-		_content.add_theme_constant_override("margin_left", BADGE_CLEARANCE if _has_badge else 56)
-		_scrim.visible = true
+	match template:
+		IllustrationData.Template.PORTRAIT:
+			# Livre : texte sur la demi-page droite, loin de la pastille → marge normale.
+			_set_rect_anchors(_illustration, 0.0, 0.0, 0.5, 1.0, BORDER)
+			_set_rect_anchors(_content, 0.5, 0.0, 1.0, 1.0)
+			_content.add_theme_constant_override("margin_left", 56)
+			_scrim.visible = false
+		IllustrationData.Template.CHARACTER:
+			# Carré ancré en haut à gauche ; le texte occupe l'écran mais dégage
+			# le coin. Réutilise le dégagement de la pastille (même emprise).
+			_set_corner_square(_illustration, CHARACTER_MARGIN, CHARACTER_SIDE)
+			_set_rect_anchors(_content, 0.0, 0.0, 1.0, 1.0)
+			_content.add_theme_constant_override("margin_left", BADGE_CLEARANCE)
+			_scrim.visible = false
+		_:
+			# Plein cadre : illustration encadrée d'une bordure (meilleure lecture),
+			# texte par-dessus ; on dégage la pastille à gauche.
+			_set_rect_anchors(_illustration, 0.0, 0.0, 1.0, 1.0, BORDER)
+			_set_rect_anchors(_content, 0.0, 0.0, 1.0, 1.0)
+			_content.add_theme_constant_override("margin_left", BADGE_CLEARANCE if _has_badge else 56)
+			_scrim.visible = true
 
 
 func _set_rect_anchors(node: Control, l: float, t: float, r: float, b: float, inset: float = 0.0) -> void:
@@ -329,6 +344,19 @@ func _set_rect_anchors(node: Control, l: float, t: float, r: float, b: float, in
 	node.offset_top = inset
 	node.offset_right = -inset
 	node.offset_bottom = -inset
+
+
+## Ancre un contrôle en carré (side × side) dans le coin haut-gauche, à `margin`
+## px des bords — gabarit Character.
+func _set_corner_square(node: Control, margin: float, side: float) -> void:
+	node.anchor_left = 0.0
+	node.anchor_top = 0.0
+	node.anchor_right = 0.0
+	node.anchor_bottom = 0.0
+	node.offset_left = margin
+	node.offset_top = margin
+	node.offset_right = margin + side
+	node.offset_bottom = margin + side
 
 
 func _on_story_ended() -> void:

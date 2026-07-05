@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="GameSettings" format=3]
+
+[ext_resource type="Script" path="res://core/game/game_settings.gd" id="1_nbeqg"]
+
+[resource]
+script = ExtResource("1_nbeqg")
+parallax_pivot_index = 5
+mouse_sensitivity = 1.0
+parallax_gain_default = 9.0

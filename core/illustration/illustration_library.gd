@@ -60,8 +60,11 @@ const DEFS := {
 			["Illu_Ceremony_Plan9.png", 9],
 		],
 	},
+	# Portraits en cadrage « contain » sans marge : parallax désactivé, sinon un
+	# décalage souris découvrirait un bord vide (pas d'overscan en mode contain).
 	"Démon": {
 		"template": IllustrationData.Template.PORTRAIT,
+		"parallax_enabled": false,
 		"dir": "res://assets/illustrations/portrait/Demon/",
 		"layers": [
 			["Illu_Demon_Plan06.png", 6],
@@ -70,6 +73,7 @@ const DEFS := {
 	},
 	"Orante": {
 		"template": IllustrationData.Template.PORTRAIT,
+		"parallax_enabled": false,
 		"dir": "res://assets/illustrations/portrait/Orante/",
 		"layers": [
 			["Illu_Orante_Plan06.png", 6],
@@ -78,6 +82,7 @@ const DEFS := {
 	},
 	"Statue de Sîn": {
 		"template": IllustrationData.Template.PORTRAIT,
+		"parallax_enabled": false,
 		"dir": "res://assets/illustrations/portrait/Sin/",
 		"layers": [
 			["Illu_Prologue_Sin_Unique_Plan05.png", 5],
@@ -86,6 +91,7 @@ const DEFS := {
 	},
 	"Halî-Ammi": {
 		"template": IllustrationData.Template.PORTRAIT,
+		"parallax_enabled": false,
 		"dir": "res://assets/illustrations/portrait/HaliAmmi/",
 		"layers": [
 			["Illu_HaliAmmi_Plan06.png", 6],
@@ -121,6 +127,7 @@ static func _build(name: String, def: Dictionary) -> IllustrationData:
 	var data := IllustrationData.new()
 	data.illustration_name = name
 	data.template = def["template"]
+	data.parallax_enabled = def.get("parallax_enabled", true)
 	var layers: Array[IllustrationLayer] = []
 	for entry in def["layers"]:
 		var layer := IllustrationLayer.new()

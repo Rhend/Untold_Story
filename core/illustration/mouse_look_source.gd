@@ -13,6 +13,9 @@ func sample(viewport: Viewport) -> Vector2:
 		(mouse.x / size.x) * 2.0 - 1.0,
 		(mouse.y / size.y) * 2.0 - 1.0
 	)
+	# Sensibilité appliquée AVANT le clamp : au-delà de 1, le regard atteint les
+	# bords plus tôt (l'appliquer après le clamp n'aurait aucun effet > 1).
+	look *= Settings.mouse_sensitivity
 	look.x = clampf(look.x, -1.0, 1.0)
 	look.y = clampf(look.y, -1.0, 1.0)
 	return look

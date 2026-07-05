@@ -23,6 +23,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 GameState="*res://core/game/game_state.gd"
+Settings="*res://core/game/settings.gd"
 Progress="*res://core/game/progress_tracker.gd"
 SettingsMenu="*res://core/game/settings_menu.gd"
 

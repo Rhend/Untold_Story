@@ -7,28 +7,31 @@ extends Control
 ## elle peut donc occuper tout l'écran (paysage) ou une demi-page (portrait,
 ## mise en page « livre »).
 ##
-## Modèle de parallaxe (façon diorama, repris du projet d'origine) :
-##   - Le calque PIVOT (layer_index 4) ne bouge JAMAIS : il cadre la scène.
-##   - Les calques DEVANT le pivot (1,2,3) et DERRIÈRE (5,6,7,8) se décalent
-##     d'autant plus qu'ils sont LOIN du pivot (amplitude = |index − 4|).
-##   - Devant et derrière se décalent en sens OPPOSÉS (offset = (index−4) × …).
+## Modèle de parallaxe (façon diorama, repris du projet d'origine), à 9 calques :
+##   - Le calque PIVOT (Settings.parallax_pivot_index, défaut 5) ne bouge
+##     JAMAIS : il cadre la scène.
+##   - Les calques DEVANT le pivot (1..4) et DERRIÈRE (6..9) se décalent d'autant
+##     plus qu'ils sont LOIN du pivot (amplitude = |index − pivot|).
+##   - Devant et derrière se décalent en sens OPPOSÉS (offset ∝ (index − pivot)).
+##   - parallax_gain module l'amplitude globale ; une illustration dont
+##     IllustrationData.parallax_enabled == false reste totalement figée.
 
-## Index du calque pivot (immobile, plan de référence).
-const PIVOT_INDEX := 4
 ## Petite marge de sécurité au-delà du décalage max, en px.
 const EDGE_MARGIN := 8.0
 
 ## Amplitude du parallaxe : px de décalage par unité de distance au pivot et par
-## unité de « regard » (-1..1). Le calque le plus loin (|index−4| max) se décale
-## de _max_distance × parallax_gain au maximum.
-@export var parallax_gain := 9.0
+## unité de « regard » (-1..1). NAN = hériter de Settings.parallax_gain_default ;
+## fixer une valeur dans l'inspecteur surcharge ce réglage global pour l'instance.
+@export var parallax_gain := NAN
 
 var look_source: LookSource = MouseLookSource.new()
 
 ## true = on montre l'illustration ENTIÈRE, cadrée dans la zone (portrait,
 ## page de livre) ; false = on REMPLIT la zone quitte à rogner (paysage plein écran).
 var _contain := false
-var _max_distance := 0  # plus grande |index − 4| parmi les calques (pour l'overscan)
+## false = illustration figée (aucun décalage de parallaxe), cf. IllustrationData.
+var _parallax_enabled := true
+var _max_distance := 0  # plus grande |index − pivot| parmi les calques (pour l'overscan)
 var _layers: Array = []  # [{ "rect": TextureRect, "scroll": float, "mult": Vector2 }]
 
 
@@ -36,6 +39,9 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# Empêche un calque décalé par le parallaxe de déborder hors de la zone.
 	clip_contents = true
+	# Amplitude non fixée par l'instance → réglage global partagé.
+	if is_nan(parallax_gain):
+		parallax_gain = Settings.parallax_gain_default
 
 
 func setup(data: IllustrationData) -> void:
@@ -44,8 +50,11 @@ func setup(data: IllustrationData) -> void:
 	_layers.clear()
 	_max_distance = 0
 
-	_contain = data.template == IllustrationData.Template.PORTRAIT
-	# Portrait : on garde toute l'image visible (fit). Paysage : on remplit (cover).
+	# Portrait et Character : on garde toute l'image visible (fit, cadre carré/
+	# vertical). Paysage : on remplit la zone quitte à rogner (cover).
+	_contain = data.template != IllustrationData.Template.LANDSCAPE
+	_parallax_enabled = data.parallax_enabled
+	var pivot: int = Settings.parallax_pivot_index
 	var stretch := TextureRect.STRETCH_KEEP_ASPECT_CENTERED if _contain \
 		else TextureRect.STRETCH_KEEP_ASPECT_COVERED
 
@@ -66,8 +75,8 @@ func setup(data: IllustrationData) -> void:
 		add_child(rect)
 
 		# Décalage signé par rapport au pivot : devant (<0), derrière (>0), pivot (0).
-		var scroll := float(layer.layer_index - PIVOT_INDEX)
-		_max_distance = maxi(_max_distance, absi(layer.layer_index - PIVOT_INDEX))
+		var scroll := float(layer.layer_index - pivot)
+		_max_distance = maxi(_max_distance, absi(layer.layer_index - pivot))
 		_layers.append({
 			"rect": rect,
 			"scroll": scroll,
@@ -89,9 +98,12 @@ func _process(_delta: float) -> void:
 	for entry in _layers:
 		var rect: TextureRect = entry["rect"]
 		rect.size = layer_size
-		var mult: Vector2 = entry["mult"]
-		var offset := Vector2(
-			entry["scroll"] * mult.x * look.x,
-			entry["scroll"] * mult.y * look.y
-		) * parallax_gain
+		var offset := Vector2.ZERO
+		# Illustration figée (parallax_enabled == false) : aucun décalage.
+		if _parallax_enabled:
+			var mult: Vector2 = entry["mult"]
+			offset = Vector2(
+				entry["scroll"] * mult.x * look.x,
+				entry["scroll"] * mult.y * look.y
+			) * parallax_gain
 		rect.position = base + offset
