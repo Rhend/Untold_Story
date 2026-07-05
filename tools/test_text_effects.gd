@@ -55,7 +55,7 @@ func _test_pause_extraction() -> void:
 
 func _test_effects() -> void:
 	print("Effets RichTextEffect custom :")
-	for name in ["shock", "danger", "highlight", "silence"]:
+	for name in ["shock", "danger", "silence"]:
 		var fx: RichTextEffect = load("res://core/text_effects/%s.gd" % name).new()
 		_check(fx.bbcode == name, "%s : bbcode == \"%s\"" % [name, name])
 		var cfx := CharFXTransform.new()

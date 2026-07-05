@@ -112,7 +112,6 @@ func _build_ui() -> void:
 	_fx_shock = preload("res://core/text_effects/shock.gd").new()
 	_text_label.install_effect(_fx_shock)
 	_text_label.install_effect(preload("res://core/text_effects/danger.gd").new())
-	_text_label.install_effect(preload("res://core/text_effects/highlight.gd").new())
 	_text_label.install_effect(preload("res://core/text_effects/silence.gd").new())
 	col.add_child(_text_label)
 
