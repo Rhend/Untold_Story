@@ -6,12 +6,19 @@ extends RefCounted
 ## outil d'édition du graphe (addons/narrative_graph).
 ##
 ## Un lien est un Dictionary :
-##   "from"    : id du nœud source
-##   "target"  : id du nœud cible (peut être "END")
-##   "kind"    : "choice" | "divert" | "cond"
-##   "text"    : libellé du choix ("" pour un saut)
-##   "guarded" : true si l'instruction est sous condition (garde { ... } ou
-##               saut conditionnel) — le joueur peut ne jamais l'avoir vue.
+##   "from"     : id du nœud source
+##   "target"   : id du nœud cible (peut être "END")
+##   "kind"     : "choice" | "divert" | "cond"
+##   "text"     : libellé du choix ("" pour un saut)
+##   "guarded"  : true si l'instruction est sous condition (garde { ... } ou
+##                saut conditionnel) — le joueur peut ne jamais l'avoir vue.
+##   "identity" : true si la condition porte UNIQUEMENT sur l'identité du
+##                joueur (variables character/type, fixées à la sélection du
+##                personnage) — c'est une variante de personnage, pas un
+##                embranchement secret de l'histoire.
+
+## Variables fixées une fois pour toutes au choix du personnage.
+const IDENTITY_VARS := ["character", "type"]
 
 var story: Story
 ## id -> Array de liens sortants, dans l'ordre du fichier.
@@ -27,15 +34,28 @@ static func build(p_story: Story) -> StoryGraph:
 			match ins["type"]:
 				"choice":
 					out.append({"from": id, "target": ins["target"], "kind": "choice",
-							"text": ins["text"], "guarded": ins.has("if")})
+							"text": ins["text"], "guarded": ins.has("if"),
+							"identity": ins.has("if") and _guard_identity_only(ins)})
 				"divert":
 					out.append({"from": id, "target": ins["target"], "kind": "divert",
-							"text": "", "guarded": ins.has("if")})
+							"text": "", "guarded": ins.has("if"),
+							"identity": ins.has("if") and _guard_identity_only(ins)})
 				"cond":
 					out.append({"from": id, "target": ins["target"], "kind": "cond",
-							"text": "", "guarded": true})
+							"text": "", "guarded": true,
+							"identity": IDENTITY_VARS.has(ins["var"]) and _guard_identity_only(ins)})
 		graph.links[id] = out
 	return graph
+
+
+## Vrai si la garde "if" éventuelle ne porte que sur des variables d'identité
+## (aucun visited(), aucune variable d'état de l'histoire).
+static func _guard_identity_only(ins: Dictionary) -> bool:
+	for group in ins.get("if", []):
+		for cond in group:
+			if cond["kind"] != "var" or not IDENTITY_VARS.has(cond["name"]):
+				return false
+	return true
 
 
 func outgoing(id: String) -> Array:

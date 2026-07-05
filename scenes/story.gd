@@ -18,6 +18,8 @@ var _illustration: Illustration
 var _scrim: ColorRect
 var _content: MarginContainer
 var _has_badge := false
+## Nœud où le récit s'est arrêté (repère « vous êtes ici » de la carte).
+var _current_node := ""
 
 ## Marge gauche du texte laissant la place à la pastille de profil (px de réf.).
 const BADGE_CLEARANCE := 340
@@ -178,6 +180,7 @@ func _clear_choices() -> void:
 
 func _on_display_text(text: String, node_id: String, tags: Array) -> void:
 	_clear_choices()
+	_current_node = node_id
 
 	var header := node_id
 	if tags.size() > 0:
@@ -250,7 +253,7 @@ func _toggle_map() -> void:
 		return
 	_map = StoryMap.new()
 	add_child(_map)
-	_map.setup(_story, STORY_PATH)
+	_map.setup(_story, STORY_PATH, _current_node)
 	_map.close_requested.connect(_toggle_map)
 
 
