@@ -19,3 +19,7 @@ extends Resource
 ## Amplitude par défaut du parallaxe (px de décalage par unité de distance au
 ## pivot et de regard). Une illustration peut la surcharger par instance.
 @export var parallax_gain_default: float = 9.0
+
+## Vitesse de l'effet « machine à écrire » : secondes par caractère visible.
+## Plus petit = plus rapide.
+@export var text_speed: float = 0.02

@@ -16,6 +16,8 @@ var _map: StoryMap
 var _text_label: RichTextLabel
 var _choices_box: VBoxContainer
 var _typewriter: Tween
+## Effet « shock » gardé en référence pour relancer son à-coup à chaque passage.
+var _fx_shock: RichTextEffect
 var _illustration: Illustration
 var _scrim: ColorRect
 var _content: MarginContainer
@@ -103,6 +105,15 @@ func _build_ui() -> void:
 	_text_label.fit_content = true
 	_text_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_text_label.add_theme_font_size_override("normal_font_size", 20)
+	# Clic sur le texte = affichage instantané (cf. _on_text_input).
+	_text_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	_text_label.gui_input.connect(_on_text_input)
+	# Effets BBCode custom (les natifs wave/shake/fade/color restent gérés seuls).
+	_fx_shock = preload("res://core/text_effects/shock.gd").new()
+	_text_label.install_effect(_fx_shock)
+	_text_label.install_effect(preload("res://core/text_effects/danger.gd").new())
+	_text_label.install_effect(preload("res://core/text_effects/highlight.gd").new())
+	_text_label.install_effect(preload("res://core/text_effects/silence.gd").new())
 	col.add_child(_text_label)
 
 	_choices_box = VBoxContainer.new()
@@ -192,15 +203,87 @@ func _on_display_text(text: String, node_id: String, tags: Array) -> void:
 
 	_header.text = _build_header(node_id, tags)
 
-	_text_label.text = text
+	# Extrait les pauses dramatiques [Soupir:X] : le texte affiché n'en contient
+	# plus, et chaque pause connaît son rang en caractères VISIBLES.
+	var prepared := _prepare_dramatic_text(text)
+	_text_label.text = prepared["text"]
+	# La secousse « shock » repart depuis l'apparition de ce texte.
+	if _fx_shock != null and _fx_shock.has_method("restart"):
+		_fx_shock.restart()
 
-	# Effet "machine à écrire" — contrôle d'affichage du texte.
+	# Compte des caractères VISIBLES réels (hors balises BBCode), APRÈS
+	# assignation du texte — sinon les balises gonfleraient la durée perçue.
+	var total := _text_label.get_total_character_count()
+
 	_text_label.visible_ratio = 0.0
 	if _typewriter and _typewriter.is_running():
 		_typewriter.kill()
-	_typewriter = create_tween()
-	var duration: float = clampf(text.length() * GameState.text_speed, 0.3, 6.0)
-	_typewriter.tween_property(_text_label, "visible_ratio", 1.0, duration)
+		_typewriter = null
+	if total <= 0:
+		_text_label.visible_ratio = 1.0
+		return
+	_typewriter = _build_typewriter(total, prepared["pauses"])
+
+
+## Construit la séquence « machine à écrire » : révèle le texte à vitesse
+## Settings.text_speed, en marquant une pause de X s à chaque balise [Soupir:X].
+## Fonctionne avec zéro, une ou plusieurs pauses.
+func _build_typewriter(total: int, pauses: Array) -> Tween:
+	var full := clampf(total * Settings.text_speed, 0.3, 6.0)  # temps de frappe (hors pauses)
+	var tween := create_tween()
+	var prev := 0.0
+	for p in pauses:
+		var r: float = clampf(float(p["visible"]) / float(total), 0.0, 1.0)
+		if r > prev:
+			tween.tween_property(_text_label, "visible_ratio", r, full * (r - prev))
+			prev = r
+		if p["duration"] > 0.0:
+			tween.tween_interval(p["duration"])
+	if prev < 1.0:
+		tween.tween_property(_text_label, "visible_ratio", 1.0, full * (1.0 - prev))
+	return tween
+
+
+## Retire les balises de pause [Soupir:X] du texte et renvoie :
+##   "text"   : le texte à afficher (balises de pause ôtées, BBCode conservé) ;
+##   "pauses" : Array de { "visible": int, "duration": float } — nombre de
+##              caractères visibles précédant la pause, et sa durée en secondes.
+## La position est convertie en caractères VISIBLES (hors BBCode) via un
+## RichTextLabel de mesure, cohérent avec get_total_character_count().
+static func _prepare_dramatic_text(raw: String) -> Dictionary:
+	var re := RegEx.create_from_string("\\[Soupir:\\s*([0-9]*\\.?[0-9]+)[^\\]]*\\]")
+	var clean := ""
+	var marks: Array = []  # { "pos": index dans clean, "duration": float }
+	var last := 0
+	for m in re.search_all(raw):
+		clean += raw.substr(last, m.get_start() - last)
+		marks.append({"pos": clean.length(), "duration": float(m.get_string(1))})
+		last = m.get_end()
+	clean += raw.substr(last)
+
+	var pauses: Array = []
+	if not marks.is_empty():
+		var scratch := RichTextLabel.new()
+		scratch.bbcode_enabled = true
+		for mark in marks:
+			scratch.text = clean.substr(0, mark["pos"])
+			pauses.append({
+				"visible": scratch.get_total_character_count(),
+				"duration": mark["duration"],
+			})
+		scratch.free()
+	return {"text": clean, "pauses": pauses}
+
+
+## Clic sur la zone de texte : si la frappe est en cours, tout afficher d'un coup
+## (on tue la séquence et on révèle le texte entier). Sinon, ne rien faire ici.
+func _on_text_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed \
+			and event.button_index == MOUSE_BUTTON_LEFT:
+		if _typewriter != null and _typewriter.is_running():
+			_typewriter.kill()
+			_typewriter = null
+			_text_label.visible_ratio = 1.0
 
 
 ## En-tête du passage courant, selon l'environnement :

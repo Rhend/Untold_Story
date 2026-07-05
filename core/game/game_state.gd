@@ -10,7 +10,3 @@ var selected_character: CharacterData = null
 ## Valeurs par défaut utilisées si l'histoire est lancée sans passer par la sélection.
 var character_type: String = "Nadîtum"
 var character_attribute: String = "Social"
-
-## Contrôle de l'affichage du texte (sera enrichi : vitesse, sauts, effets).
-## Secondes par caractère pour l'effet "machine à écrire".
-var text_speed: float = 0.02
