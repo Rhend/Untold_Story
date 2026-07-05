@@ -8,6 +8,8 @@ const SELECTION_SCENE := "res://scenes/character_selection.tscn"
 
 var _runner: StoryRunner
 var _story: Story
+## Métadonnées d'auteur (sidecar .meta.json) — sert ici aux titres de scène.
+var _meta: StoryMeta
 var _header: Label
 var _progress_label: Label
 var _map: StoryMap
@@ -49,6 +51,7 @@ func _ready() -> void:
 func _start_story() -> void:
 	var source := FileAccess.get_file_as_string(STORY_PATH)
 	_story = StoryParser.parse(source)
+	_meta = StoryMeta.load_for(STORY_PATH)
 	Progress.begin_story(STORY_PATH.get_file().get_basename(), GameState.character_type)
 	_runner.start(_story, {
 		"character": GameState.character_type,
@@ -182,17 +185,7 @@ func _on_display_text(text: String, node_id: String, tags: Array) -> void:
 	_clear_choices()
 	_current_node = node_id
 
-	var header := node_id
-	if tags.size() > 0:
-		header += "   [ " + " · ".join(PackedStringArray(tags)) + " ]"
-	# Mentions de relecture : le passage courant est déjà compté, d'où le > 1.
-	if Progress.visit_count(node_id, GameState.character_type) > 1:
-		header += "   · déjà lu"
-	var others: Array = Progress.visitors(node_id).filter(
-		func(c: String) -> bool: return c != GameState.character_type)
-	if not others.is_empty():
-		header += "   · lu par " + ", ".join(PackedStringArray(others))
-	_header.text = header
+	_header.text = _build_header(node_id, tags)
 
 	_text_label.text = text
 
@@ -203,6 +196,27 @@ func _on_display_text(text: String, node_id: String, tags: Array) -> void:
 	_typewriter = create_tween()
 	var duration: float = clampf(text.length() * GameState.text_speed, 0.3, 6.0)
 	_typewriter.tween_property(_text_label, "visible_ratio", 1.0, duration)
+
+
+## En-tête du passage courant, selon l'environnement :
+##  - PROD : seulement le titre de scène lisible (sidecar), vide s'il n'y en a
+##    pas — l'id technique n'est JAMAIS montré au joueur.
+##  - DEV  : en-tête de debug complet — id brut + tags + mentions de relecture.
+func _build_header(node_id: String, tags: Array) -> String:
+	if Env.is_production():
+		return _meta.get_title(node_id)
+
+	var header := node_id
+	if tags.size() > 0:
+		header += "   [ " + " · ".join(PackedStringArray(tags)) + " ]"
+	# Mentions de relecture : le passage courant est déjà compté, d'où le > 1.
+	if Progress.visit_count(node_id, GameState.character_type) > 1:
+		header += "   · déjà lu"
+	var others: Array = Progress.visitors(node_id).filter(
+		func(c: String) -> bool: return c != GameState.character_type)
+	if not others.is_empty():
+		header += "   · lu par " + ", ".join(PackedStringArray(others))
+	return header
 
 
 func _on_present_choices(choices: Array) -> void:

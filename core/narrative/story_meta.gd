@@ -9,6 +9,7 @@ extends RefCounted
 ##   "positions": { node_id: [x, y] }  — disposition du graphe (outil + carte)
 ##   "comments":  { node_id: String }  — notes privées à l'outil narratif
 ##   "collapsed": { node_id: true }    — nœuds repliés dans l'outil graphe
+##   "titles":    { node_id: String }  — titre lisible affiché au joueur (PROD)
 
 var path := ""
 var data: Dictionary = {}
@@ -81,3 +82,18 @@ func set_comment(node_id: String, text: String) -> void:
 		section("comments").erase(node_id)
 	else:
 		section("comments")[node_id] = text
+
+
+# --------------------------------------------------------------------- Titres
+
+## Titre lisible du nœud, affiché au joueur en production à la place de l'id
+## technique. "" si aucun titre n'a été défini (le champ est optionnel).
+func get_title(node_id: String) -> String:
+	return str(section("titles").get(node_id, ""))
+
+
+func set_title(node_id: String, title: String) -> void:
+	if title.strip_edges().is_empty():
+		section("titles").erase(node_id)
+	else:
+		section("titles")[node_id] = title
