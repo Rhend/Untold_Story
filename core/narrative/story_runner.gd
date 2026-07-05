@@ -35,6 +35,10 @@ var _story: Story
 var _pending_choices: Array = []
 ## Nœuds déjà traversés (pour les conditions visited()).
 var _visited: Dictionary = {}
+## Nœud dont les choix sont actuellement présentés (pour refresh_choices()).
+var _current_node_id := ""
+## true tant qu'un point de choix est ouvert (garde refresh_choices()).
+var _awaiting_choice := false
 
 ## Démarre une histoire. `initial_vars` écrase les variables par défaut
 ## (ex: {"character": "Nadîtum", "type": "Mystique"}).
@@ -44,6 +48,8 @@ func start(story: Story, initial_vars: Dictionary = {}) -> void:
 	for key in initial_vars:
 		variables[key] = initial_vars[key]
 	_visited = {}
+	_current_node_id = ""
+	_awaiting_choice = false
 	_run_from(story.start_node)
 
 ## Le joueur sélectionne le choix d'index `index`.
@@ -52,8 +58,30 @@ func choose(index: int) -> void:
 		return
 	var choice: Dictionary = _pending_choices[index]
 	_pending_choices = []
+	_awaiting_choice = false
 	choice_selected.emit(choice["node"], choice)
 	_run_from(choice["target"])
+
+
+## Ré-évalue UNIQUEMENT les choix du nœud courant avec l'état à jour (variables,
+## zone_clicked) et ré-émet present_choices — sans retoucher au texte ni aux
+## commandes. À appeler quand un clic de zone a pu débloquer une nouvelle sortie.
+## Sans effet si aucun point de choix n'est ouvert.
+func refresh_choices() -> void:
+	if not _awaiting_choice or _story == null:
+		return
+	var node: StoryNode = _story.get_node_by_id(_current_node_id)
+	if node == null:
+		return
+	var choices: Array = []
+	for ins in node.instructions:
+		if ins["type"] != "choice":
+			continue
+		if ins.has("if") and not _check_conds(ins["if"]):
+			continue
+		choices.append({"text": ins["text"], "target": ins["target"], "node": _current_node_id})
+	_pending_choices = choices
+	present_choices.emit(choices)
 
 ## Reprend l'histoire à un nœud précis (utile au retour d'un mini-jeu).
 func go_to(node_id: String) -> void:
@@ -122,11 +150,15 @@ func _run_from(start_id: String) -> void:
 		display_text.emit(buffer, last_node, last_tags)
 
 	if id == END_NODE:
+		_awaiting_choice = false
 		story_ended.emit()
 	elif choices.size() > 0:
 		_pending_choices = choices
+		_current_node_id = last_node
+		_awaiting_choice = true
 		present_choices.emit(choices)
 	else:
+		_awaiting_choice = false
 		story_ended.emit()
 
 
@@ -162,5 +194,9 @@ func _check_group(conds: Array) -> bool:
 					return false
 			"visited":
 				if _visited.has(cond["id"]) == cond["neg"]:
+					return false
+			"zone":
+				# Zone d'illustration cliquée : état persistant (autoload Progress).
+				if Progress.is_zone_clicked(cond["id"]) == cond["neg"]:
 					return false
 	return true

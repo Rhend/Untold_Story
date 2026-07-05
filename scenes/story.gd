@@ -18,6 +18,9 @@ var _choices_box: VBoxContainer
 var _typewriter: Tween
 ## Effet « shock » gardé en référence pour relancer son à-coup à chaque passage.
 var _fx_shock: RichTextEffect
+## Texte brut (avec balises de pause) actuellement affiché, accumulé par les
+## lignes de dialogue ajoutées au clic d'une zone — base des ajouts suivants.
+var _display_raw := ""
 var _illustration: Illustration
 var _scrim: ColorRect
 var _content: MarginContainer
@@ -204,7 +207,8 @@ func _on_display_text(text: String, node_id: String, tags: Array) -> void:
 
 	# Extrait les pauses dramatiques [Soupir:X] : le texte affiché n'en contient
 	# plus, et chaque pause connaît son rang en caractères VISIBLES.
-	var prepared := _prepare_dramatic_text(text)
+	_display_raw = text
+	var prepared := _prepare_dramatic_text(_display_raw)
 	_text_label.text = prepared["text"]
 	# La secousse « shock » repart depuis l'apparition de ce texte.
 	if _fx_shock != null and _fx_shock.has_method("restart"):
@@ -214,32 +218,41 @@ func _on_display_text(text: String, node_id: String, tags: Array) -> void:
 	# assignation du texte — sinon les balises gonfleraient la durée perçue.
 	var total := _text_label.get_total_character_count()
 
-	_text_label.visible_ratio = 0.0
 	if _typewriter and _typewriter.is_running():
 		_typewriter.kill()
-		_typewriter = null
+	_typewriter = null
 	if total <= 0:
 		_text_label.visible_ratio = 1.0
 		return
-	_typewriter = _build_typewriter(total, prepared["pauses"])
+	_typewriter = _build_typewriter(total, prepared["pauses"], 0)
 
 
-## Construit la séquence « machine à écrire » : révèle le texte à vitesse
-## Settings.text_speed, en marquant une pause de X s à chaque balise [Soupir:X].
-## Fonctionne avec zéro, une ou plusieurs pauses.
-func _build_typewriter(total: int, pauses: Array) -> Tween:
-	var full := clampf(total * Settings.text_speed, 0.3, 6.0)  # temps de frappe (hors pauses)
+## Construit la séquence « machine à écrire » : révèle le texte de start_visible
+## caractères jusqu'à la fin, à vitesse Settings.text_speed, en marquant une
+## pause de X s à chaque balise [Soupir:X] au-delà du point de départ. Un départ
+## > 0 sert à ne dévoiler QUE des lignes ajoutées (cf. _append_dialogue).
+func _build_typewriter(total: int, pauses: Array, start_visible: int) -> Tween:
+	var remaining := total - start_visible
+	if remaining <= 0:
+		_text_label.visible_ratio = 1.0
+		return null
+	_text_label.visible_ratio = float(start_visible) / float(total)
+	var full := clampf(remaining * Settings.text_speed, 0.3, 6.0)  # temps de frappe (hors pauses)
 	var tween := create_tween()
-	var prev := 0.0
+	var cursor := start_visible
 	for p in pauses:
-		var r: float = clampf(float(p["visible"]) / float(total), 0.0, 1.0)
-		if r > prev:
-			tween.tween_property(_text_label, "visible_ratio", r, full * (r - prev))
-			prev = r
+		var v: int = p["visible"]
+		if v <= start_visible:
+			continue  # pause déjà dépassée avant le point de départ
+		if v > cursor:
+			tween.tween_property(_text_label, "visible_ratio",
+				float(v) / float(total), full * float(v - cursor) / float(remaining))
+			cursor = v
 		if p["duration"] > 0.0:
 			tween.tween_interval(p["duration"])
-	if prev < 1.0:
-		tween.tween_property(_text_label, "visible_ratio", 1.0, full * (1.0 - prev))
+	if cursor < total:
+		tween.tween_property(_text_label, "visible_ratio",
+			1.0, full * float(total - cursor) / float(remaining))
 	return tween
 
 
@@ -283,6 +296,48 @@ func _on_text_input(event: InputEvent) -> void:
 			_typewriter.kill()
 			_typewriter = null
 			_text_label.visible_ratio = 1.0
+
+
+# ------------------------------------------------- Zones interactives (clic)
+
+## Clic sur une zone interactive d'une illustration. Rejoué à CHAQUE clic (aucune
+## protection anti-répétition, décision actée).
+func _on_illustration_interaction(interaction: IllustrationInteraction) -> void:
+	# Toujours enregistré, même sans effet dialogue/objet (alimente zone_clicked).
+	Progress.record_zone_click(interaction.id)
+
+	if not interaction.dialogue_lines.is_empty():
+		_append_dialogue(interaction.dialogue_lines)
+
+	if not interaction.item_id.is_empty():
+		# TODO point 10 : Inventory n'existe pas encore.
+		# Inventory.add_item(interaction.item_id, interaction.item_qty)
+		pass
+
+	# Un clic de zone a pu débloquer une nouvelle sortie (garde zone_clicked) :
+	# on ré-évalue les choix du nœud courant sans rejouer le nœud.
+	_runner.refresh_choices()
+
+
+## Ajoute des lignes à la SUITE du texte courant (sans rejouer le nœud), avec
+## leur propre effet machine à écrire : le texte déjà affiché reste entier,
+## seules les lignes ajoutées défilent.
+func _append_dialogue(lines: Array) -> void:
+	# Fige le texte déjà présent, en entier, avant d'ajouter la suite.
+	if _typewriter and _typewriter.is_running():
+		_typewriter.kill()
+	_typewriter = null
+	_text_label.visible_ratio = 1.0
+	var shown := _text_label.get_total_character_count()
+
+	_display_raw += "\n" + "\n".join(PackedStringArray(lines))
+	var prepared := _prepare_dramatic_text(_display_raw)
+	_text_label.text = prepared["text"]
+	var total := _text_label.get_total_character_count()
+	if total <= shown:
+		_text_label.visible_ratio = 1.0
+		return
+	_typewriter = _build_typewriter(total, prepared["pauses"], shown)
 
 
 ## En-tête du passage courant, selon l'environnement :
@@ -379,6 +434,7 @@ func _show_illustration(illustration_name: String) -> void:
 		return
 
 	_illustration = Illustration.new()
+	_illustration.interaction_clicked.connect(_on_illustration_interaction)
 	add_child(_illustration)
 	# Au-dessus du fond (index 0), sous le voile et l'UI.
 	move_child(_illustration, 1)

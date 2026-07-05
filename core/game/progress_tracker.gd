@@ -20,6 +20,10 @@ var _character := ""
 ##     "chosen":     { texte de la réponse: { personnage: nombre de fois } } } } }
 var _data: Dictionary = {}
 
+## Clics sur les zones interactives d'illustration (indépendant des nœuds).
+## { story_id: { zone_id: { personnage: nombre de clics } } }
+var _zones: Dictionary = {}
+
 
 func _ready() -> void:
 	_load()
@@ -50,9 +54,22 @@ func record_choice(node_id: String, choice_text: String) -> void:
 	_save()
 
 
+## Le personnage courant clique sur une zone interactive d'illustration.
+## Enregistré quelle que soit la zone (même sans effet dialogue/objet).
+func record_zone_click(zone_id: String) -> void:
+	if not _zones.has(_story_id):
+		_zones[_story_id] = {}
+	var zones: Dictionary = _zones[_story_id]
+	var by: Dictionary = zones.get(zone_id, {})
+	by[_character] = int(by.get(_character, 0)) + 1
+	zones[zone_id] = by
+	_save()
+
+
 ## Efface toute la progression (tous personnages, toutes histoires).
 func reset() -> void:
 	_data = {}
+	_zones = {}
 	_save()
 
 
@@ -82,6 +99,12 @@ func is_choice_chosen(node_id: String, choice_text: String, story_id := "") -> b
 ## Personnages ayant déjà choisi cette réponse.
 func choice_choosers(node_id: String, choice_text: String, story_id := "") -> Array:
 	return _node_of(node_id, story_id).get("chosen", {}).get(choice_text, {}).keys()
+
+
+## Cette zone a-t-elle déjà été cliquée (tous personnages confondus) ?
+## Interrogé par la garde zone_clicked("id") du .untold.
+func is_zone_clicked(zone_id: String, story_id := "") -> bool:
+	return not _zones.get(_resolve(story_id), {}).get(zone_id, {}).is_empty()
 
 
 ## État de TOUTES les réponses déclarées par un nœud : pour chacune, si elle a
@@ -133,14 +156,20 @@ func _save() -> void:
 	if file == null:
 		push_error("Progress: impossible d'écrire " + SAVE_PATH)
 		return
-	file.store_string(JSON.stringify(_data, "\t"))
+	file.store_string(JSON.stringify({"stories": _data, "zones": _zones}, "\t"))
 
 
 func _load() -> void:
 	if not FileAccess.file_exists(SAVE_PATH):
 		return
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
-	if parsed is Dictionary:
-		_data = parsed
-	else:
+	if not (parsed is Dictionary):
 		push_warning("Progress: sauvegarde illisible, repartie de zéro.")
+		return
+	# Nouveau format { "stories", "zones" } ; ancien format = dict de story_id
+	# à plat (avant l'ajout des zones) → chargé tel quel, zones vides.
+	if parsed.has("stories") or parsed.has("zones"):
+		_data = parsed.get("stories", {})
+		_zones = parsed.get("zones", {})
+	else:
+		_data = parsed

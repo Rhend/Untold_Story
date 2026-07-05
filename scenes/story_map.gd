@@ -672,6 +672,9 @@ func _guard_true(groups: Array, vars: Dictionary) -> bool:
 				"visited":
 					if Progress.is_visited(cond["id"]) == cond["neg"]:
 						ok = false
+				"zone":
+					if Progress.is_zone_clicked(cond["id"]) == cond["neg"]:
+						ok = false
 			if not ok:
 				break
 		if ok:

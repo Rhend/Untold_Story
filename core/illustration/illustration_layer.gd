@@ -11,5 +11,5 @@ extends Resource
 @export var sprite: Texture2D
 @export_range(1, 9) var layer_index: int = 5
 @export var parallax_multiplier: Vector2 = Vector2(1, 0)
-## Zones interactives — réservé pour le L4b (événements sur une zone de l'image).
-@export var interactions: Array = []
+## Zones interactives (cliquables) posées sur ce calque — cf. IllustrationInteraction.
+@export var interactions: Array[IllustrationInteraction] = []
