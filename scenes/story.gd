@@ -44,6 +44,13 @@ const CHARACTER_MARGIN := 24.0
 
 
 func _ready() -> void:
+	# Repli pour un lancement direct de story.tscn dans l'éditeur (sans hub ni
+	# sélection) : résout génériquement l'histoire puis le personnage, sans nommer
+	# aucun contenu. En flux normal, hub + sélection les ont déjà posés.
+	if GameState.story_id.is_empty():
+		GameState.story_id = GameState.first_story_id()
+	_ensure_character()
+
 	_build_ui()
 
 	# La carte du récit s'ouvre par la touche M ou depuis le menu Échap : on
@@ -87,6 +94,25 @@ func _exit_tree() -> void:
 	if SettingsMenu.restart_requested.is_connected(_restart_story):
 		SettingsMenu.restart_requested.disconnect(_restart_story)
 	SettingsMenu.set_restart_available(false)
+
+
+## Repli quand story.tscn est lancée sans personnage (hors sélection) : prend le
+## PREMIER personnage scanné de l'histoire (ordre alphabétique) plutôt que de
+## tourner avec un personnage vide. Placé ici — le vrai consommateur de
+## character_type — et non dans character_selection.gd, qui n'écrit cette valeur
+## qu'au clic et ne la lit jamais.
+func _ensure_character() -> void:
+	if not GameState.character_type.is_empty():
+		return
+	var paths := GameState.character_paths()
+	if paths.is_empty():
+		return
+	var data: CharacterData = load(paths[0])
+	if data == null:
+		return
+	GameState.selected_character = data
+	GameState.character_type = data.character_type
+	GameState.character_attribute = data.attribute
 
 
 ## Résout le chemin du .untold de l'histoire courante via son manifest.json.

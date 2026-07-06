@@ -9,6 +9,10 @@ const HUB_SCENE := "res://scenes/hub.tscn"
 
 
 func _ready() -> void:
+	# Repli pour un lancement direct de character_selection.tscn (sans hub) :
+	# résout génériquement l'histoire pour que le scan des personnages aboutisse.
+	if GameState.story_id.is_empty():
+		GameState.story_id = GameState.first_story_id()
 	_build_ui()
 
 

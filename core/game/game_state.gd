@@ -7,22 +7,38 @@ extends Node
 var selected_character: CharacterData = null
 
 ## Personnage et attribut sélectionnés (pilotent le filtrage narratif par tags).
-## Valeurs par défaut utilisées si l'histoire est lancée sans passer par la sélection.
-var character_type: String = "Nadîtum"
-var character_attribute: String = "Social"
+## Vides par défaut : renseignés par la sélection de personnage. core/ reste
+## agnostique au contenu — aucun nom de personnage n'y est codé en dur.
+var character_type: String = ""
+var character_attribute: String = ""
 
 ## Racine des histoires : un sous-dossier par histoire (data/stories/<id>/).
 const STORIES_ROOT := "res://data/stories/"
 
-## Histoire choisie. Défaut "mesopotamia" tant que le hub (point 9) n'existe pas
-## — le joueur arrive donc directement dans la seule histoire disponible, sans
-## changement de comportement.
-var story_id: String = "mesopotamia"
+## Histoire choisie, posée par le hub. Vide par défaut : core/ ne nomme aucune
+## histoire. Un lancement direct d'une scène de test la résout génériquement
+## (cf. first_story_id, appelé par story.gd/character_selection.gd).
+var story_id: String = ""
 
 
 ## Dossier de l'histoire courante (terminé par « / »).
 func story_dir() -> String:
 	return STORIES_ROOT + story_id + "/"
+
+
+## Id de la première histoire (ordre alphabétique) disposant d'un manifest.json,
+## ou "" si aucune. Repli GÉNÉRIQUE pour lancer une scène de test sans passer par
+## le hub — ne nomme aucune histoire en dur, garde core/ agnostique au contenu.
+func first_story_id() -> String:
+	var dir := DirAccess.open(STORIES_ROOT)
+	if dir == null:
+		return ""
+	var ids: Array = []
+	for sub in dir.get_directories():
+		if FileAccess.file_exists(STORIES_ROOT + sub + "/manifest.json"):
+			ids.append(sub)
+	ids.sort()
+	return ids[0] if not ids.is_empty() else ""
 
 
 ## Chemins des CharacterData (.tres) de l'histoire courante, scannés dans son
