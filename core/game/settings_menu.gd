@@ -3,7 +3,13 @@ extends CanvasLayer
 ## S'ouvre / se ferme avec Échap, met le jeu en pause tant qu'il est ouvert, et
 ## permet de quitter le jeu à tout moment (depuis n'importe quelle scène).
 
+## Demande d'ouverture de la carte du récit (émis par l'entrée dédiée du menu).
+## La scène d'histoire s'y abonne quand elle est active (cf. story.gd).
+signal map_requested
+
 var _fullscreen_toggle: CheckButton
+## Entrée « Carte du récit » — visible seulement quand une histoire est active.
+var _map_button: Button
 
 
 func _ready() -> void:
@@ -76,6 +82,12 @@ func _build_ui() -> void:
 	_fullscreen_toggle.toggled.connect(_on_fullscreen_toggled)
 	col.add_child(_fullscreen_toggle)
 
+	_map_button = Button.new()
+	_map_button.text = "🗺  Carte du récit"
+	_map_button.visible = false  # activée par la scène d'histoire (set_map_available)
+	_map_button.pressed.connect(_on_map_pressed)
+	col.add_child(_map_button)
+
 	var resume := Button.new()
 	resume.text = "Reprendre"
 	resume.pressed.connect(_close)
@@ -85,6 +97,18 @@ func _build_ui() -> void:
 	quit.text = "Quitter le jeu"
 	quit.pressed.connect(_on_quit_pressed)
 	col.add_child(quit)
+
+
+## Active/désactive l'entrée « Carte du récit » (appelée par la scène d'histoire).
+func set_map_available(available: bool) -> void:
+	if _map_button != null:
+		_map_button.visible = available
+
+
+## Ferme le menu puis demande l'ouverture de la carte à la scène abonnée.
+func _on_map_pressed() -> void:
+	_close()
+	map_requested.emit()
 
 
 func _on_fullscreen_toggled(on: bool) -> void:

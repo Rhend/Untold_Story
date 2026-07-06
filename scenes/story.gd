@@ -42,6 +42,11 @@ const CHARACTER_MARGIN := 24.0
 func _ready() -> void:
 	_build_ui()
 
+	# La carte du récit s'ouvre par la touche M ou depuis le menu Échap : on
+	# active l'entrée « Carte du récit » du menu tant que cette scène est active.
+	SettingsMenu.set_map_available(true)
+	SettingsMenu.map_requested.connect(_toggle_map)
+
 	# Précharge les textures d'illustration en tâche de fond pour éviter
 	# l'à-coup quand une page à parallaxe apparaît.
 	IllustrationLibrary.preload_all()
@@ -56,6 +61,14 @@ func _ready() -> void:
 	_runner.choice_selected.connect(_on_choice_selected)
 
 	_start_story()
+
+
+## En quittant la scène : on retire l'entrée « Carte du récit » du menu global
+## et on se désabonne (les autres scènes n'ont pas de carte).
+func _exit_tree() -> void:
+	if SettingsMenu.map_requested.is_connected(_toggle_map):
+		SettingsMenu.map_requested.disconnect(_toggle_map)
+	SettingsMenu.set_map_available(false)
 
 
 func _start_story() -> void:
@@ -139,14 +152,6 @@ func _build_ui() -> void:
 	_progress_label.modulate = Color(0.55, 0.55, 0.7)
 	_progress_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_progress_label)
-
-	# Accès à la carte de progression narrative (aussi via la touche M).
-	var map_button := Button.new()
-	map_button.text = "🗺  Carte (M)"
-	map_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	map_button.position = Vector2(-160, 48)
-	map_button.pressed.connect(_toggle_map)
-	add_child(map_button)
 
 	# Pastille de profil du personnage, dans le coin haut-gauche.
 	var character: CharacterData = GameState.selected_character

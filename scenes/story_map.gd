@@ -43,6 +43,12 @@ const MARGIN := Vector2(60, 90)
 ## écart horizontal entre deux variantes d'une même profondeur.
 const DEPTH_GAP := 120.0
 const H_GAP := 60.0
+## Courbure des connecteurs : fraction de la distance (projetée sur l'axe du
+## flux) dont on décale les points de contrôle de la Bézier (0 = trait droit).
+const EDGE_CURVATURE := 0.4
+## Balayages de l'heuristique du barycentre (aller/retour) pour ranger les
+## rangées et réduire les croisements de liens.
+const BARYCENTER_PASSES := 4
 ## Police des libellés de nœud (sert aussi à mesurer la largeur des panneaux).
 const LABEL_FONT_SIZE := 13
 ## Liseré du nœud sélectionné (relecture) — sépia, distinct du nœud courant.
@@ -56,6 +62,7 @@ var _graph: StoryGraph
 var _positions: Dictionary = {}   # rep -> Vector2 (coin haut-gauche du widget)
 var _sizes: Dictionary = {}       # rep -> Vector2 (taille réelle du widget)
 var _revealed: Dictionary = {}    # id -> "visited" | "known" (nœuds d'origine)
+var _map_hidden: Dictionary = {}  # id -> true : nœuds #hors_carte, exclus de la carte
 var _chains: Dictionary = {}      # rep -> membres de la chaîne (ordre du récit)
 var _rep_of: Dictionary = {}      # id -> rep de sa chaîne (identité hors chaîne)
 var _canvas: Control
@@ -79,6 +86,7 @@ func setup(story: Story, untold_path: String, current_node := "") -> void:
 			_characters.append(data)
 	_player_color = _color_of(GameState.character_type)
 
+	_compute_map_hidden()
 	_compute_revealed()
 	_build_chains()
 	_compute_sizes()
@@ -88,10 +96,20 @@ func setup(story: Story, untold_path: String, current_node := "") -> void:
 
 # ------------------------------------------------------------------ Modèle
 
+## Nœuds tagués #hors_carte : jamais dessinés (ni visité, ni aperçu, ni inconnu)
+## et jamais suivis comme cible d'un lien. N'affecte pas le jeu (filtrage carte).
+func _compute_map_hidden() -> void:
+	for id in _story.nodes:
+		if "hors_carte" in _story.nodes[id].tags:
+			_map_hidden[id] = true
+
+
 ## Règles de révélation. « known » = le joueur a vu le libellé du choix en jeu
 ## (choix non gardé d'un nœud visité) sans jamais le prendre.
 func _compute_revealed() -> void:
 	for id in _story.nodes:
+		if _map_hidden.has(id):
+			continue
 		if Progress.is_visited(id):
 			_revealed[id] = "visited"
 	for id in _story.nodes:
@@ -99,7 +117,7 @@ func _compute_revealed() -> void:
 			continue
 		for link in _graph.outgoing(id):
 			var target: String = link["target"]
-			if not _story.has_node(target) or _revealed.has(target):
+			if not _story.has_node(target) or _revealed.has(target) or _map_hidden.has(target):
 				continue
 			if link["kind"] == "choice" and not link["guarded"]:
 				_revealed[target] = "known"
@@ -144,10 +162,11 @@ func _build_chains() -> void:
 	_current_rep = _rep_of.get(_current_id, _current_id)
 
 
-## Liens sortants vers des nœuds existants (END exclu).
+## Liens sortants vers des nœuds existants et non exclus de la carte (END exclu).
 func _real_outgoing(id: String) -> Array:
 	return _graph.outgoing(id).filter(
-			func(link: Dictionary) -> bool: return _story.has_node(link["target"]))
+			func(link: Dictionary) -> bool:
+				return _story.has_node(link["target"]) and not _map_hidden.has(link["target"]))
 
 
 ## Libellé affiché : id du premier membre, suffixé du nombre de nœuds absorbés.
@@ -234,15 +253,93 @@ func _auto_layout_vertical() -> void:
 				max_depth = maxi(max_depth, depth[target])
 				queue.append(target)
 
-	var next_x: Dictionary = {}  # rangée -> prochaine abscisse libre
+	# Rangée (= profondeur) → représentants, dans l'ordre du fichier au départ.
+	var rows: Dictionary = {}  # row:int -> Array[rep]
 	for id in _story.nodes:  # l'ordre du fichier rend la disposition stable
 		var rep: String = _rep_of.get(id, id)
-		if rep != id or _positions.has(rep):
+		if rep != id or _map_hidden.has(rep):
 			continue
 		var row: int = depth.get(rep, max_depth + 1)
-		var x: float = next_x.get(row, 0.0)
-		_positions[rep] = Vector2(x, row * DEPTH_GAP)
-		next_x[row] = x + _size_of(rep).x + H_GAP
+		if not rows.has(row):
+			rows[row] = []
+		rows[row].append(rep)
+
+	# Heuristique du barycentre (Sugiyama) : réordonne chaque rangée pour réduire
+	# les croisements, puis pose les abscisses selon l'ordre obtenu.
+	var adj := _row_adjacency(depth, max_depth)
+	_order_by_barycenter(rows, max_depth, adj["parents"], adj["children"])
+	for row in rows:
+		var x := 0.0
+		for rep in rows[row]:
+			_positions[rep] = Vector2(x, row * DEPTH_GAP)
+			x += _size_of(rep).x + H_GAP
+
+
+## Liens entre rangées ADJACENTES (profondeur r → r+1) dans le graphe contracté :
+##   { "parents": rep -> [reps de la rangée du dessus],
+##     "children": rep -> [reps de la rangée du dessous] }.
+## Les liens qui sautent des rangées sont ignorés (ils croiseront de toute façon).
+func _row_adjacency(depth: Dictionary, _max_depth: int) -> Dictionary:
+	var parents: Dictionary = {}
+	var children: Dictionary = {}
+	for id in _story.nodes:
+		var rep: String = _rep_of.get(id, id)
+		if rep != id or _map_hidden.has(rep) or not depth.has(rep):
+			continue
+		for target in _contracted_targets(rep):
+			if depth.get(target, -1) != depth[rep] + 1:
+				continue
+			children.get_or_add(rep, []).append(target)
+			parents.get_or_add(target, []).append(rep)
+	return {"parents": parents, "children": children}
+
+
+## Quelques balayages haut→bas (par les parents) et bas→haut (par les enfants) :
+## chaque rangée est triée selon la position moyenne de ses voisins de la rangée
+## adjacente. Réduit les croisements sans prétendre les annuler.
+func _order_by_barycenter(rows: Dictionary, max_depth: int,
+		parents: Dictionary, children: Dictionary) -> void:
+	var rank := _row_ranks(rows)
+	for pass_i in BARYCENTER_PASSES:
+		if pass_i % 2 == 0:
+			for r in range(1, max_depth + 1):
+				_sort_row(rows, r, rank, parents)
+		else:
+			for r in range(max_depth - 1, -1, -1):
+				_sort_row(rows, r, rank, children)
+
+
+## Rang (position horizontale) courant de chaque rep dans sa rangée.
+func _row_ranks(rows: Dictionary) -> Dictionary:
+	var rank: Dictionary = {}
+	for row in rows:
+		for i in rows[row].size():
+			rank[rows[row][i]] = i
+	return rank
+
+
+## Trie une rangée par le barycentre des rangs de ses voisins (neighbors), et met
+## à jour les rangs de cette rangée. Un rep sans voisin garde sa place courante.
+func _sort_row(rows: Dictionary, row: int, rank: Dictionary, neighbors: Dictionary) -> void:
+	if not rows.has(row):
+		return
+	var bary: Dictionary = {}
+	for rep in rows[row]:
+		var neigh: Array = neighbors.get(rep, [])
+		if neigh.is_empty():
+			bary[rep] = float(rank.get(rep, 0))
+		else:
+			var sum := 0.0
+			for n in neigh:
+				sum += float(rank.get(n, 0))
+			bary[rep] = sum / neigh.size()
+	# Tri par barycentre, départage par le rang courant (stabilité).
+	rows[row].sort_custom(func(a: String, b: String) -> bool:
+		if bary[a] == bary[b]:
+			return rank.get(a, 0) < rank.get(b, 0)
+		return bary[a] < bary[b])
+	for i in rows[row].size():
+		rank[rows[row][i]] = i
 
 
 ## Représentants effectivement dessinés : chaînes visitées + bulles « ? ».
@@ -360,17 +457,28 @@ func _chain_visitors(rep: String) -> Array:
 	return seen.keys()
 
 
-## Style du panneau selon l'état de la chaîne :
+## Style du panneau (pilule) :
+##  - fond/bordure teintés par le personnage quand UN SEUL l'a traversée ;
+##    accent neutre si plusieurs (les pastilles distinguent déjà qui) ;
 ##  - sélectionnée → liseré sépia (volet de relecture ouvert) ;
-##  - courante     → liseré à la couleur du personnage incarné ;
-##  - sinon        → cadre discret.
+##  - courante     → liseré à la couleur du personnage incarné.
 func _panel_style(rep: String) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.12, 0.11, 0.16)
-	style.set_border_width_all(2)
-	style.border_color = Color(0.5, 0.45, 0.35)
-	style.set_corner_radius_all(6)
+	# Rayon = moitié de la hauteur du nœud → vrai effet pilule.
+	style.set_corner_radius_all(int(_size_of(rep).y / 2.0))
 	style.set_content_margin_all(6)
+
+	# Accent par personnage : couleur du seul visiteur, sinon neutre.
+	var visitors: Array = _chain_visitors(rep)
+	if visitors.size() == 1:
+		var accent := _color_of(str(visitors[0]))
+		style.bg_color = Color(0.12, 0.11, 0.16).lerp(accent, 0.18)
+		style.border_color = accent.lerp(Color(0.5, 0.45, 0.35), 0.35)
+	else:
+		style.bg_color = Color(0.12, 0.11, 0.16)
+		style.border_color = Color(0.5, 0.45, 0.35)
+	style.set_border_width_all(2)
+
 	var outline := Color.TRANSPARENT
 	if rep == _selected_id:
 		outline = SEPIA
@@ -698,25 +806,44 @@ func _draw_edges() -> void:
 			var target_visited: bool = _revealed.get(target) == "visited"
 			var seen_choice: bool = link["kind"] == "choice" and not link["guarded"]
 			if target_visited or (seen_choice and _revealed.has(target)):
-				_canvas.draw_line(from_center, to_center, EDGE_COLOR, 2.0, true)
+				_canvas.draw_polyline(_edge_curve(from_center, to_center).tessellate(),
+						EDGE_COLOR, 2.0, true)
 			elif not link.get("identity", false):
 				# Une variante de personnage non explorée (ex. Prologue1 selon
 				# le héros incarné) n'est PAS une piste cachée : rien à montrer.
 				_draw_hidden_stub(from_center, to_center, _size_of(rep).x)
 
 
-## Amorce de piste cachée : pointillés qui s'évanouissent en direction de la
-## cible, tronqués pour ne rien révéler de sa position exacte.
+## Courbe d'un lien : Bézier cubique dont les points de contrôle sont décalés le
+## long de l'AXE DU FLUX (l'axe dominant de la distance — vertical en disposition
+## auto, horizontal en disposition d'auteur), même principe que la courbure de
+## GraphEdit mais dessinée à la main.
+func _edge_curve(from_center: Vector2, to_center: Vector2) -> Curve2D:
+	var delta := to_center - from_center
+	var bend: Vector2
+	if absf(delta.y) >= absf(delta.x):
+		bend = Vector2(0.0, delta.y * EDGE_CURVATURE)
+	else:
+		bend = Vector2(delta.x * EDGE_CURVATURE, 0.0)
+	var curve := Curve2D.new()
+	curve.add_point(from_center, Vector2.ZERO, bend)   # sort dans le sens du flux
+	curve.add_point(to_center, -bend, Vector2.ZERO)    # arrive dans le sens du flux
+	return curve
+
+
+## Amorce de piste cachée : pointillés qui s'évanouissent EN SUIVANT LA COURBE
+## vers la cible, tronqués pour ne rien révéler de sa position exacte.
 func _draw_hidden_stub(from_center: Vector2, toward: Vector2, source_width: float) -> void:
-	var dir := (toward - from_center).normalized()
-	if dir == Vector2.ZERO:
-		dir = Vector2.RIGHT
-	var cursor := from_center + dir * (source_width * 0.45)
+	var curve := _edge_curve(from_center, toward)
+	var length := curve.get_baked_length()
 	const DASH := 9.0
 	const GAP := 7.0
 	const COUNT := 7
+	var cursor := source_width * 0.45  # démarre au bord du nœud source
 	for i in COUNT:
+		if cursor >= length:
+			break
 		var alpha := 0.75 * (1.0 - float(i) / COUNT)
-		_canvas.draw_line(cursor, cursor + dir * DASH,
+		_canvas.draw_line(curve.sample_baked(cursor), curve.sample_baked(minf(cursor + DASH, length)),
 				Color(HIDDEN_COLOR.r, HIDDEN_COLOR.g, HIDDEN_COLOR.b, alpha), 2.0, true)
-		cursor += dir * (DASH + GAP)
+		cursor += DASH + GAP
