@@ -8,6 +8,7 @@ const SECTIONS := [
 	preload("res://addons/narrative_graph/sections/section_identity.gd"),
 	preload("res://addons/narrative_graph/sections/section_links.gd"),
 	preload("res://addons/narrative_graph/sections/section_illustration.gd"),
+	preload("res://addons/narrative_graph/sections/section_interactions.gd"),
 	preload("res://addons/narrative_graph/sections/section_events.gd"),
 	preload("res://addons/narrative_graph/sections/section_comment.gd"),
 ]

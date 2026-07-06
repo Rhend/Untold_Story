@@ -3,47 +3,47 @@
 		"template": "LANDSCAPE",
 		"dir": "illustrations/landscape/Village/",
 		"layers": [
-			["Illu_Village_Plan04.png", 4],
-			["Illu_Village_Plan05.png", 5],
-			["Illu_Village_Plan06.png", 6],
-			["Illu_Village_Plan07.png", 7]
+			{ "file": "Illu_Village_Plan04.png", "index": 4, "interactions": [] },
+			{ "file": "Illu_Village_Plan05.png", "index": 5, "interactions": [] },
+			{ "file": "Illu_Village_Plan06.png", "index": 6, "interactions": [] },
+			{ "file": "Illu_Village_Plan07.png", "index": 7, "interactions": [] }
 		]
 	},
 	"La palmeraie": {
 		"template": "LANDSCAPE",
 		"dir": "illustrations/landscape/PalmGrove/",
 		"layers": [
-			["Illu_PalmGrove_Plan01.png", 1],
-			["Illu_PalmGrove_Plan02.png", 2],
-			["Illu_PalmGrove_Plan03.png", 3],
-			["Illu_PalmGrove_Plan04.png", 4],
-			["Illu_PalmGrove_Plan05.png", 5],
-			["Illu_PalmGrove_Plan06.png", 6],
-			["Illu_PalmGrove_Plan07.png", 7],
-			["Illu_PalmGrove_Plan08.png", 8]
+			{ "file": "Illu_PalmGrove_Plan01.png", "index": 1, "interactions": [] },
+			{ "file": "Illu_PalmGrove_Plan02.png", "index": 2, "interactions": [] },
+			{ "file": "Illu_PalmGrove_Plan03.png", "index": 3, "interactions": [] },
+			{ "file": "Illu_PalmGrove_Plan04.png", "index": 4, "interactions": [] },
+			{ "file": "Illu_PalmGrove_Plan05.png", "index": 5, "interactions": [] },
+			{ "file": "Illu_PalmGrove_Plan06.png", "index": 6, "interactions": [] },
+			{ "file": "Illu_PalmGrove_Plan07.png", "index": 7, "interactions": [] },
+			{ "file": "Illu_PalmGrove_Plan08.png", "index": 8, "interactions": [] }
 		]
 	},
 	"La rue": {
 		"template": "LANDSCAPE",
 		"dir": "illustrations/landscape/Street/",
 		"layers": [
-			["Illu_Street_Plan04.png", 4],
-			["Illu_Street_Plan05.png", 5],
-			["Illu_Street_Plan06.png", 6],
-			["Illu_Street_Plan07.png", 7]
+			{ "file": "Illu_Street_Plan04.png", "index": 4, "interactions": [] },
+			{ "file": "Illu_Street_Plan05.png", "index": 5, "interactions": [] },
+			{ "file": "Illu_Street_Plan06.png", "index": 6, "interactions": [] },
+			{ "file": "Illu_Street_Plan07.png", "index": 7, "interactions": [] }
 		]
 	},
 	"La cérémonie": {
 		"template": "LANDSCAPE",
 		"dir": "illustrations/landscape/Ceremony/",
 		"layers": [
-			["Illu_Ceremony_Plan2.png", 2],
-			["Illu_Ceremony_Plan3.png", 3],
-			["Illu_Ceremony_Plan5.png", 5],
-			["Illu_Ceremony_Plan6.png", 6],
-			["Illu_Ceremony_Plan7.png", 7],
-			["Illu_Ceremony_Plan8.png", 8],
-			["Illu_Ceremony_Plan9.png", 9]
+			{ "file": "Illu_Ceremony_Plan2.png", "index": 2, "interactions": [] },
+			{ "file": "Illu_Ceremony_Plan3.png", "index": 3, "interactions": [] },
+			{ "file": "Illu_Ceremony_Plan5.png", "index": 5, "interactions": [] },
+			{ "file": "Illu_Ceremony_Plan6.png", "index": 6, "interactions": [] },
+			{ "file": "Illu_Ceremony_Plan7.png", "index": 7, "interactions": [] },
+			{ "file": "Illu_Ceremony_Plan8.png", "index": 8, "interactions": [] },
+			{ "file": "Illu_Ceremony_Plan9.png", "index": 9, "interactions": [] }
 		]
 	},
 	"Démon": {
@@ -51,8 +51,8 @@
 		"parallax_enabled": false,
 		"dir": "illustrations/portrait/Demon/",
 		"layers": [
-			["Illu_Demon_Plan06.png", 6],
-			["Illu_Demon_Plan07.png", 7]
+			{ "file": "Illu_Demon_Plan06.png", "index": 6, "interactions": [] },
+			{ "file": "Illu_Demon_Plan07.png", "index": 7, "interactions": [] }
 		]
 	},
 	"Orante": {
@@ -60,8 +60,8 @@
 		"parallax_enabled": false,
 		"dir": "illustrations/portrait/Orante/",
 		"layers": [
-			["Illu_Orante_Plan06.png", 6],
-			["Illu_Orante_Plan07.png", 7]
+			{ "file": "Illu_Orante_Plan06.png", "index": 6, "interactions": [] },
+			{ "file": "Illu_Orante_Plan07.png", "index": 7, "interactions": [] }
 		]
 	},
 	"Statue de Sîn": {
@@ -69,8 +69,8 @@
 		"parallax_enabled": false,
 		"dir": "illustrations/portrait/Sin/",
 		"layers": [
-			["Illu_Prologue_Sin_Unique_Plan05.png", 5],
-			["Illu_Prologue_Sin_Unique_Plan06.png", 6]
+			{ "file": "Illu_Prologue_Sin_Unique_Plan05.png", "index": 5, "interactions": [] },
+			{ "file": "Illu_Prologue_Sin_Unique_Plan06.png", "index": 6, "interactions": [] }
 		]
 	},
 	"Halî-Ammi": {
@@ -78,8 +78,8 @@
 		"parallax_enabled": false,
 		"dir": "illustrations/portrait/HaliAmmi/",
 		"layers": [
-			["Illu_HaliAmmi_Plan06.png", 6],
-			["Illu_HaliAmmi_Plan07.png", 7]
+			{ "file": "Illu_HaliAmmi_Plan06.png", "index": 6, "interactions": [] },
+			{ "file": "Illu_HaliAmmi_Plan07.png", "index": 7, "interactions": [] }
 		]
 	}
 }

@@ -5,8 +5,8 @@ extends Resource
 ##
 ## Le polygone est défini en coordonnées NORMALISÉES [0,1] dans l'espace de la
 ## texture NON transformée du calque (avant parallaxe) : il suit donc le calque
-## quand celui-ci se décale. L'outil de dessin à la souris viendra plus tard
-## (point 6) ; pour l'instant les zones se saisissent à la main dans l'inspecteur.
+## quand celui-ci se décale. Les zones se dessinent à la souris dans l'outil
+## narratif (section_interactions.gd), sérialisées dans illustrations_defs.json.
 ##
 ## Effets déclenchés au clic (cf. story.gd) — chacun optionnel :
 ##   - dialogue_lines : lignes ajoutées à la suite du texte courant ;
