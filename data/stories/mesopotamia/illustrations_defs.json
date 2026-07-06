@@ -1,0 +1,85 @@
+{
+	"Le village": {
+		"template": "LANDSCAPE",
+		"dir": "illustrations/landscape/Village/",
+		"layers": [
+			["Illu_Village_Plan04.png", 4],
+			["Illu_Village_Plan05.png", 5],
+			["Illu_Village_Plan06.png", 6],
+			["Illu_Village_Plan07.png", 7]
+		]
+	},
+	"La palmeraie": {
+		"template": "LANDSCAPE",
+		"dir": "illustrations/landscape/PalmGrove/",
+		"layers": [
+			["Illu_PalmGrove_Plan01.png", 1],
+			["Illu_PalmGrove_Plan02.png", 2],
+			["Illu_PalmGrove_Plan03.png", 3],
+			["Illu_PalmGrove_Plan04.png", 4],
+			["Illu_PalmGrove_Plan05.png", 5],
+			["Illu_PalmGrove_Plan06.png", 6],
+			["Illu_PalmGrove_Plan07.png", 7],
+			["Illu_PalmGrove_Plan08.png", 8]
+		]
+	},
+	"La rue": {
+		"template": "LANDSCAPE",
+		"dir": "illustrations/landscape/Street/",
+		"layers": [
+			["Illu_Street_Plan04.png", 4],
+			["Illu_Street_Plan05.png", 5],
+			["Illu_Street_Plan06.png", 6],
+			["Illu_Street_Plan07.png", 7]
+		]
+	},
+	"La cérémonie": {
+		"template": "LANDSCAPE",
+		"dir": "illustrations/landscape/Ceremony/",
+		"layers": [
+			["Illu_Ceremony_Plan2.png", 2],
+			["Illu_Ceremony_Plan3.png", 3],
+			["Illu_Ceremony_Plan5.png", 5],
+			["Illu_Ceremony_Plan6.png", 6],
+			["Illu_Ceremony_Plan7.png", 7],
+			["Illu_Ceremony_Plan8.png", 8],
+			["Illu_Ceremony_Plan9.png", 9]
+		]
+	},
+	"Démon": {
+		"template": "PORTRAIT",
+		"parallax_enabled": false,
+		"dir": "illustrations/portrait/Demon/",
+		"layers": [
+			["Illu_Demon_Plan06.png", 6],
+			["Illu_Demon_Plan07.png", 7]
+		]
+	},
+	"Orante": {
+		"template": "PORTRAIT",
+		"parallax_enabled": false,
+		"dir": "illustrations/portrait/Orante/",
+		"layers": [
+			["Illu_Orante_Plan06.png", 6],
+			["Illu_Orante_Plan07.png", 7]
+		]
+	},
+	"Statue de Sîn": {
+		"template": "PORTRAIT",
+		"parallax_enabled": false,
+		"dir": "illustrations/portrait/Sin/",
+		"layers": [
+			["Illu_Prologue_Sin_Unique_Plan05.png", 5],
+			["Illu_Prologue_Sin_Unique_Plan06.png", 6]
+		]
+	},
+	"Halî-Ammi": {
+		"template": "PORTRAIT",
+		"parallax_enabled": false,
+		"dir": "illustrations/portrait/HaliAmmi/",
+		"layers": [
+			["Illu_HaliAmmi_Plan06.png", 6],
+			["Illu_HaliAmmi_Plan07.png", 7]
+		]
+	}
+}

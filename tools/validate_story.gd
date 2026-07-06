@@ -5,7 +5,8 @@
 ##      (détecte nœuds introuvables, impasses, boucles infinies).
 ## Usage : godot --headless --path . --script tools/validate_story.gd
 
-const STORY_PATH := "res://data/stories/act1_sc1.untold"
+const STORY_DIR := "res://data/stories/mesopotamia/"
+const STORY_PATH := STORY_DIR + "act1_sc1.untold"
 const RUNS_PER_COMBO := 200
 const MAX_STEPS := 2000
 
@@ -33,6 +34,7 @@ func _init() -> void:
 		quit(1)
 		return
 	var story = Parser.parse(source)
+	Library.load_story(STORY_DIR)  # peuple les définitions d'illustrations
 	print("Nœuds parsés : %d" % story.nodes.size())
 
 	var errors := 0
@@ -47,7 +49,7 @@ func _init() -> void:
 				errors += 1
 			if ins["type"] == "command" and ins["name"] == "illustration":
 				var illu: String = ins["args"][0]
-				if not Library.DEFS.has(illu):
+				if not Library.defs().has(illu):
 					print("ERREUR: illustration inconnue « %s » dans %s" % [illu, id])
 					errors += 1
 

@@ -27,11 +27,6 @@ extends Control
 
 signal close_requested()
 
-const CHARACTER_PATHS := [
-	"res://data/characters/naditum.tres",
-	"res://data/characters/soldat.tres",
-	"res://data/characters/pretresse.tres",
-]
 
 ## Taille MINIMALE d'un panneau — la largeur réelle suit le libellé.
 const NODE_SIZE := Vector2(170, 46)
@@ -80,7 +75,7 @@ func setup(story: Story, untold_path: String, current_node := "") -> void:
 	_story = story
 	_graph = StoryGraph.build(story)
 	_current_id = current_node
-	for path in CHARACTER_PATHS:
+	for path in GameState.character_paths():
 		var data: CharacterData = load(path)
 		if data != null:
 			_characters.append(data)

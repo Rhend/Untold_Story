@@ -3,8 +3,11 @@ extends Control
 ## affiche le buste du personnage + texte (effet machine à écrire) + choix.
 ## UI construite en code pour cette tranche (passage en .tscn éditable plus tard).
 
-const STORY_PATH := "res://data/stories/act1_sc1.untold"
 const SELECTION_SCENE := "res://scenes/character_selection.tscn"
+
+## Chemin du .untold de l'histoire courante, résolu au démarrage depuis
+## GameState.story_id + le entry_file du manifest.json de l'histoire.
+var _story_path := ""
 
 var _runner: StoryRunner
 var _story: Story
@@ -51,6 +54,11 @@ func _ready() -> void:
 	SettingsMenu.set_restart_available(true)
 	SettingsMenu.restart_requested.connect(_restart_story)
 
+	# Résout l'histoire choisie (dossier data/stories/<id>/ + entry_file du
+	# manifest), puis charge ses définitions d'illustrations AVANT le préchargement.
+	_story_path = _resolve_story_path()
+	IllustrationLibrary.load_story(GameState.story_dir())
+
 	# Précharge les textures d'illustration en tâche de fond pour éviter
 	# l'à-coup quand une page à parallaxe apparaît.
 	IllustrationLibrary.preload_all()
@@ -78,11 +86,26 @@ func _exit_tree() -> void:
 	SettingsMenu.set_restart_available(false)
 
 
+## Résout le chemin du .untold de l'histoire courante via son manifest.json.
+func _resolve_story_path() -> String:
+	var dir := GameState.story_dir()
+	var manifest_path := dir + "manifest.json"
+	if not FileAccess.file_exists(manifest_path):
+		push_error("story: manifest introuvable : " + manifest_path)
+		return ""
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(manifest_path))
+	var entry := str(parsed.get("entry_file", "")) if parsed is Dictionary else ""
+	if entry.is_empty():
+		push_error("story: entry_file manquant dans " + manifest_path)
+		return ""
+	return dir + entry
+
+
 func _start_story() -> void:
-	var source := FileAccess.get_file_as_string(STORY_PATH)
+	var source := FileAccess.get_file_as_string(_story_path)
 	_story = StoryParser.parse(source)
-	_meta = StoryMeta.load_for(STORY_PATH)
-	Progress.begin_story(STORY_PATH.get_file().get_basename(), GameState.character_type)
+	_meta = StoryMeta.load_for(_story_path)
+	Progress.begin_story(_story_path.get_file().get_basename(), GameState.character_type)
 
 	# Reprise auto et silencieuse : si ce personnage a un point de reprise
 	# valide, on démarre directement là plutôt qu'au nœud d'entrée (les
@@ -442,7 +465,7 @@ func _toggle_map() -> void:
 		return
 	_map = StoryMap.new()
 	add_child(_map)
-	_map.setup(_story, STORY_PATH, _current_node)
+	_map.setup(_story, _story_path, _current_node)
 	_map.close_requested.connect(_toggle_map)
 
 
@@ -559,5 +582,5 @@ func _go_to_selection() -> void:
 ## start_node — plus propre qu'un go_to() qui laisserait variables et décor en
 ## place.
 func _restart_story() -> void:
-	Progress.restart_playthrough(STORY_PATH.get_file().get_basename(), GameState.character_type)
+	Progress.restart_playthrough(_story_path.get_file().get_basename(), GameState.character_type)
 	get_tree().reload_current_scene()

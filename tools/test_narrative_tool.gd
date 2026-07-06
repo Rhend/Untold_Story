@@ -5,7 +5,7 @@ extends SceneTree
 ##  - StoryMeta : positions et commentaires.
 ## Lancer : godot --headless --path . --script tools/test_narrative_tool.gd
 
-const STORY_PATH := "res://data/stories/act1_sc1.untold"
+const STORY_PATH := "res://data/stories/mesopotamia/act1_sc1.untold"
 const UntoldSource := preload("res://addons/narrative_graph/untold_source.gd")
 
 var _failures := 0

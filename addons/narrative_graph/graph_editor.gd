@@ -30,15 +30,6 @@ const NODE_BORDER := Color(0.33, 0.33, 0.4)
 ## Courbure des connecteurs natifs de GraphEdit (0 = droit, 1 = très courbe).
 const LINES_CURVATURE := 0.4
 
-## Personnages connus, pour l'accent de couleur d'identité (CharacterData.color).
-## Ceux cités dans l'histoire sans ressource (Marchand, Danseuse, Exorciste)
-## retombent sur une teinte stable dérivée du nom.
-const CHARACTER_PATHS := [
-	"res://data/characters/naditum.tres",
-	"res://data/characters/soldat.tres",
-	"res://data/characters/pretresse.tres",
-]
-
 var _stories: OptionButton
 var _status: Label
 var _graph_edit: GraphEdit
@@ -62,15 +53,21 @@ func _init() -> void:
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_build_ui()
-	_load_characters()
 
 
-## Personnages jouables connus (couleur d'accent). Chargés une fois.
-func _load_characters() -> void:
-	for path in CHARACTER_PATHS:
-		var data: CharacterData = load(path)
-		if data != null:
-			_characters.append(data)
+## Personnages jouables de l'histoire éditée (couleur d'accent), scannés dans le
+## dossier characters/ à côté du .untold. Rechargés à chaque histoire ouverte ;
+## une histoire sans dossier characters/ laisse simplement des accents neutres.
+func _load_characters(story_dir: String) -> void:
+	_characters.clear()
+	var dir := DirAccess.open(story_dir + "characters/")
+	if dir == null:
+		return
+	for file in dir.get_files():
+		if file.ends_with(".tres"):
+			var data: CharacterData = load(story_dir + "characters/" + file)
+			if data != null:
+				_characters.append(data)
 
 
 func _ready() -> void:
@@ -157,22 +154,41 @@ func set_status(message: String) -> void:
 
 func _scan_stories() -> void:
 	_stories.clear()
-	var dir := DirAccess.open(STORIES_DIR)
-	if dir == null:
-		set_status("Dossier introuvable : " + STORIES_DIR)
-		return
-	for file in dir.get_files():
-		if file.ends_with(".untold"):
-			_stories.add_item(file)
+	for path in _find_untold_files():
+		_stories.add_item(path.get_file())
+		# Le chemin complet est porté par la métadonnée : les .untold vivent
+		# désormais dans un sous-dossier par histoire (data/stories/<id>/).
+		_stories.set_item_metadata(_stories.item_count - 1, path)
 	if _stories.item_count > 0:
 		_stories.select(0)
 		_load_selected()
 
 
+## .untold rangés par histoire : un niveau de sous-dossier (data/stories/<id>/),
+## plus ceux restés à la racine (histoires non encore rangées, ex. sample).
+func _find_untold_files() -> Array:
+	var found: Array = []
+	var root := DirAccess.open(STORIES_DIR)
+	if root == null:
+		set_status("Dossier introuvable : " + STORIES_DIR)
+		return found
+	for file in root.get_files():
+		if file.ends_with(".untold"):
+			found.append(STORIES_DIR + "/" + file)
+	for sub in root.get_directories():
+		var subdir := DirAccess.open(STORIES_DIR + "/" + sub)
+		if subdir == null:
+			continue
+		for file in subdir.get_files():
+			if file.ends_with(".untold"):
+				found.append(STORIES_DIR + "/" + sub + "/" + file)
+	return found
+
+
 func _current_path() -> String:
 	if _stories.selected < 0:
 		return ""
-	return STORIES_DIR + "/" + _stories.get_item_text(_stories.selected)
+	return str(_stories.get_item_metadata(_stories.selected))
 
 
 func _load_selected() -> void:
@@ -183,6 +199,11 @@ func _load_selected() -> void:
 	if not _source.load_file(path):
 		set_status("Lecture impossible : " + path)
 		return
+	# Ressources propres à l'histoire éditée (dossier du .untold) : personnages
+	# pour l'accent d'identité, définitions d'illustrations pour les aperçus.
+	var story_dir := path.get_base_dir() + "/"
+	_load_characters(story_dir)
+	IllustrationLibrary.load_story(story_dir)
 	_story = StoryParser.parse(FileAccess.get_file_as_string(path))
 	_graph = StoryGraph.build(_story)
 	_meta = StoryMeta.load_for(path)

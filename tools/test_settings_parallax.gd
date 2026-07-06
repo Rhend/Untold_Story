@@ -47,6 +47,7 @@ func _test_template_enum() -> void:
 
 func _test_library_parallax_flag() -> void:
 	print("IllustrationLibrary — parallax_enabled par illustration :")
+	IllustrationLibrary.load_story("res://data/stories/mesopotamia/")
 	for name in ["Démon", "Orante", "Statue de Sîn", "Halî-Ammi"]:
 		var data := IllustrationLibrary.get_illustration(name)
 		_check(data != null and not data.parallax_enabled,

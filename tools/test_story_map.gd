@@ -3,7 +3,7 @@ extends Node
 ## réels, pour attraper toute erreur d'exécution sans lancer l'UI complète.
 ## Lancer : godot --headless --path . tools/test_story_map.tscn
 
-const STORY_PATH := "res://data/stories/act1_sc1.untold"
+const STORY_PATH := "res://data/stories/mesopotamia/act1_sc1.untold"
 
 
 func _ready() -> void:

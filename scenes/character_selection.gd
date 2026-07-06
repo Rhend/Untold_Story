@@ -4,11 +4,6 @@ extends Control
 ## renseigne GameState au clic puis lance la scène d'histoire.
 ## UI construite en code pour cette tranche (passage en .tscn éditable plus tard).
 
-const CHARACTER_PATHS := [
-	"res://data/characters/naditum.tres",
-	"res://data/characters/soldat.tres",
-	"res://data/characters/pretresse.tres",
-]
 const STORY_SCENE := "res://scenes/story.tscn"
 
 
@@ -39,7 +34,9 @@ func _build_ui() -> void:
 	row.add_theme_constant_override("separation", 36)
 	root.add_child(row)
 
-	for path in CHARACTER_PATHS:
+	# Casting scanné dans le dossier characters/ de l'histoire choisie (plus de
+	# liste en dur) : chaque histoire apporte ses propres personnages.
+	for path in GameState.character_paths():
 		var data: CharacterData = load(path)
 		if data == null:
 			push_error("Sélection : personnage introuvable : " + path)

@@ -60,10 +60,10 @@ func _add_preview(illustration_name: String, occurrence: int) -> void:
 	remove.pressed.connect(_remove_illustration.bind(occurrence, illustration_name))
 	row.add_child(remove)
 
-	if not IllustrationLibrary.DEFS.has(illustration_name):
+	if not IllustrationLibrary.defs().has(illustration_name):
 		title.text += "  (inconnue de la bibliothèque !)"
 		title.modulate = Color(0.9, 0.5, 0.4)
-		title.tooltip_text = "Aucune entrée dans core/illustration/illustration_library.gd."
+		title.tooltip_text = "Aucune entrée dans illustrations_defs.json de l'histoire."
 		return
 
 	var texture := _preview_texture(illustration_name)
@@ -81,7 +81,7 @@ func _add_preview(illustration_name: String, occurrence: int) -> void:
 ## Texture de preview : le fichier « ...Preview... » du dossier de
 ## l'illustration s'il existe, sinon son premier calque.
 func _preview_texture(illustration_name: String) -> Texture2D:
-	var def: Dictionary = IllustrationLibrary.DEFS[illustration_name]
+	var def: Dictionary = IllustrationLibrary.defs()[illustration_name]
 	var dir_path: String = def["dir"]
 	var dir := DirAccess.open(dir_path)
 	if dir != null:
@@ -130,8 +130,9 @@ func _drop_data(_position: Vector2, data: Variant) -> void:
 ## Illustration de la bibliothèque dont le dossier contient ce chemin
 ## (fichier d'un calque, preview, ou dossier de l'illustration lui-même).
 func _name_for_path(path: String) -> String:
-	for name in IllustrationLibrary.DEFS:
-		var dir: String = IllustrationLibrary.DEFS[name]["dir"]
+	var defs := IllustrationLibrary.defs()
+	for name in defs:
+		var dir: String = defs[name]["dir"]
 		if path.begins_with(dir) or dir.trim_suffix("/") == path.trim_suffix("/"):
 			return name
 	return ""
