@@ -41,8 +41,10 @@ var _position: Dictionary = {}
 ## { story_id: { personnage: [node_id, ...] } }
 var _visited_session: Dictionary = {}
 
-## Inventaire de la partie en cours, par personnage (mêmes règles de durée de vie
-## que _zones : remis à zéro par restart_playthrough(), PAS par "decouverte").
+## Inventaire de la partie en cours, par personnage. Lié au RUN, pas au
+## personnage : effacé à la fin de l'histoire ET par restart_playthrough (mêmes
+## règles que _position/_visited_session, cf. _erase_current_run), PAS par
+## "decouverte". Un nouveau run repart donc les mains vides.
 ## { story_id: { personnage: { item_id: quantité } } }
 var _inventory: Dictionary = {}
 
@@ -153,10 +155,11 @@ func record_checkpoint(node_id: String) -> void:
 	_save()
 
 
-## Efface le point de reprise du personnage courant ET sa trace de session (fin
-## d'histoire : reprendre une fin n'a pas de sens, la prochaine sélection repart
-## de start_node avec un _visited vierge — sinon la trace de la partie terminée
-## contaminerait les gardes visited() d'une relecture ultérieure).
+## Efface l'état du run terminé (reprise + trace de session + inventaire) pour le
+## personnage courant. Fin d'histoire : reprendre une fin n'a pas de sens, la
+## prochaine sélection repart de start_node, _visited vierge et les mains vides —
+## sinon la trace de la partie terminée contaminerait les gardes visited()/
+## has_item() d'un nouveau run.
 func clear_checkpoint() -> void:
 	_erase_current_run(_story_id, _character)
 	_save()
@@ -181,16 +184,19 @@ func restart_playthrough(story_id: String, character: String) -> void:
 				_zones[story_id].erase(zone_id)
 		if _zones[story_id].is_empty():
 			_zones.erase(story_id)
-	_erase_from(_inventory, story_id, character)
 	_erase_current_run(story_id, character)
 	_save()
 
 
-## Efface l'état transitoire (reprise + trace de session) d'un (story_id,
-## personnage). Ne touche NI zones NI "decouverte".
+## Efface l'état transitoire d'un RUN (reprise + trace de session + inventaire)
+## pour un (story_id, personnage). Appelé à la fin de l'histoire (clear_checkpoint)
+## ET par restart_playthrough : l'inventaire est lié à la partie, pas au
+## personnage — un nouveau run repart les mains vides. Ne touche NI zones NI
+## "decouverte".
 func _erase_current_run(story_id: String, character: String) -> void:
 	_erase_from(_position, story_id, character)
 	_erase_from(_visited_session, story_id, character)
+	_erase_from(_inventory, story_id, character)
 
 
 func _erase_from(store: Dictionary, story_id: String, character: String) -> void:
