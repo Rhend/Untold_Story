@@ -5,6 +5,7 @@ extends Control
 ## UI construite en code pour cette tranche (passage en .tscn éditable plus tard).
 
 const STORY_SCENE := "res://scenes/story.tscn"
+const HUB_SCENE := "res://scenes/hub.tscn"
 
 
 func _ready() -> void:
@@ -22,6 +23,16 @@ func _build_ui() -> void:
 	root.alignment = BoxContainer.ALIGNMENT_CENTER
 	root.add_theme_constant_override("separation", 32)
 	add_child(root)
+
+	# Retour au hub : le joueur n'est pas enfermé dans une histoire une fois
+	# entré (il peut en changer avant de choisir un personnage). Ancré en haut à
+	# gauche, hors du flux centré.
+	var back := Button.new()
+	back.text = "↩  Changer d'histoire"
+	back.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	back.position = Vector2(24, 24)
+	back.pressed.connect(func() -> void: get_tree().change_scene_to_file(HUB_SCENE))
+	add_child(back)
 
 	var title := Label.new()
 	title.text = "Choisis ton personnage"

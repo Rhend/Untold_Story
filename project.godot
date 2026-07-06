@@ -16,7 +16,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="Untold (Godot)"
 config/description="Visual novel narratif — réécriture native Godot. Source narrative unique au format .untold."
-run/main_scene="res://scenes/character_selection.tscn"
+run/main_scene="res://scenes/hub.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
 

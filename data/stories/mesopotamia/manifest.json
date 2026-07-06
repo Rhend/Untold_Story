@@ -1,5 +1,6 @@
 {
 	"id": "mesopotamia",
 	"display_name": "Mésopotamia",
-	"entry_file": "act1_sc1.untold"
+	"entry_file": "act1_sc1.untold",
+	"locked": false
 }
