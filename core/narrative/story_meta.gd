@@ -6,10 +6,12 @@ extends RefCounted
 ## jamais polluée par des données d'outillage.
 ##
 ## Structure libre (extensible sans migration), clés utilisées aujourd'hui :
-##   "positions": { node_id: [x, y] }  — disposition du graphe (outil + carte)
-##   "comments":  { node_id: String }  — notes privées à l'outil narratif
-##   "collapsed": { node_id: true }    — nœuds repliés dans l'outil graphe
-##   "titles":    { node_id: String }  — titre lisible affiché au joueur (PROD)
+##   "positions":   { node_id: [x, y] }  — disposition du graphe (outil + carte)
+##   "comments":    { node_id: String }  — notes privées à l'outil narratif
+##   "collapsed":   { node_id: true }    — nœuds repliés dans l'outil graphe
+##   "titles":      { node_id: String }  — titre lisible affiché au joueur (PROD)
+##   "total_nodes": int                  — nombre de nœuds, mis en cache à
+##       l'ouverture dans l'outil (évite de reparser l'histoire dans le hub)
 
 var path := ""
 var data: Dictionary = {}
@@ -38,6 +40,13 @@ func section(key: String) -> Dictionary:
 	if not data.has(key):
 		data[key] = {}
 	return data[key]
+
+
+## Nombre de nœuds de l'histoire, mis en cache par l'outil narratif à l'ouverture
+## (cf. graph_editor._load_selected). 0 si l'histoire n'a jamais été ouverte dans
+## l'outil (sidecar absent ou clé jamais écrite). Lisible sans reparser le .untold.
+func total_nodes() -> int:
+	return int(data.get("total_nodes", 0))
 
 
 # ------------------------------------------------------------------ Positions

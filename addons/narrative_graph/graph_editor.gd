@@ -186,6 +186,11 @@ func _load_selected() -> void:
 	_story = StoryParser.parse(FileAccess.get_file_as_string(path))
 	_graph = StoryGraph.build(_story)
 	_meta = StoryMeta.load_for(path)
+	# Cache du total de nœuds dans le sidecar : le futur hub (point 9) le lit sans
+	# reparser le .untold. Écrit MAINTENANT (l'ouverture donne _story gratuitement)
+	# et sauvé immédiatement, indépendamment des autres call sites de _meta.save().
+	_meta.data["total_nodes"] = _story.nodes.size()
+	_meta.save()
 	_rebuild_graph_view()
 	set_status("%d nœuds — %s" % [_story.nodes.size(), path.get_file()])
 
