@@ -33,6 +33,14 @@ var _zones: Dictionary = {}
 ## { story_id: { personnage: node_id } }
 var _position: Dictionary = {}
 
+## Ensemble des nœuds traversés PENDANT la partie en cours, par personnage —
+## alimente la restauration de StoryRunner._visited à la reprise, pour que les
+## gardes visited()/!visited() se comportent comme dans une lecture continue.
+## DISTINCT de "decouverte" (_data), cumulatif inter-parties : celui-ci est une
+## trace de session, remise à zéro à la fin de l'histoire et par restart.
+## { story_id: { personnage: [node_id, ...] } }
+var _visited_session: Dictionary = {}
+
 
 func _ready() -> void:
 	_load()
@@ -47,11 +55,24 @@ func begin_story(story_id: String, character: String) -> void:
 
 
 ## Le personnage courant traverse un nœud (y compris les nœuds intermédiaires
-## enchaînés par des sauts).
+## enchaînés par des sauts). Deux écritures synchronisées ICI, jamais séparées :
+##  - "decouverte" (_data) : compteur cumulatif inter-parties (visited_by) ;
+##  - "visited_session"     : trace de la partie en cours (pour la reprise).
 func record_visit(node_id: String) -> void:
 	var visitors_of_node: Dictionary = _node_entry(node_id)["visited_by"]
 	visitors_of_node[_character] = int(visitors_of_node.get(_character, 0)) + 1
+	var session: Array = _session_entry()
+	if not session.has(node_id):
+		session.append(node_id)
 	_save()
+
+
+## Liste des nœuds traversés durant la partie en cours de ce (story_id,
+## personnage), pour restaurer StoryRunner._visited à la reprise. Copie défensive
+## (l'appelant ne doit pas muter l'état interne). Vide si aucune partie en cours.
+func resume_visited_set(story_id := "", character := "") -> Array:
+	var chr := _character if character.is_empty() else character
+	return (_visited_session.get(_resolve(story_id), {}).get(chr, []) as Array).duplicate()
 
 
 ## Le personnage courant valide une réponse à un point de choix.
@@ -86,10 +107,12 @@ func record_checkpoint(node_id: String) -> void:
 	_save()
 
 
-## Efface le point de reprise du personnage courant (fin d'histoire : reprendre
-## une fin n'a pas de sens, la prochaine sélection repart de start_node).
+## Efface le point de reprise du personnage courant ET sa trace de session (fin
+## d'histoire : reprendre une fin n'a pas de sens, la prochaine sélection repart
+## de start_node avec un _visited vierge — sinon la trace de la partie terminée
+## contaminerait les gardes visited() d'une relecture ultérieure).
 func clear_checkpoint() -> void:
-	_erase_position(_story_id, _character)
+	_erase_current_run(_story_id, _character)
 	_save()
 
 
@@ -101,8 +124,9 @@ func resume_node(story_id := "", character := "") -> String:
 
 
 ## Recommence la partie de ce (story_id, personnage) : efface UNIQUEMENT sa
-## "partie en cours" — zones cliquées ET point de reprise. La section
-## "decouverte" (visited_by/chosen, cumulative) reste intacte.
+## "partie en cours" — zones cliquées, point de reprise ET trace de session
+## (gardes visited() de l'ancienne partie). La section "decouverte"
+## (visited_by/chosen, cumulative) reste intacte.
 func restart_playthrough(story_id: String, character: String) -> void:
 	if _zones.has(story_id):
 		for zone_id in _zones[story_id].keys():
@@ -111,16 +135,23 @@ func restart_playthrough(story_id: String, character: String) -> void:
 				_zones[story_id].erase(zone_id)
 		if _zones[story_id].is_empty():
 			_zones.erase(story_id)
-	_erase_position(story_id, character)
+	_erase_current_run(story_id, character)
 	_save()
 
 
-func _erase_position(story_id: String, character: String) -> void:
-	if not _position.has(story_id):
+## Efface l'état transitoire (reprise + trace de session) d'un (story_id,
+## personnage). Ne touche NI zones NI "decouverte".
+func _erase_current_run(story_id: String, character: String) -> void:
+	_erase_from(_position, story_id, character)
+	_erase_from(_visited_session, story_id, character)
+
+
+func _erase_from(store: Dictionary, story_id: String, character: String) -> void:
+	if not store.has(story_id):
 		return
-	_position[story_id].erase(character)
-	if _position[story_id].is_empty():
-		_position.erase(story_id)
+	store[story_id].erase(character)
+	if store[story_id].is_empty():
+		store.erase(story_id)
 
 
 ## Efface toute la progression (tous personnages, toutes histoires) — découverte
@@ -129,6 +160,7 @@ func reset() -> void:
 	_data = {}
 	_zones = {}
 	_position = {}
+	_visited_session = {}
 	_save()
 
 
@@ -210,9 +242,16 @@ func _node_entry(node_id: String) -> Dictionary:
 	return nodes[node_id]
 
 
+## Écriture : liste des nœuds de session pour le (story_id, personnage) courant,
+## créée au besoin.
+func _session_entry() -> Array:
+	var by_story: Dictionary = _visited_session.get_or_add(_story_id, {})
+	return by_story.get_or_add(_character, [])
+
+
 ## Format disque, structuré par DURÉE DE VIE des données :
 ##   { "decouverte":      <cumulatif, jamais remis à zéro : visited_by/chosen>,
-##     "partie_en_cours": { "zones": ..., "position": ... } }
+##     "partie_en_cours": { "zones": ..., "position": ..., "visited_session": ... } }
 ## La section "partie_en_cours" est destinée à grossir (ex. inventaire au
 ## point 10) : ajouter une clé ici et l'inclure dans restart_playthrough().
 func _save() -> void:
@@ -225,6 +264,7 @@ func _save() -> void:
 		"partie_en_cours": {
 			"zones": _zones,
 			"position": _position,
+			"visited_session": _visited_session,
 		},
 	}, "\t"))
 
@@ -243,12 +283,14 @@ func _load() -> void:
 ## ancien. Chaque nouvelle version du format ajoute une branche EN TÊTE ; les
 ## anciennes branches restent pour ne perdre aucune sauvegarde existante.
 func _migrate(parsed: Dictionary) -> void:
-	# v3 (point 7) — sections par durée de vie.
+	# v3 (points 7-8) — sections par durée de vie. "visited_session" absent des
+	# toutes premières sauvegardes v3 (point 7) → défaut {} sans migration.
 	if parsed.has("decouverte") or parsed.has("partie_en_cours"):
 		_data = parsed.get("decouverte", {})
 		var current: Dictionary = parsed.get("partie_en_cours", {})
 		_zones = current.get("zones", {})
 		_position = current.get("position", {})
+		_visited_session = current.get("visited_session", {})
 		return
 	# v2 (point 4) — { "stories", "zones" }, sans point de reprise.
 	if parsed.has("stories") or parsed.has("zones"):

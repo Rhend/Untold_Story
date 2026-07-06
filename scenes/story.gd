@@ -88,13 +88,17 @@ func _start_story() -> void:
 	# valide, on démarre directement là plutôt qu'au nœud d'entrée (les
 	# variables d'identité sont posées de la même manière). Un checkpoint
 	# obsolète (nœud disparu après édition) est ignoré → repart du début.
+	# La trace de session (nœuds déjà visités) est réamorcée AVEC la reprise pour
+	# que les gardes visited() se comportent comme dans une lecture continue ;
+	# sans reprise, on repart d'un _visited vierge (pas de restauration).
 	var resume := Progress.resume_node()
 	if not resume.is_empty() and not _story.has_node(resume):
 		resume = ""
+	var visited_ids: Array = Progress.resume_visited_set() if not resume.is_empty() else []
 	_runner.start(_story, {
 		"character": GameState.character_type,
 		"type": GameState.character_attribute,
-	}, resume)
+	}, resume, visited_ids)
 
 
 # ------------------------------------------------------------------ UI

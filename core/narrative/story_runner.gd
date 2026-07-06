@@ -44,7 +44,11 @@ var _awaiting_choice := false
 ## (ex: {"character": "Nadîtum", "type": "Mystique"}). `from_node` permet de
 ## reprendre à un nœud précis (checkpoint) plutôt qu'au nœud d'entrée — les
 ## variables sont posées de la même façon, seul le point de départ change.
-func start(story: Story, initial_vars: Dictionary = {}, from_node := "") -> void:
+## `visited_ids` réamorce l'ensemble des nœuds déjà visités : indispensable à la
+## reprise pour que les gardes visited()/!visited() se comportent comme dans une
+## lecture continue. Restauré APRÈS la remise à zéro de _visited et AVANT le saut
+## vers `from_node`, sinon les gardes du nœud de reprise verraient un état vierge.
+func start(story: Story, initial_vars: Dictionary = {}, from_node := "", visited_ids: Array = []) -> void:
 	_story = story
 	variables = story.variables.duplicate(true)
 	for key in initial_vars:
@@ -52,7 +56,15 @@ func start(story: Story, initial_vars: Dictionary = {}, from_node := "") -> void
 	_visited = {}
 	_current_node_id = ""
 	_awaiting_choice = false
+	restore_visited(visited_ids)
 	_run_from(from_node if not from_node.is_empty() else story.start_node)
+
+
+## Réamorce _visited depuis une liste d'ids (reprise). N'affecte que l'état
+## interne des gardes visited() ; ne rejoue rien, n'émet aucun signal.
+func restore_visited(ids: Array) -> void:
+	for id in ids:
+		_visited[id] = true
 
 ## Le joueur sélectionne le choix d'index `index`.
 func choose(index: int) -> void:
