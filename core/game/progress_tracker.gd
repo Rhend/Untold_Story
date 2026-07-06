@@ -22,6 +22,9 @@ var _data: Dictionary = {}
 
 ## Clics sur les zones interactives d'illustration (indépendant des nœuds).
 ## { story_id: { zone_id: { personnage: nombre de clics } } }
+# TODO point 7 : appartient à la section "partie en cours", doit être remis à
+# zéro à chaque nouvelle partie, contrairement à visited_by/chosen qui sont
+# cumulatifs.
 var _zones: Dictionary = {}
 
 

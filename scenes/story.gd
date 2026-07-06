@@ -91,6 +91,11 @@ func _build_ui() -> void:
 	# mise en page : plein écran, ou demi-page droite pour le mode « livre ».
 	_content = MarginContainer.new()
 	_content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# En paysage, _content couvre tout l'écran : PASS laisse les clics NON
+	# consommés par un enfant réel (texte, boutons) remonter jusqu'aux zones
+	# interactives de l'illustration en dessous. _content n'a pas de gui_input
+	# propre, donc rien de son comportement n'est perdu.
+	_content.mouse_filter = Control.MOUSE_FILTER_PASS
 	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
 		_content.add_theme_constant_override(side, 56)
 	add_child(_content)
