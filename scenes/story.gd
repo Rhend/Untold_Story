@@ -16,6 +16,7 @@ var _meta: StoryMeta
 var _header: Label
 var _progress_label: Label
 var _map: StoryMap
+var _inventory_overlay: InventoryOverlay
 var _text_label: RichTextLabel
 var _choices_box: VBoxContainer
 var _typewriter: Tween
@@ -55,9 +56,11 @@ func _ready() -> void:
 	SettingsMenu.restart_requested.connect(_restart_story)
 
 	# Résout l'histoire choisie (dossier data/stories/<id>/ + entry_file du
-	# manifest), puis charge ses définitions d'illustrations AVANT le préchargement.
+	# manifest), puis charge ses définitions d'illustrations et d'objets AVANT le
+	# préchargement / la première commande.
 	_story_path = _resolve_story_path()
 	IllustrationLibrary.load_story(GameState.story_dir())
+	ItemLibrary.load_story(GameState.story_dir())
 
 	# Précharge les textures d'illustration en tâche de fond pour éviter
 	# l'à-coup quand une page à parallaxe apparaît.
@@ -362,9 +365,9 @@ func _on_illustration_interaction(interaction: IllustrationInteraction) -> void:
 		_append_dialogue(interaction.dialogue_lines)
 
 	if not interaction.item_id.is_empty():
-		# TODO point 10 : Inventory n'existe pas encore.
-		# Inventory.add_item(interaction.item_id, interaction.item_qty)
-		pass
+		# L'objet donné par la zone entre réellement dans l'inventaire (Progress,
+		# section partie_en_cours). Une garde has_item pourra alors passer.
+		Progress.add_item(interaction.item_id, interaction.item_qty)
 
 	# Un clic de zone a pu débloquer une nouvelle sortie (garde zone_clicked) :
 	# on ré-évalue les choix du nœud courant sans rejouer le nœud.
@@ -451,9 +454,24 @@ func _on_choice_selected(node_id: String, choice: Dictionary) -> void:
 # ------------------------------------------------------- Carte de progression
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo \
-			and event.keycode == KEY_M:
-		_toggle_map()
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_M:
+			_toggle_map()
+		elif event.keycode == KEY_I:
+			_toggle_inventory()
+
+
+## Ouvre/ferme l'inventaire (overlay modal), reconstruit à chaque ouverture pour
+## refléter les objets actuellement possédés.
+func _toggle_inventory() -> void:
+	if _inventory_overlay != null:
+		_inventory_overlay.queue_free()
+		_inventory_overlay = null
+		return
+	_inventory_overlay = InventoryOverlay.new()
+	add_child(_inventory_overlay)
+	_inventory_overlay.setup()
+	_inventory_overlay.close_requested.connect(_toggle_inventory)
 
 
 ## Ouvre/ferme la carte, reconstruite à chaque ouverture pour refléter la
@@ -474,9 +492,25 @@ func _on_command(name: String, args: Array) -> void:
 		"illustration":
 			if args.size() > 0:
 				_show_illustration(args[0])
+		"add_into_inventory":
+			if args.size() > 0:
+				Progress.add_item(str(args[0]), _arg_qty(args, 1))
+		"remove_object_from_inventory", "use_object_from_inventory":
+			# Identiques côté moteur : la distinction est purement pour la
+			# lisibilité de l'auteur du .untold (retirer vs consommer un objet).
+			if args.size() > 0:
+				Progress.remove_item(str(args[0]), _arg_qty(args, 1))
 		_:
 			# Autres commandes à venir (mini-jeux, etc.).
 			print("[command] %s(%s)" % [name, ", ".join(PackedStringArray(args))])
+
+
+## Quantité d'une commande d'inventaire : args[index] (String brute) converti en
+## int, défaut 1 si absent. Les objets uniques sont invoqués sans quantité.
+func _arg_qty(args: Array, index: int) -> int:
+	if args.size() > index and not str(args[index]).strip_edges().is_empty():
+		return int(str(args[index]))
+	return 1
 
 
 func _show_illustration(illustration_name: String) -> void:

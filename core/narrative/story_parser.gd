@@ -137,6 +137,9 @@ static func _append(node: StoryNode, ins: Dictionary, guard: Array) -> void:
 ##   !visited(noeud)   → {"kind": "visited", "id", "neg": true}
 ##   zone_clicked("z") → {"kind": "zone", "id", "neg": false}
 ##   !zone_clicked("z")→ {"kind": "zone", "id", "neg": true}
+##   has_item("i")     → {"kind": "item", "id", "qty": 1, "neg": false}
+##   has_item("i", 2)  → {"kind": "item", "id", "qty": 2, "neg": false}
+##   !has_item("i")    → {"kind": "item", "id", "qty": 1, "neg": true}
 ## Retourne [] si une des conditions est illisible.
 static func _parse_conds(s: String) -> Array:
 	var re_var := RegEx.new()
@@ -145,6 +148,8 @@ static func _parse_conds(s: String) -> Array:
 	re_visited.compile("^(!)?\\s*visited\\(\\s*(\\S+?)\\s*\\)$")
 	var re_zone := RegEx.new()
 	re_zone.compile("^(!)?\\s*zone_clicked\\(\\s*\"([^\"]*)\"\\s*\\)$")
+	var re_item := RegEx.new()
+	re_item.compile("^(!)?\\s*has_item\\(\\s*\"([^\"]*)\"\\s*(?:,\\s*(\\d+)\\s*)?\\)$")
 
 	var groups: Array = []
 	for group_src in s.split(" or "):
@@ -174,6 +179,15 @@ static func _parse_conds(s: String) -> Array:
 					"kind": "zone",
 					"id": mz.get_string(2),
 					"neg": mz.get_string(1) == "!",
+				})
+				continue
+			var mi := re_item.search(part)
+			if mi:
+				conds.append({
+					"kind": "item",
+					"id": mi.get_string(2),
+					"qty": int(mi.get_string(3)) if mi.get_string(3) != "" else 1,
+					"neg": mi.get_string(1) == "!",
 				})
 				continue
 			return []

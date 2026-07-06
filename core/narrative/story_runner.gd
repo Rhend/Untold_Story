@@ -213,4 +213,8 @@ func _check_group(conds: Array) -> bool:
 				# Zone d'illustration cliquée : état persistant (autoload Progress).
 				if Progress.is_zone_clicked(cond["id"]) == cond["neg"]:
 					return false
+			"item":
+				# Objet possédé (au moins qty) : inventaire persistant (Progress).
+				if Progress.has_item(cond["id"], cond["qty"]) == cond["neg"]:
+					return false
 	return true

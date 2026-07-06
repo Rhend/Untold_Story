@@ -1,0 +1,7 @@
+{
+	"pelle": {
+		"display_name": "Pelle",
+		"description": "Une solide pelle en bronze. De quoi creuser la terre meuble des berges.",
+		"icon": "res://icon.svg"
+	}
+}

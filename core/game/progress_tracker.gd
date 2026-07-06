@@ -41,6 +41,11 @@ var _position: Dictionary = {}
 ## { story_id: { personnage: [node_id, ...] } }
 var _visited_session: Dictionary = {}
 
+## Inventaire de la partie en cours, par personnage (mêmes règles de durée de vie
+## que _zones : remis à zéro par restart_playthrough(), PAS par "decouverte").
+## { story_id: { personnage: { item_id: quantité } } }
+var _inventory: Dictionary = {}
+
 
 func _ready() -> void:
 	_load()
@@ -96,6 +101,47 @@ func record_zone_click(zone_id: String) -> void:
 	_save()
 
 
+# -------------------------------------------------------------- Inventaire
+# Partie en cours, personnage courant. « unique » = qty 1 par défaut ; aucune
+# distinction stockée, seule l'invocation (avec ou sans quantité) la porte.
+
+## Ajoute qty exemplaires d'un objet à l'inventaire du personnage courant.
+func add_item(id: String, qty: int = 1) -> void:
+	var items: Dictionary = _inventory_entry()
+	items[id] = int(items.get(id, 0)) + qty
+	_save()
+
+
+## Retire qty exemplaires. Si le total tombe à 0 ou moins, l'entrée DISPARAÎT
+## (un objet n'est jamais affiché « à 0 »). Sans effet si l'objet est absent.
+func remove_item(id: String, qty: int = 1) -> void:
+	var items: Dictionary = _inventory.get(_story_id, {}).get(_character, {})
+	if not items.has(id):
+		return
+	var left := int(items[id]) - qty
+	if left <= 0:
+		items.erase(id)
+		if items.is_empty():
+			_erase_from(_inventory, _story_id, _character)
+	else:
+		items[id] = left
+	_save()
+
+
+## Le personnage possède-t-il AU MOINS qty exemplaires de l'objet ?
+## Interrogé par la garde has_item("id"[, qty]) du .untold. Comparaison >=.
+func has_item(id: String, qty: int = 1, story_id := "", character := "") -> bool:
+	var chr := _character if character.is_empty() else character
+	return int(_inventory.get(_resolve(story_id), {}).get(chr, {}).get(id, 0)) >= qty
+
+
+## Inventaire { item_id: quantité } d'un (story_id, personnage), pour l'UI.
+## Copie défensive (l'appelant ne doit pas muter l'état interne).
+func inventory_items(story_id := "", character := "") -> Dictionary:
+	var chr := _character if character.is_empty() else character
+	return (_inventory.get(_resolve(story_id), {}).get(chr, {}) as Dictionary).duplicate()
+
+
 ## Enregistre le point de reprise du personnage courant : le nœud où un point de
 ## choix vient d'être présenté (PAS les nœuds intermédiaires enchaînés — le
 ## joueur ne s'y "arrête" pas). Appelé aussi à la fin de l'histoire, où il faut
@@ -124,8 +170,8 @@ func resume_node(story_id := "", character := "") -> String:
 
 
 ## Recommence la partie de ce (story_id, personnage) : efface UNIQUEMENT sa
-## "partie en cours" — zones cliquées, point de reprise ET trace de session
-## (gardes visited() de l'ancienne partie). La section "decouverte"
+## "partie en cours" — zones cliquées, point de reprise, trace de session
+## (gardes visited() de l'ancienne partie) ET inventaire. La section "decouverte"
 ## (visited_by/chosen, cumulative) reste intacte.
 func restart_playthrough(story_id: String, character: String) -> void:
 	if _zones.has(story_id):
@@ -135,6 +181,7 @@ func restart_playthrough(story_id: String, character: String) -> void:
 				_zones[story_id].erase(zone_id)
 		if _zones[story_id].is_empty():
 			_zones.erase(story_id)
+	_erase_from(_inventory, story_id, character)
 	_erase_current_run(story_id, character)
 	_save()
 
@@ -161,6 +208,7 @@ func reset() -> void:
 	_zones = {}
 	_position = {}
 	_visited_session = {}
+	_inventory = {}
 	_save()
 
 
@@ -249,11 +297,18 @@ func _session_entry() -> Array:
 	return by_story.get_or_add(_character, [])
 
 
+## Écriture : inventaire { item_id: qté } du (story_id, personnage) courant,
+## créé au besoin.
+func _inventory_entry() -> Dictionary:
+	var by_story: Dictionary = _inventory.get_or_add(_story_id, {})
+	return by_story.get_or_add(_character, {})
+
+
 ## Format disque, structuré par DURÉE DE VIE des données :
 ##   { "decouverte":      <cumulatif, jamais remis à zéro : visited_by/chosen>,
-##     "partie_en_cours": { "zones": ..., "position": ..., "visited_session": ... } }
-## La section "partie_en_cours" est destinée à grossir (ex. inventaire au
-## point 10) : ajouter une clé ici et l'inclure dans restart_playthrough().
+##     "partie_en_cours": { "zones", "position", "visited_session", "inventory" } }
+## La section "partie_en_cours" peut encore grossir : ajouter une clé ici et
+## l'inclure dans restart_playthrough().
 func _save() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -265,6 +320,7 @@ func _save() -> void:
 			"zones": _zones,
 			"position": _position,
 			"visited_session": _visited_session,
+			"inventory": _inventory,
 		},
 	}, "\t"))
 
@@ -291,6 +347,7 @@ func _migrate(parsed: Dictionary) -> void:
 		_zones = current.get("zones", {})
 		_position = current.get("position", {})
 		_visited_session = current.get("visited_session", {})
+		_inventory = current.get("inventory", {})  # absent des sauvegardes pré-point-10 → {}
 		return
 	# v2 (point 4) — { "stories", "zones" }, sans point de reprise.
 	if parsed.has("stories") or parsed.has("zones"):

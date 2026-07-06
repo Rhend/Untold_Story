@@ -778,6 +778,9 @@ func _guard_true(groups: Array, vars: Dictionary) -> bool:
 				"zone":
 					if Progress.is_zone_clicked(cond["id"]) == cond["neg"]:
 						ok = false
+				"item":
+					if Progress.has_item(cond["id"], cond["qty"]) == cond["neg"]:
+						ok = false
 			if not ok:
 				break
 		if ok:
