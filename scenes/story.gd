@@ -47,6 +47,10 @@ func _ready() -> void:
 	SettingsMenu.set_map_available(true)
 	SettingsMenu.map_requested.connect(_toggle_map)
 
+	# Entrée « Recommencer cette histoire » du menu, active pendant l'histoire.
+	SettingsMenu.set_restart_available(true)
+	SettingsMenu.restart_requested.connect(_restart_story)
+
 	# Précharge les textures d'illustration en tâche de fond pour éviter
 	# l'à-coup quand une page à parallaxe apparaît.
 	IllustrationLibrary.preload_all()
@@ -69,6 +73,9 @@ func _exit_tree() -> void:
 	if SettingsMenu.map_requested.is_connected(_toggle_map):
 		SettingsMenu.map_requested.disconnect(_toggle_map)
 	SettingsMenu.set_map_available(false)
+	if SettingsMenu.restart_requested.is_connected(_restart_story):
+		SettingsMenu.restart_requested.disconnect(_restart_story)
+	SettingsMenu.set_restart_available(false)
 
 
 func _start_story() -> void:
@@ -76,10 +83,18 @@ func _start_story() -> void:
 	_story = StoryParser.parse(source)
 	_meta = StoryMeta.load_for(STORY_PATH)
 	Progress.begin_story(STORY_PATH.get_file().get_basename(), GameState.character_type)
+
+	# Reprise auto et silencieuse : si ce personnage a un point de reprise
+	# valide, on démarre directement là plutôt qu'au nœud d'entrée (les
+	# variables d'identité sont posées de la même manière). Un checkpoint
+	# obsolète (nœud disparu après édition) est ignoré → repart du début.
+	var resume := Progress.resume_node()
+	if not resume.is_empty() and not _story.has_node(resume):
+		resume = ""
 	_runner.start(_story, {
 		"character": GameState.character_type,
 		"type": GameState.character_attribute,
-	})
+	}, resume)
 
 
 # ------------------------------------------------------------------ UI
@@ -373,6 +388,10 @@ func _build_header(node_id: String, tags: Array) -> String:
 
 func _on_present_choices(choices: Array) -> void:
 	_clear_choices()
+	# Point de reprise : le joueur s'arrête ici (un point de choix lui est
+	# présenté). Les nœuds intermédiaires enchaînés ne sont jamais un checkpoint.
+	if not choices.is_empty():
+		Progress.record_checkpoint(choices[0]["node"])
 	for i in choices.size():
 		var choice: Dictionary = choices[i]
 		var button := Button.new()
@@ -510,6 +529,10 @@ func _set_corner_square(node: Control, margin: float, side: float) -> void:
 func _on_story_ended() -> void:
 	_clear_choices()
 
+	# Fin atteinte : plus de reprise pour ce personnage — la prochaine sélection
+	# repartira du début (reprendre une fin n'a pas de sens).
+	Progress.clear_checkpoint()
+
 	var restart := Button.new()
 	restart.text = "↻ Recommencer"
 	restart.pressed.connect(_start_story)
@@ -523,3 +546,14 @@ func _on_story_ended() -> void:
 
 func _go_to_selection() -> void:
 	get_tree().change_scene_to_file(SELECTION_SCENE)
+
+
+## Recommence l'histoire pour le personnage courant, depuis le menu Réglages :
+## efface sa partie en cours (zones + reprise, PAS la découverte cumulative)
+## puis recharge la scène. Le rechargement remet à zéro TOUT l'état d'affichage
+## (illustration, texte, carte) et, la reprise effacée, _start_story repart de
+## start_node — plus propre qu'un go_to() qui laisserait variables et décor en
+## place.
+func _restart_story() -> void:
+	Progress.restart_playthrough(STORY_PATH.get_file().get_basename(), GameState.character_type)
+	get_tree().reload_current_scene()

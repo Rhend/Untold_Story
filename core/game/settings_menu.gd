@@ -6,10 +6,15 @@ extends CanvasLayer
 ## Demande d'ouverture de la carte du récit (émis par l'entrée dédiée du menu).
 ## La scène d'histoire s'y abonne quand elle est active (cf. story.gd).
 signal map_requested
+## Demande de recommencer l'histoire en cours (efface la partie en cours du
+## personnage, garde la découverte cumulative). Même patron que map_requested.
+signal restart_requested
 
 var _fullscreen_toggle: CheckButton
 ## Entrée « Carte du récit » — visible seulement quand une histoire est active.
 var _map_button: Button
+## Entrée « Recommencer » — visible seulement quand une histoire est active.
+var _restart_button: Button
 
 
 func _ready() -> void:
@@ -88,6 +93,12 @@ func _build_ui() -> void:
 	_map_button.pressed.connect(_on_map_pressed)
 	col.add_child(_map_button)
 
+	_restart_button = Button.new()
+	_restart_button.text = "↻  Recommencer cette histoire"
+	_restart_button.visible = false  # activée par la scène d'histoire (set_restart_available)
+	_restart_button.pressed.connect(_on_restart_pressed)
+	col.add_child(_restart_button)
+
 	var resume := Button.new()
 	resume.text = "Reprendre"
 	resume.pressed.connect(_close)
@@ -105,10 +116,22 @@ func set_map_available(available: bool) -> void:
 		_map_button.visible = available
 
 
+## Active/désactive l'entrée « Recommencer » (appelée par la scène d'histoire).
+func set_restart_available(available: bool) -> void:
+	if _restart_button != null:
+		_restart_button.visible = available
+
+
 ## Ferme le menu puis demande l'ouverture de la carte à la scène abonnée.
 func _on_map_pressed() -> void:
 	_close()
 	map_requested.emit()
+
+
+## Ferme le menu puis demande à la scène d'histoire de tout recommencer.
+func _on_restart_pressed() -> void:
+	_close()
+	restart_requested.emit()
 
 
 func _on_fullscreen_toggled(on: bool) -> void:

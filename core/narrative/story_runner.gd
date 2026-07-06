@@ -41,8 +41,10 @@ var _current_node_id := ""
 var _awaiting_choice := false
 
 ## Démarre une histoire. `initial_vars` écrase les variables par défaut
-## (ex: {"character": "Nadîtum", "type": "Mystique"}).
-func start(story: Story, initial_vars: Dictionary = {}) -> void:
+## (ex: {"character": "Nadîtum", "type": "Mystique"}). `from_node` permet de
+## reprendre à un nœud précis (checkpoint) plutôt qu'au nœud d'entrée — les
+## variables sont posées de la même façon, seul le point de départ change.
+func start(story: Story, initial_vars: Dictionary = {}, from_node := "") -> void:
 	_story = story
 	variables = story.variables.duplicate(true)
 	for key in initial_vars:
@@ -50,7 +52,7 @@ func start(story: Story, initial_vars: Dictionary = {}) -> void:
 	_visited = {}
 	_current_node_id = ""
 	_awaiting_choice = false
-	_run_from(story.start_node)
+	_run_from(from_node if not from_node.is_empty() else story.start_node)
 
 ## Le joueur sélectionne le choix d'index `index`.
 func choose(index: int) -> void:

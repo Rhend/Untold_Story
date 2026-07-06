@@ -21,11 +21,17 @@ var _character := ""
 var _data: Dictionary = {}
 
 ## Clics sur les zones interactives d'illustration (indépendant des nœuds).
+## Appartient à la PARTIE EN COURS : remis à zéro par restart_playthrough(),
+## contrairement à visited_by/chosen (section "decouverte", cumulatifs).
 ## { story_id: { zone_id: { personnage: nombre de clics } } }
-# TODO point 7 : appartient à la section "partie en cours", doit être remis à
-# zéro à chaque nouvelle partie, contrairement à visited_by/chosen qui sont
-# cumulatifs.
 var _zones: Dictionary = {}
+
+## Point de reprise (checkpoint) de la partie en cours : le dernier nœud où un
+## point de choix a été présenté au personnage. Sauté directement à la prochaine
+## sélection de ce personnage (reprise auto, cf. record_checkpoint/resume_node).
+## Effacé à la fin de l'histoire et par restart_playthrough().
+## { story_id: { personnage: node_id } }
+var _position: Dictionary = {}
 
 
 func _ready() -> void:
@@ -69,10 +75,60 @@ func record_zone_click(zone_id: String) -> void:
 	_save()
 
 
-## Efface toute la progression (tous personnages, toutes histoires).
+## Enregistre le point de reprise du personnage courant : le nœud où un point de
+## choix vient d'être présenté (PAS les nœuds intermédiaires enchaînés — le
+## joueur ne s'y "arrête" pas). Appelé aussi à la fin de l'histoire, où il faut
+## au contraire EFFACER la reprise (cf. clear_checkpoint).
+func record_checkpoint(node_id: String) -> void:
+	if not _position.has(_story_id):
+		_position[_story_id] = {}
+	_position[_story_id][_character] = node_id
+	_save()
+
+
+## Efface le point de reprise du personnage courant (fin d'histoire : reprendre
+## une fin n'a pas de sens, la prochaine sélection repart de start_node).
+func clear_checkpoint() -> void:
+	_erase_position(_story_id, _character)
+	_save()
+
+
+## Nœud de reprise pour (story_id, personnage), ou "" si aucun (repart du début).
+## story_id / character vides = contexte courant.
+func resume_node(story_id := "", character := "") -> String:
+	var chr := _character if character.is_empty() else character
+	return _position.get(_resolve(story_id), {}).get(chr, "")
+
+
+## Recommence la partie de ce (story_id, personnage) : efface UNIQUEMENT sa
+## "partie en cours" — zones cliquées ET point de reprise. La section
+## "decouverte" (visited_by/chosen, cumulative) reste intacte.
+func restart_playthrough(story_id: String, character: String) -> void:
+	if _zones.has(story_id):
+		for zone_id in _zones[story_id].keys():
+			_zones[story_id][zone_id].erase(character)
+			if _zones[story_id][zone_id].is_empty():
+				_zones[story_id].erase(zone_id)
+		if _zones[story_id].is_empty():
+			_zones.erase(story_id)
+	_erase_position(story_id, character)
+	_save()
+
+
+func _erase_position(story_id: String, character: String) -> void:
+	if not _position.has(story_id):
+		return
+	_position[story_id].erase(character)
+	if _position[story_id].is_empty():
+		_position.erase(story_id)
+
+
+## Efface toute la progression (tous personnages, toutes histoires) — découverte
+## comprise. Non câblé dans l'UI (aucune remise à zéro globale n'est proposée).
 func reset() -> void:
 	_data = {}
 	_zones = {}
+	_position = {}
 	_save()
 
 
@@ -154,12 +210,23 @@ func _node_entry(node_id: String) -> Dictionary:
 	return nodes[node_id]
 
 
+## Format disque, structuré par DURÉE DE VIE des données :
+##   { "decouverte":      <cumulatif, jamais remis à zéro : visited_by/chosen>,
+##     "partie_en_cours": { "zones": ..., "position": ... } }
+## La section "partie_en_cours" est destinée à grossir (ex. inventaire au
+## point 10) : ajouter une clé ici et l'inclure dans restart_playthrough().
 func _save() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
 		push_error("Progress: impossible d'écrire " + SAVE_PATH)
 		return
-	file.store_string(JSON.stringify({"stories": _data, "zones": _zones}, "\t"))
+	file.store_string(JSON.stringify({
+		"decouverte": _data,
+		"partie_en_cours": {
+			"zones": _zones,
+			"position": _position,
+		},
+	}, "\t"))
 
 
 func _load() -> void:
@@ -169,10 +236,24 @@ func _load() -> void:
 	if not (parsed is Dictionary):
 		push_warning("Progress: sauvegarde illisible, repartie de zéro.")
 		return
-	# Nouveau format { "stories", "zones" } ; ancien format = dict de story_id
-	# à plat (avant l'ajout des zones) → chargé tel quel, zones vides.
+	_migrate(parsed)
+
+
+## Charge une sauvegarde en gérant les formats successifs, du plus récent au plus
+## ancien. Chaque nouvelle version du format ajoute une branche EN TÊTE ; les
+## anciennes branches restent pour ne perdre aucune sauvegarde existante.
+func _migrate(parsed: Dictionary) -> void:
+	# v3 (point 7) — sections par durée de vie.
+	if parsed.has("decouverte") or parsed.has("partie_en_cours"):
+		_data = parsed.get("decouverte", {})
+		var current: Dictionary = parsed.get("partie_en_cours", {})
+		_zones = current.get("zones", {})
+		_position = current.get("position", {})
+		return
+	# v2 (point 4) — { "stories", "zones" }, sans point de reprise.
 	if parsed.has("stories") or parsed.has("zones"):
 		_data = parsed.get("stories", {})
 		_zones = parsed.get("zones", {})
-	else:
-		_data = parsed
+		return
+	# v1 (pré-point-4) — dict de story_id à plat, sans zones ni reprise.
+	_data = parsed
