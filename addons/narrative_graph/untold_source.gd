@@ -177,6 +177,61 @@ func append_instruction(id: String, line: String) -> void:
 	blocks[id].append(line)
 
 
+## Vrai si le bloc du nœud porte le tag donné (sans le « # »), sur une des
+## lignes de tags « #A #B ... » du bloc.
+func has_tag(id: String, tag: String) -> bool:
+	if not blocks.has(id):
+		return false
+	for line in blocks[id]:
+		var stripped: String = str(line).strip_edges()
+		if stripped.begins_with("#"):
+			for token in stripped.split(" ", false):
+				if token.lstrip("#") == tag:
+					return true
+	return false
+
+
+## Ajoute un tag au bloc du nœud : accolé à une ligne de tags existante, ou
+## inséré juste après la ligne « :: id » si le nœud n'en a pas encore. No-op
+## (retourne true) si le tag est déjà présent.
+func add_tag(id: String, tag: String) -> bool:
+	if not blocks.has(id):
+		return false
+	if has_tag(id, tag):
+		return true
+	for i in blocks[id].size():
+		if str(blocks[id][i]).strip_edges().begins_with("#"):
+			blocks[id][i] = str(blocks[id][i]).rstrip(" \t") + " #" + tag
+			return true
+	blocks[id].insert(1, "#" + tag)  # index 0 = la ligne « :: id »
+	return true
+
+
+## Retire un tag du bloc du nœud : ôte le jeton « #tag » de sa ligne de tags (la
+## ligne entière disparaît si elle devient vide). Retourne false si absent.
+func remove_tag(id: String, tag: String) -> bool:
+	if not blocks.has(id):
+		return false
+	for i in blocks[id].size():
+		var stripped: String = str(blocks[id][i]).strip_edges()
+		if not stripped.begins_with("#"):
+			continue
+		var kept: Array = []
+		var removed := false
+		for token in stripped.split(" ", false):
+			if token.lstrip("#") == tag:
+				removed = true
+			else:
+				kept.append(token)
+		if removed:
+			if kept.is_empty():
+				blocks[id].remove_at(i)
+			else:
+				blocks[id][i] = " ".join(PackedStringArray(kept))
+			return true
+	return false
+
+
 static func _without_trailing_blanks(lines: Array) -> Array:
 	var out := lines.duplicate()
 	while not out.is_empty() and str(out.back()).strip_edges().is_empty():

@@ -22,6 +22,23 @@ const KIND_COLORS := {
 	"cond": Color(0.7, 0.5, 0.8),
 }
 
+## Aspect « pilule sobre » des GraphNode (arrondi plus discret qu'en jeu).
+const NODE_CORNER_RADIUS := 8
+const NODE_BG := Color(0.17, 0.17, 0.2)
+const NODE_TITLE_BG := Color(0.21, 0.21, 0.26)
+const NODE_BORDER := Color(0.33, 0.33, 0.4)
+## Courbure des connecteurs natifs de GraphEdit (0 = droit, 1 = très courbe).
+const LINES_CURVATURE := 0.4
+
+## Personnages connus, pour l'accent de couleur d'identité (CharacterData.color).
+## Ceux cités dans l'histoire sans ressource (Marchand, Danseuse, Exorciste)
+## retombent sur une teinte stable dérivée du nom.
+const CHARACTER_PATHS := [
+	"res://data/characters/naditum.tres",
+	"res://data/characters/soldat.tres",
+	"res://data/characters/pretresse.tres",
+]
+
 var _stories: OptionButton
 var _status: Label
 var _graph_edit: GraphEdit
@@ -33,6 +50,8 @@ var _graph: StoryGraph
 var _meta: StoryMeta
 var _node_ids: Dictionary = {}  # nom du GraphNode -> id du nœud d'histoire
 var _collapse_buttons: Dictionary = {}  # id du nœud -> Button de repli (titre)
+var _characters: Array = []   # CharacterData chargés (accent d'identité)
+var _reach: Dictionary = {}   # id -> Array[String] personnages atteignant le nœud
 
 
 func _init() -> void:
@@ -43,6 +62,15 @@ func _init() -> void:
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_build_ui()
+	_load_characters()
+
+
+## Personnages jouables connus (couleur d'accent). Chargés une fois.
+func _load_characters() -> void:
+	for path in CHARACTER_PATHS:
+		var data: CharacterData = load(path)
+		if data != null:
+			_characters.append(data)
 
 
 func _ready() -> void:
@@ -107,6 +135,9 @@ func _build_ui() -> void:
 	_graph_edit = GraphEdit.new()
 	_graph_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_graph_edit.minimap_enabled = true
+	# Connecteurs courbes (natif) : cohérent avec la carte en jeu (story_map),
+	# aucune ligne de dessin custom à écrire.
+	_graph_edit.connection_lines_curvature = LINES_CURVATURE
 	# Le rangement natif de GraphEdit ignore la logique de l'histoire :
 	# masqué au profit du bouton « Disposition auto » de la barre d'outils.
 	_graph_edit.show_arrange_button = false
@@ -167,6 +198,10 @@ func _rebuild_graph_view() -> void:
 	_node_ids.clear()
 	_collapse_buttons.clear()
 
+	# Accessibilité par identité (accent de couleur personnage) : calculée une
+	# fois par reconstruction, structurelle (indépendante de la progression).
+	_reach = _graph.identity_reach()
+
 	# Disposition : positions sauvegardées, complétées par l'auto-layout.
 	var positions := _meta.positions()
 	var auto: Dictionary = {}
@@ -190,6 +225,19 @@ func _make_graph_node(id: String, pos: Vector2) -> GraphNode:
 	gnode.title = id
 	gnode.position_offset = pos
 	_node_ids[String(gnode.name)] = id
+
+	# Coins arrondis + accent de couleur d'identité (fond/bordure, pas les ports).
+	_apply_node_style(gnode, _node_accent(id))
+
+	# Badge « hors carte » dans la barre de titre : le nœud est exclu de la carte
+	# de progression en jeu (retour visuel de l'état du tag #hors_carte).
+	if "hors_carte" in node.tags:
+		var hidden_badge := Label.new()
+		hidden_badge.text = "⊘"
+		hidden_badge.tooltip_text = "#hors_carte : nœud exclu de la carte de progression en jeu."
+		hidden_badge.modulate = Color(0.9, 0.62, 0.5)
+		hidden_badge.add_theme_font_size_override("font_size", 18)
+		gnode.get_titlebar_hbox().add_child(hidden_badge)
 
 	# Badge « illustration » dans la barre de titre : repérable sans avoir à
 	# cliquer sur chaque nœud (le nom est dans l'infobulle).
@@ -240,6 +288,77 @@ func _make_graph_node(id: String, pos: Vector2) -> GraphNode:
 
 func _gnode_name(id: String) -> StringName:
 	return StringName(("n_" + id).validate_node_name())
+
+
+## Accent d'identité d'un nœud : couleur du seul personnage qui peut l'atteindre
+## (via les liens d'identité), sinon accent neutre (plusieurs personnages, aucun,
+## ou nœud hors de l'accessibilité calculée). Cf. StoryGraph.identity_reach.
+func _node_accent(id: String) -> Dictionary:
+	var chars: Array = _reach.get(id, [])
+	if chars.size() == 1:
+		return {"tinted": true, "color": _character_color(str(chars[0]))}
+	return {"tinted": false, "color": NODE_BORDER}
+
+
+## Couleur d'un personnage : sa ressource si connue, sinon une teinte stable
+## dérivée du nom (mêmes règles que la carte en jeu, story_map._color_of).
+func _character_color(character_type: String) -> Color:
+	for data in _characters:
+		if data.character_type == character_type:
+			return data.color
+	return Color.from_hsv(fmod(abs(float(character_type.hash())) / 1000.0, 1.0), 0.55, 0.9)
+
+
+## Style « pilule sobre » du GraphNode : coins arrondis (barre de titre + corps),
+## fond/bordure teintés par l'accent d'identité. N'affecte PAS les ports (colorés
+## par nature de lien — information distincte de la couleur personnage).
+func _apply_node_style(gnode: GraphNode, accent: Dictionary) -> void:
+	var border: Color = NODE_BORDER
+	var bg := NODE_BG
+	var title_bg := NODE_TITLE_BG
+	if accent["tinted"]:
+		var c: Color = accent["color"]
+		bg = NODE_BG.lerp(c, 0.14)
+		title_bg = NODE_TITLE_BG.lerp(c, 0.22)
+		border = c.lerp(Color(0.5, 0.5, 0.55), 0.25)
+	gnode.add_theme_stylebox_override("titlebar", _title_box(title_bg, border, false))
+	gnode.add_theme_stylebox_override("titlebar_selected", _title_box(title_bg, border.lerp(Color.WHITE, 0.4), true))
+	gnode.add_theme_stylebox_override("panel", _body_box(bg, border, false))
+	gnode.add_theme_stylebox_override("panel_selected", _body_box(bg, border.lerp(Color.WHITE, 0.4), true))
+
+
+## Barre de titre : coins arrondis EN HAUT seulement (le corps arrondit le bas).
+func _title_box(bg: Color, border: Color, selected: bool) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = bg
+	s.corner_radius_top_left = NODE_CORNER_RADIUS
+	s.corner_radius_top_right = NODE_CORNER_RADIUS
+	s.content_margin_left = 8
+	s.content_margin_right = 8
+	s.content_margin_top = 4
+	s.content_margin_bottom = 4
+	s.border_color = border
+	s.border_width_left = 2 if selected else 1
+	s.border_width_right = s.border_width_left
+	s.border_width_top = s.border_width_left
+	return s
+
+
+## Corps : coins arrondis EN BAS seulement (la barre de titre arrondit le haut).
+func _body_box(bg: Color, border: Color, selected: bool) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = bg
+	s.corner_radius_bottom_left = NODE_CORNER_RADIUS
+	s.corner_radius_bottom_right = NODE_CORNER_RADIUS
+	s.content_margin_left = 8
+	s.content_margin_right = 8
+	s.content_margin_top = 4
+	s.content_margin_bottom = 6
+	s.border_color = border
+	s.border_width_left = 2 if selected else 1
+	s.border_width_right = s.border_width_left
+	s.border_width_bottom = s.border_width_left
+	return s
 
 
 ## Noms passés aux commandes @illustration(...) du nœud, dans l'ordre.
