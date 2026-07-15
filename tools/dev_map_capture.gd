@@ -50,6 +50,14 @@ func _ready() -> void:
 	add_child(map)
 	map.setup(story, STORY_PATH, current)
 
+	# $MAP_FILTER_OUT="Soldat,Prêtresse" : masque les nœuds de ces personnages
+	# (mêmes effets qu'un clic sur leurs boutons de filtre).
+	var filter := OS.get_environment("MAP_FILTER_OUT")
+	if not filter.is_empty():
+		for character in filter.split(","):
+			map._filtered_out[character.strip_edges()] = true
+		map._rebuild()
+
 	await get_tree().process_frame
 	await get_tree().process_frame
 	print("MAP OK — widgets: %d, courant: %s" % [map._canvas.get_child_count(), current])

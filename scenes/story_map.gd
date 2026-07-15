@@ -35,6 +35,12 @@ extends Control
 ##    passage, illustration figée, personnages l'ayant découvert ou non.
 ##    Ce volet est purement consultatif : aucune interaction narrative.
 ##
+## Filtrage par personnage (boutons on/off de l'en-tête) : un nœud visité
+## reste affiché tant qu'AU MOINS un de ses découvreurs est actif ; les nœuds
+## découverts uniquement par des personnages masqués disparaissent (avec leurs
+## bulles « ? ») et la disposition se recompacte. Filtre remis à zéro à chaque
+## ouverture de la carte (contrairement à l'orientation, retenue en session).
+##
 ## Navigation : glisser (clic gauche maintenu) pour se déplacer, Ctrl+molette
 ## pour zoomer, molette seule pour défiler.
 
@@ -85,6 +91,7 @@ static var preferred_horizontal := false
 
 var _story: Story
 var _horizontal := false          # flux gauche → droite plutôt que haut → bas
+var _filtered_out: Dictionary = {}  # character_type -> true : nœuds masqués
 var _graph: StoryGraph
 var _meta: StoryMeta              # titres lisibles + positions d'auteur
 var _positions: Dictionary = {}   # rep -> Vector2 (coin haut-gauche du widget)
@@ -119,6 +126,27 @@ func setup(story: Story, untold_path: String, current_node := "") -> void:
 		if data != null:
 			_characters.append(data)
 	_player_color = _color_of(GameState.character_type)
+	_rebuild()
+
+
+## (Re)calcule tout le modèle (révélation, chaînes, tailles, positions) puis
+## reconstruit l'UI. Appelé au setup, à la bascule d'orientation et à chaque
+## changement de filtre personnage.
+func _rebuild() -> void:
+	for child in get_children():
+		child.queue_free()
+	_selected_id = ""
+	_recap = null
+	_panels.clear()
+	_positions.clear()
+	_sizes.clear()
+	_revealed.clear()
+	_map_hidden.clear()
+	_chains.clear()
+	_rep_of.clear()
+	_current_rep = ""
+	_zoom = 1.0
+	_panning = false
 
 	_compute_map_hidden()
 	_compute_revealed()
@@ -140,11 +168,14 @@ func _compute_map_hidden() -> void:
 
 ## Règles de révélation. « known » = le joueur a vu le libellé du choix en jeu
 ## (choix non gardé d'un nœud visité) sans jamais le prendre.
+## Le filtre par personnage s'applique ICI : un nœud dont TOUS les découvreurs
+## sont masqués n'est pas révélé — chaînes, bulles, liens et disposition
+## suivent sans autre traitement.
 func _compute_revealed() -> void:
 	for id in _story.nodes:
 		if _map_hidden.has(id):
 			continue
-		if Progress.is_visited(id):
+		if Progress.is_visited(id) and _has_active_visitor(id):
 			_revealed[id] = "visited"
 	for id in _story.nodes:
 		if _revealed.get(id) != "visited":
@@ -194,6 +225,14 @@ func _build_chains() -> void:
 		for member in members:
 			_rep_of[member] = id
 	_current_rep = _rep_of.get(_current_id, _current_id)
+
+
+## Au moins un des personnages passés par ce nœud est-il encore affiché ?
+func _has_active_visitor(id: String) -> bool:
+	for character in Progress.visitors(id):
+		if not _filtered_out.has(str(character)):
+			return true
+	return false
 
 
 ## Liens sortants vers des nœuds existants et non exclus de la carte (END exclu).
@@ -614,6 +653,18 @@ func _build_header() -> Control:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(spacer)
 
+	# Filtres par personnage (uniquement ceux ayant découvert quelque chose :
+	# un bouton sans effet n'aurait rien à masquer).
+	var any_filter := false
+	for data in _characters:
+		if _character_has_discoveries(data.character_type):
+			row.add_child(_make_filter_toggle(data))
+			any_filter = true
+	if any_filter:
+		var sep := VSeparator.new()
+		sep.modulate = Color(1, 1, 1, 0.25)
+		row.add_child(sep)
+
 	var flip := Button.new()
 	flip.text = "⇅  Vue verticale" if _horizontal else "⇄  Vue horizontale"
 	flip.tooltip_text = "Bascule le sens de lecture de la carte"
@@ -668,6 +719,43 @@ func _build_progress_box() -> Control:
 	bar.add_theme_stylebox_override("fill", bar_fill)
 	box.add_child(bar)
 	return box
+
+
+## Ce personnage a-t-il découvert au moins un nœud de la carte ?
+func _character_has_discoveries(character_type: String) -> bool:
+	for id in _story.nodes:
+		if not _map_hidden.has(id) and Progress.visitors(id).has(character_type):
+			return true
+	return false
+
+
+## Filtre par personnage : bouton on/off à sa couleur — enfoncé, ses nœuds
+## sont visibles ; relâché, les nœuds qu'il est seul à avoir découverts
+## disparaissent de la carte (elle se recompacte).
+func _make_filter_toggle(data: CharacterData) -> Button:
+	var active := not _filtered_out.has(data.character_type)
+	var toggle := Button.new()
+	toggle.toggle_mode = true
+	toggle.button_pressed = active
+	toggle.flat = true
+	toggle.focus_mode = Control.FOCUS_NONE
+	# ● = ses nœuds sont visibles, ○ = masqués (en plus de l'atténuation).
+	toggle.text = ("●  %s" if active else "○  %s") % data.character_type
+	toggle.tooltip_text = ("Masquer les nœuds découverts par %s" if active
+			else "Réafficher les nœuds découverts par %s") % data.character_type
+	toggle.add_theme_font_size_override("font_size", 13)
+	for state in ["font_color", "font_pressed_color", "font_hover_color",
+			"font_hover_pressed_color"]:
+		toggle.add_theme_color_override(state, data.color)
+	if not active:
+		toggle.modulate = Color(1, 1, 1, 0.45)
+	toggle.toggled.connect(func(pressed: bool) -> void:
+		if pressed:
+			_filtered_out.erase(data.character_type)
+		else:
+			_filtered_out[data.character_type] = true
+		_rebuild())
+	return toggle
 
 
 ## Entrée de légende : petit glyphe dessiné + libellé discret.
@@ -731,16 +819,7 @@ func _set_orientation(horizontal: bool) -> void:
 		return
 	_horizontal = horizontal
 	StoryMap.preferred_horizontal = horizontal
-	_selected_id = ""
-	_recap = null
-	_panels.clear()
-	_positions.clear()
-	_zoom = 1.0
-	_panning = false
-	for child in get_children():
-		child.queue_free()
-	_compute_positions()
-	_build_ui()
+	_rebuild()
 
 
 func _center_on(rep: String) -> void:
