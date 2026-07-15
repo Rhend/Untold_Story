@@ -37,9 +37,10 @@ fait sous Unity avec Ink. **Aucun plugin tiers** : tout est reconstruit nativeme
 
 ## Lancer
 Ouvrir le dossier du projet dans Godot 4.x et lancer (F5).
-La scène principale est `scenes/character_selection.tscn` (choix du personnage
-et de l'attribut), qui enchaîne sur `scenes/story.tscn` jouant
-`data/stories/act1_sc1.untold`.
+La scène principale est `scenes/hub.tscn` (choix de l'histoire), qui enchaîne
+sur `scenes/character_selection.tscn` (choix du personnage) puis
+`scenes/story.tscn` jouant le `.untold` de l'histoire choisie
+(ex. `data/stories/mesopotamia/act1_sc1.untold`).
 
 ## Architecture
 ```
@@ -53,9 +54,11 @@ core/
                  character_data.gd    (données d'un personnage jouable)
   illustration/  illustration_*.gd    (calques, parallaxe, bibliothèque)
 data/
-  stories/       act1_sc1.untold, sample.untold            (contenu)
+  stories/       mesopotamia/  (une histoire par sous-dossier : manifest.json,
+                 .untold + sidecar .meta.json, characters/, illustrations…)
+                 demo_format.untold  (démo du format, hors jeu — outil narratif)
 scenes/
-  character_selection.tscn / story.tscn                    (jeu)
+  hub.tscn / character_selection.tscn / story.tscn         (jeu)
 ```
 
 Découplage strict : le moteur ne connaît pas l'UI, il ne fait qu'émettre des

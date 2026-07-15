@@ -1,5 +1,7 @@
 // ============================================================
-//  Histoire d'exemple — format maison ".untold"
+//  Démo du format maison ".untold" — HORS JEU (sans manifest.json,
+//  invisible dans le hub). Sert de référence au format et de fichier
+//  d'essai pour l'outil narratif (plugin narrative_graph).
 //  Tirée du Prologue de la version Unity (texte raccourci).
 //  Démontre : routage par personnage, tags, commande illustration,
 //  choix, routage par attribut, accumulation de texte, fin.

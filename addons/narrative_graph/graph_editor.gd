@@ -165,7 +165,7 @@ func _scan_stories() -> void:
 
 
 ## .untold rangés par histoire : un niveau de sous-dossier (data/stories/<id>/),
-## plus ceux restés à la racine (histoires non encore rangées, ex. sample).
+## plus ceux restés à la racine (hors jeu, ex. demo_format — démo du format).
 func _find_untold_files() -> Array:
 	var found: Array = []
 	var root := DirAccess.open(STORIES_DIR)
