@@ -43,6 +43,9 @@ func _ready() -> void:
 
 	IllustrationLibrary.load_story(GameState.story_dir())
 
+	# $MAP_HORIZONTAL=1 : capture la carte en flux gauche → droite.
+	StoryMap.preferred_horizontal = OS.get_environment("MAP_HORIZONTAL") == "1"
+
 	var map := StoryMap.new()
 	add_child(map)
 	map.setup(story, STORY_PATH, current)

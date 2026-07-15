@@ -2,8 +2,10 @@ class_name StoryMap
 extends Control
 ## Carte de progression narrative (L7, volet jeu) : les embranchements de
 ## l'acte se révèlent au fil de l'exploration. Sans disposition d'auteur, le
-## récit s'enchaîne de HAUT en BAS (défilement vertical, variantes en largeur)
-## et la carte s'ouvre centrée sur le nœud courant.
+## récit s'enchaîne de HAUT en BAS par défaut (variantes en largeur) ou de
+## GAUCHE à DROITE (bouton de bascule dans l'en-tête, choix retenu pour la
+## session). La carte s'ouvre centrée sur le nœud courant ; le volet de
+## relecture s'ancre à droite en vertical, en bas en horizontal.
 ##
 ## La disposition automatique ne place QUE les nœuds dessinés (chaînes visitées
 ## et bulles « ? ») : les nœuds encore inconnus n'occupent aucune place — la
@@ -49,6 +51,10 @@ const MARGIN := Vector2(80, 70)
 ## écart horizontal entre deux variantes d'une même profondeur.
 const DEPTH_GAP := 92.0
 const H_GAP := 30.0
+## Disposition auto horizontale : écart entre deux colonnes (après la plus
+## large) et écart vertical entre deux variantes d'une même colonne.
+const FLOW_GAP_H := 80.0
+const CROSS_GAP_H := 22.0
 ## Courbure des connecteurs : fraction de la distance (projetée sur l'axe du
 ## flux) dont on décale les points de contrôle de la Bézier (0 = trait droit).
 const EDGE_CURVATURE := 0.4
@@ -66,13 +72,19 @@ const CHIP := 16.0
 const SEPIA := Color(0.85, 0.64, 0.38)
 const PARCHMENT := Color(0.9, 0.86, 0.74)
 const RECAP_WIDTH := 460.0
+const RECAP_HEIGHT := 340.0
 const HEADER_H := 52.0
 const MIN_ZOOM := 0.5
 const MAX_ZOOM := 2.0
 ## Marqueur "glue" du format .untold (cf. StoryRunner.GLUE).
 const GLUE := "<>"
 
+## Orientation choisie via le bouton de bascule, retenue pour la session
+## (la carte est reconstruite à chaque ouverture).
+static var preferred_horizontal := false
+
 var _story: Story
+var _horizontal := false          # flux gauche → droite plutôt que haut → bas
 var _graph: StoryGraph
 var _meta: StoryMeta              # titres lisibles + positions d'auteur
 var _positions: Dictionary = {}   # rep -> Vector2 (coin haut-gauche du widget)
@@ -101,6 +113,7 @@ func setup(story: Story, untold_path: String, current_node := "") -> void:
 	_graph = StoryGraph.build(story)
 	_meta = StoryMeta.load_for(untold_path)
 	_current_id = current_node
+	_horizontal = preferred_horizontal
 	for path in GameState.character_paths():
 		var data: CharacterData = load(path)
 		if data != null:
@@ -264,7 +277,7 @@ func _drawn_children(rep: String) -> Array:
 func _compute_positions() -> void:
 	var authored: Dictionary = _meta.positions()
 	if authored.is_empty():
-		_auto_layout_vertical()
+		_auto_layout()
 	else:
 		# Disposition d'auteur : on reste dans son espace de coordonnées,
 		# complété par la disposition auto horizontale d'origine.
@@ -289,9 +302,10 @@ func _compute_positions() -> void:
 
 
 ## Disposition auto : ne place QUE les nœuds dessinés. Profondeur (BFS sur le
-## graphe dessiné) = rangée ; chaque rangée est ordonnée (barycentre), paquetée
-## centrée sur l'axe du récit, puis redressée sous ses voisines (_straighten).
-func _auto_layout_vertical() -> void:
+## graphe dessiné) = rangée (flux vertical) ou colonne (flux horizontal) ;
+## chaque rangée est ordonnée (barycentre), paquetée centrée sur l'axe du
+## récit, puis redressée sous ses voisines (_straighten).
+func _auto_layout() -> void:
 	var drawn := _drawn_reps()
 	if drawn.is_empty():
 		return
@@ -326,21 +340,56 @@ func _auto_layout_vertical() -> void:
 		rows.get_or_add(row, []).append(rep)
 
 	# Heuristique du barycentre (Sugiyama) : réordonne chaque rangée pour réduire
-	# les croisements, puis pose les abscisses selon l'ordre obtenu.
+	# les croisements, puis pose les positions selon l'ordre obtenu.
 	var adj := _row_adjacency(depth)
 	_order_by_barycenter(rows, max_row, adj["parents"], adj["children"])
 
-	# Paquetage initial : chaque rangée centrée sur l'axe x = 0.
+	# Position le long du flux : rangées régulières en vertical (hauteur de
+	# pilule uniforme) ; en horizontal, chaque colonne avance de la largeur de
+	# son nœud le plus large.
+	var flow: Dictionary = {}  # row -> coordonnée le long du flux
+	if _horizontal:
+		var x := 0.0
+		for row in range(0, max_row + 1):
+			if not rows.has(row):
+				continue
+			flow[row] = x
+			var widest := 0.0
+			for rep in rows[row]:
+				widest = maxf(widest, _size_of(rep).x)
+			x += widest + FLOW_GAP_H
+	else:
+		for row in rows:
+			flow[row] = row * DEPTH_GAP
+
+	# Paquetage initial : chaque rangée centrée sur l'axe transverse = 0.
+	var axis := _cross_axis()
+	var gap := _cross_gap()
 	for row in rows:
-		var total := -H_GAP
+		var total := -gap
 		for rep in rows[row]:
-			total += _size_of(rep).x + H_GAP
-		var x := -total / 2.0
+			total += _size_of(rep)[axis] + gap
+		var c := -total / 2.0
 		for rep in rows[row]:
-			_positions[rep] = Vector2(x, row * DEPTH_GAP)
-			x += _size_of(rep).x + H_GAP
+			_positions[rep] = Vector2(flow[row], c) if _horizontal else Vector2(c, flow[row])
+			c += _size_of(rep)[axis] + gap
 
 	_straighten(rows, max_row, adj)
+
+
+## Axe TRANSVERSE au flux : x quand le récit descend, y quand il va à droite.
+func _cross_axis() -> int:
+	return Vector2.AXIS_Y if _horizontal else Vector2.AXIS_X
+
+
+func _cross_gap() -> float:
+	return CROSS_GAP_H if _horizontal else H_GAP
+
+
+func _set_cross(rep: String, value: float) -> void:
+	var pos: Vector2 = _positions[rep]
+	pos[_cross_axis()] = value
+	_positions[rep] = pos
 
 
 ## Liens entre rangées ADJACENTES (profondeur r → r+1) dans le graphe dessiné :
@@ -427,53 +476,58 @@ func _straighten(rows: Dictionary, max_row: int, adj: Dictionary) -> void:
 
 
 ## Aligne une rangée sur les centres visés (barycentre des voisins), en résolvant
-## les collisions par un passage glouton depuis la gauche ou depuis la droite.
-func _align_row(reps: Array, neighbors: Dictionary, from_left: bool) -> void:
+## les collisions par un passage glouton depuis un bord ou depuis l'autre.
+## Tout se joue sur l'axe TRANSVERSE au flux (x en vertical, y en horizontal).
+func _align_row(reps: Array, neighbors: Dictionary, from_start: bool) -> void:
+	var axis := _cross_axis()
+	var gap := _cross_gap()
 	var want: Array = []
 	for rep in reps:
 		var neigh: Array = neighbors.get(rep, [])
 		if neigh.is_empty():
-			want.append(_center_of(rep).x)
+			want.append(_center_of(rep)[axis])
 		else:
 			var sum := 0.0
 			for n in neigh:
-				sum += _center_of(n).x
+				sum += _center_of(n)[axis]
 			want.append(sum / neigh.size())
 	_spread_sibling_targets(reps, want)
-	if from_left:
+	if from_start:
 		var cursor := -INF
 		for i in reps.size():
-			var w := _size_of(reps[i]).x
-			var x := maxf(want[i] - w / 2.0, cursor)
-			_positions[reps[i]] = Vector2(x, _positions[reps[i]].y)
-			cursor = x + w + H_GAP
+			var w := _size_of(reps[i])[axis]
+			var c := maxf(want[i] - w / 2.0, cursor)
+			_set_cross(reps[i], c)
+			cursor = c + w + gap
 	else:
 		var cursor := INF
 		for i in range(reps.size() - 1, -1, -1):
-			var w := _size_of(reps[i]).x
-			var x := minf(want[i] - w / 2.0, cursor - w)
-			_positions[reps[i]] = Vector2(x, _positions[reps[i]].y)
-			cursor = x - H_GAP
+			var w := _size_of(reps[i])[axis]
+			var c := minf(want[i] - w / 2.0, cursor - w)
+			_set_cross(reps[i], c)
+			cursor = c - gap
 
 
 ## Des voisins de rangée qui visent le MÊME centre (frères d'un même parent) se
 ## pousseraient en chaîne d'un seul côté : on les répartit plutôt autour du
 ## centre commun, chacun à sa place dans l'ordre de la rangée.
 func _spread_sibling_targets(reps: Array, want: Array) -> void:
+	var axis := _cross_axis()
+	var gap := _cross_gap()
 	var i := 0
 	while i < reps.size():
 		var j := i
 		while j + 1 < reps.size() and absf(want[j + 1] - want[i]) < 0.5:
 			j += 1
 		if j > i:
-			var total := -H_GAP
+			var total := -gap
 			for k in range(i, j + 1):
-				total += _size_of(reps[k]).x + H_GAP
-			var x: float = want[i] - total / 2.0
+				total += _size_of(reps[k])[axis] + gap
+			var c: float = want[i] - total / 2.0
 			for k in range(i, j + 1):
-				var w := _size_of(reps[k]).x
-				want[k] = x + w / 2.0
-				x += w + H_GAP
+				var w := _size_of(reps[k])[axis]
+				want[k] = c + w / 2.0
+				c += w + gap
 		i = j + 1
 
 
@@ -559,6 +613,15 @@ func _build_header() -> Control:
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(spacer)
+
+	var flip := Button.new()
+	flip.text = "⇅  Vue verticale" if _horizontal else "⇄  Vue horizontale"
+	flip.tooltip_text = "Bascule le sens de lecture de la carte"
+	flip.flat = true
+	flip.focus_mode = Control.FOCUS_NONE
+	flip.add_theme_font_size_override("font_size", 13)
+	flip.pressed.connect(func() -> void: _set_orientation(not _horizontal))
+	row.add_child(flip)
 
 	row.add_child(_legend_item("current", "Vous êtes ici"))
 	row.add_child(_legend_item("bubble", "Entrevu"))
@@ -659,6 +722,25 @@ func _build_footer_hint() -> Control:
 	hint.modulate = Color(1, 1, 1, 0.4)
 	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return hint
+
+
+## Bascule le flux vertical ↔ horizontal et reconstruit toute la carte (même
+## modèle, disposition et volet réorientés). Le choix vaut pour la session.
+func _set_orientation(horizontal: bool) -> void:
+	if horizontal == _horizontal:
+		return
+	_horizontal = horizontal
+	StoryMap.preferred_horizontal = horizontal
+	_selected_id = ""
+	_recap = null
+	_panels.clear()
+	_positions.clear()
+	_zoom = 1.0
+	_panning = false
+	for child in get_children():
+		child.queue_free()
+	_compute_positions()
+	_build_ui()
 
 
 func _center_on(rep: String) -> void:
@@ -894,23 +976,31 @@ func _select(rep: String) -> void:
 
 # ---------------------------------------------------- Volet de relecture
 
-## Volet latéral droit, purement consultatif : titre, illustration figée,
+## Volet de relecture, purement consultatif : titre, illustration figée,
 ## personnages l'ayant découvert ou non, textes de la chaîne concaténés.
+## Ancré au bord DROIT quand le récit descend (contenu empilé), au bord BAS
+## quand il va à droite (illustration à gauche, textes à droite).
 func _show_recap(rep: String) -> void:
 	var members: Array = _chains.get(rep, [rep])
 
 	_recap = PanelContainer.new()
-	_recap.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
-	_recap.offset_left = -RECAP_WIDTH
-	_recap.offset_top = HEADER_H
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.075, 0.065, 0.105, 0.99)
-	style.border_width_left = 1
 	style.border_color = Color(SEPIA.r, SEPIA.g, SEPIA.b, 0.5)
 	style.shadow_color = Color(0, 0, 0, 0.45)
 	style.shadow_size = 18
-	style.shadow_offset = Vector2(-6, 0)
 	style.set_content_margin_all(20)
+	if _horizontal:
+		_recap.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+		_recap.offset_top = -RECAP_HEIGHT
+		style.border_width_top = 1
+		style.shadow_offset = Vector2(0, -6)
+	else:
+		_recap.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
+		_recap.offset_left = -RECAP_WIDTH
+		_recap.offset_top = HEADER_H
+		style.border_width_left = 1
+		style.shadow_offset = Vector2(-6, 0)
 	_recap.add_theme_stylebox_override("panel", style)
 	add_child(_recap)
 
@@ -944,28 +1034,53 @@ func _show_recap(rep: String) -> void:
 
 	# Première illustration de la chaîne, figée (source de regard neutre :
 	# pas de parallaxe, aucune interaction).
+	var illustration: Illustration = null
+	var illustration_data: IllustrationData = null
 	var illustration_name := _chain_illustration(members, reader_vars)
 	if illustration_name != "":
-		var data := IllustrationLibrary.get_illustration(illustration_name)
-		if data != null:
-			var illustration := Illustration.new()
+		illustration_data = IllustrationLibrary.get_illustration(illustration_name)
+		if illustration_data != null:
+			illustration = Illustration.new()
 			illustration.look_source = LookSource.new()
-			illustration.custom_minimum_size = Vector2(0, 240)
-			col.add_child(illustration)
-			illustration.setup(data)
 
-	col.add_child(_make_discovery_summary(rep))
-
+	var summary := _make_discovery_summary(rep)
 	var rule := ColorRect.new()
 	rule.color = Color(1, 1, 1, 0.08)
 	rule.custom_minimum_size = Vector2(0, 1)
-	col.add_child(rule)
+	var body := _make_recap_body(members, reader, reader_vars)
 
-	# Textes des membres concaténés, relisibles mais sans aucune interaction.
+	if _horizontal:
+		var content := HBoxContainer.new()
+		content.add_theme_constant_override("separation", 18)
+		content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		col.add_child(content)
+		if illustration != null:
+			illustration.custom_minimum_size = Vector2(400, 0)
+			content.add_child(illustration)
+		var right := VBoxContainer.new()
+		right.add_theme_constant_override("separation", 10)
+		right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		content.add_child(right)
+		right.add_child(summary)
+		right.add_child(rule)
+		right.add_child(body)
+	else:
+		if illustration != null:
+			illustration.custom_minimum_size = Vector2(0, 240)
+			col.add_child(illustration)
+		col.add_child(summary)
+		col.add_child(rule)
+		col.add_child(body)
+
+	if illustration != null:
+		illustration.setup(illustration_data)
+
+
+## Textes des membres concaténés, relisibles mais sans aucune interaction.
+func _make_recap_body(members: Array, reader: String, reader_vars: Dictionary) -> Control:
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(scroll)
 	var body := RichTextLabel.new()
 	body.bbcode_enabled = true
 	body.fit_content = true
@@ -985,6 +1100,7 @@ func _show_recap(rep: String) -> void:
 	else:
 		body.text = text
 	scroll.add_child(body)
+	return scroll
 
 
 ## Deux lignes : personnages ayant découvert la chaîne, et ceux qui ne l'ont
@@ -1234,13 +1350,17 @@ func _draw_hidden_stub(rep: String, target: String) -> void:
 		toward = _center_of(target_rep)
 	else:
 		var fan := float(int(target.hash() % 3)) - 1.0  # -1 | 0 | 1, stable par cible
-		toward = from_center + Vector2(fan * 70.0, DEPTH_GAP)
+		if _horizontal:
+			toward = from_center + Vector2(_size_of(rep).x / 2.0 + 100.0, fan * 46.0)
+		else:
+			toward = from_center + Vector2(fan * 70.0, DEPTH_GAP)
 	var curve := _edge_curve(from_center, toward)
 	var length := curve.get_baked_length()
 	const DASH := 7.0
 	const GAP := 6.0
 	const COUNT := 6
-	var cursor := _size_of(rep).y * 0.5 + 4.0  # démarre au bord du nœud source
+	# Démarre au bord du nœud source, selon l'axe du flux.
+	var cursor := (_size_of(rep).x if _horizontal else _size_of(rep).y) * 0.5 + 4.0
 	for i in COUNT:
 		if cursor >= length:
 			break
