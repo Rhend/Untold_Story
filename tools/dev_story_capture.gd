@@ -36,10 +36,13 @@ func _ready() -> void:
 		scene._runner.go_to(node)
 		await get_tree().process_frame
 
-	# Texte affiché d'un coup (pas d'attente de la machine à écrire).
+	# Texte affiché d'un coup (même chemin qu'un clic du joueur : la frappe est
+	# tuée puis l'UI différée — les choix — est révélée).
 	if scene._typewriter != null and scene._typewriter.is_running():
 		scene._typewriter.kill()
+		scene._typewriter = null
 	scene._text_label.visible_ratio = 1.0
+	scene._on_typewriter_done()
 	await get_tree().process_frame
 
 	if DisplayServer.get_name() != "headless":

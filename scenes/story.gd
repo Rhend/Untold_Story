@@ -44,6 +44,9 @@ var _sweep: Control
 var _sweep_band: Texture2D
 var _sweep_pos := 2.0  # fraction de la largeur ; > 1.6 = invisible
 var _sweep_tween: Tween
+## UI différée jusqu'à la fin de la machine à écrire (choix, boutons de fin) :
+## les réponses n'apparaissent qu'une fois le texte entièrement révélé.
+var _pending_reveal: Callable = Callable()
 ## Nœud où le récit s'est arrêté (repère « vous êtes ici » de la carte).
 var _current_node := ""
 
@@ -446,6 +449,7 @@ func _clear_choices() -> void:
 
 func _on_display_text(text: String, node_id: String, tags: Array) -> void:
 	_clear_choices()
+	_pending_reveal = Callable()  # purge une révélation d'un passage précédent
 	# Nouveau passage : l'ombre du tournage de page balaie la page de droite.
 	if node_id != _current_node:
 		_play_page_sweep()
@@ -501,7 +505,23 @@ func _build_typewriter(total: int, pauses: Array, start_visible: int) -> Tween:
 	if cursor < total:
 		tween.tween_property(_text_label, "visible_ratio",
 			1.0, full * float(total - cursor) / float(remaining))
+	# Fin de frappe naturelle : révèle l'UI en attente (choix, boutons de fin).
+	tween.finished.connect(_on_typewriter_done)
 	return tween
+
+
+## Le texte est entièrement révélé (fin de frappe ou clic pour tout afficher) :
+## fait apparaître l'UI différée, en fondu.
+func _on_typewriter_done() -> void:
+	if not _pending_reveal.is_valid():
+		return
+	var reveal := _pending_reveal
+	_pending_reveal = Callable()
+	reveal.call()
+	_choices_box.modulate = Color(1, 1, 1, 0)
+	var tween := create_tween()
+	tween.tween_property(_choices_box, "modulate:a", 1.0, 0.4) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 
 ## Retire les balises de pause [Soupir:X] du texte et renvoie :
@@ -563,6 +583,7 @@ func _on_text_input(event: InputEvent) -> void:
 			_typewriter.kill()
 			_typewriter = null
 			_text_label.visible_ratio = 1.0
+			_on_typewriter_done()
 
 
 # ------------------------------------------------- Zones interactives (clic)
@@ -632,8 +653,16 @@ func _on_present_choices(choices: Array) -> void:
 	_clear_choices()
 	# Point de reprise : le joueur s'arrête ici (un point de choix lui est
 	# présenté). Les nœuds intermédiaires enchaînés ne sont jamais un checkpoint.
+	# Enregistré TOUT DE SUITE — seul l'affichage des réponses attend le texte.
 	if not choices.is_empty():
 		Progress.record_checkpoint(choices[0]["node"])
+	# Les réponses n'apparaissent qu'une fois le texte entièrement révélé.
+	_pending_reveal = _build_choice_buttons.bind(choices)
+	if _typewriter == null or not _typewriter.is_running():
+		_on_typewriter_done()
+
+
+func _build_choice_buttons(choices: Array) -> void:
 	for i in choices.size():
 		var choice: Dictionary = choices[i]
 		var button := Button.new()
@@ -826,6 +855,13 @@ func _on_story_ended() -> void:
 	# repartira du début (reprendre une fin n'a pas de sens).
 	Progress.clear_checkpoint()
 
+	# Comme les choix : les boutons de fin attendent la fin du texte.
+	_pending_reveal = _build_end_buttons
+	if _typewriter == null or not _typewriter.is_running():
+		_on_typewriter_done()
+
+
+func _build_end_buttons() -> void:
 	var restart := Button.new()
 	restart.text = "↻  Recommencer"
 	_style_choice(restart, false)
