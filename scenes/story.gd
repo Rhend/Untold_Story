@@ -36,24 +36,18 @@ var _illustration_data: IllustrationData
 var _plate_holder: AspectRatioContainer  # cadre la planche au ratio du gabarit
 var _plate: PanelContainer               # la planche (bordure + illustration)
 var _fullscreen: Control                 # surimpression plein écran (ou null)
-## Polices à empattements du livre (système : Georgia/Times, sans ressource).
-var _font_body: Font
-var _font_italic: Font
-var _font_bold: Font
+## Titre courant de la page verso (nom de l'histoire, lu dans le manifest).
+var _verso_title: Label
+var _story_title := ""
+## Balayage d'ombre « tournage de page » sur la page de droite.
+var _sweep: Control
+var _sweep_band: Texture2D
+var _sweep_pos := 2.0  # fraction de la largeur ; > 1.6 = invisible
+var _sweep_tween: Tween
 ## Nœud où le récit s'est arrêté (repère « vous êtes ici » de la carte).
 var _current_node := ""
 
-## Palette du grimoire — reprise de icon.svg (cuir, parchemin, encre, ruban).
-const DESK := Color("17110b")          # table sous le livre
-const LEATHER := Color("4c3826")       # couverture
-const LEATHER_DARK := Color("2d2013")  # contour de la couverture
-const PAGE_EDGE := Color("a38a5c")     # bord de page / cadre de planche
-const SPINE := Color("6b5637")         # ombre de la reliure
-const INK := Color("312216")           # encre du texte courant
-const INK_MUTED := Color("6b5637")     # encre atténuée (titres)
-const INK_FADED := Color("8a7146")     # encre passée (pied de page, choix lus)
-const RIBBON := Color("7a3126")        # ruban marque-page (survol des choix)
-
+## Palette et habillages : BookTheme (thème « grimoire » partagé, cf. icon.svg).
 ## Proportions du livre ouvert (largeur/hauteur des deux pages réunies).
 const BOOK_RATIO := 1.58
 ## Parallaxe « imprimé » : fraction du gain plein écran tant que l'illustration
@@ -142,6 +136,10 @@ func _resolve_story_path() -> String:
 		return ""
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(manifest_path))
 	var entry := str(parsed.get("entry_file", "")) if parsed is Dictionary else ""
+	# Nom lisible de l'histoire : titre courant de la page verso.
+	_story_title = str(parsed.get("display_name", "")) if parsed is Dictionary else ""
+	if _verso_title != null:
+		_verso_title.text = _story_title
 	if entry.is_empty():
 		push_error("story: entry_file manquant dans " + manifest_path)
 		return ""
@@ -174,15 +172,7 @@ func _start_story() -> void:
 # ------------------------------------------------------------------ UI
 
 func _build_ui() -> void:
-	_font_body = _serif()
-	_font_italic = _serif(true)
-	_font_bold = _serif(false, true)
-
-	# La table, sous le livre.
-	var desk := ColorRect.new()
-	desk.color = DESK
-	desk.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(desk)
+	add_child(BookTheme.make_desk())
 
 	# Le livre ouvert : centré, proportions constantes quelle que soit la fenêtre.
 	var frame := MarginContainer.new()
@@ -196,15 +186,7 @@ func _build_ui() -> void:
 	frame.add_child(ratio_box)
 
 	var book := PanelContainer.new()
-	var leather := StyleBoxFlat.new()
-	leather.bg_color = LEATHER
-	leather.set_border_width_all(3)
-	leather.border_color = LEATHER_DARK
-	leather.set_corner_radius_all(12)
-	leather.shadow_color = Color(0, 0, 0, 0.55)
-	leather.shadow_size = 26
-	leather.set_content_margin_all(14)
-	book.add_theme_stylebox_override("panel", leather)
+	book.add_theme_stylebox_override("panel", BookTheme.leather_style())
 	ratio_box.add_child(book)
 
 	var pages := HBoxContainer.new()
@@ -215,79 +197,49 @@ func _build_ui() -> void:
 
 	# Ombre de la reliure centrale, par-dessus les deux pages.
 	var spine := TextureRect.new()
-	spine.texture = _gradient_tex(
-			[Color(SPINE, 0.0), Color(SPINE, 0.42), Color(SPINE, 0.42), Color(SPINE, 0.0)],
+	spine.texture = BookTheme.gradient_tex(
+			[Color(BookTheme.SPINE, 0.0), Color(BookTheme.SPINE, 0.42),
+			Color(BookTheme.SPINE, 0.42), Color(BookTheme.SPINE, 0.0)],
 			[0.455, 0.494, 0.506, 0.545])
 	spine.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	book.add_child(spine)
 
 
-## Police à empattements SYSTÈME (Georgia, Times New Roman…) : lecture longue
-## agréable sans embarquer de ressource — repli sur la police par défaut du
-## moteur si aucune n'est installée.
-static func _serif(italic := false, bold := false) -> Font:
-	var font := SystemFont.new()
-	font.font_names = PackedStringArray(
-			["Georgia", "Times New Roman", "Palatino Linotype", "serif"])
-	font.font_italic = italic
-	font.font_weight = 700 if bold else 400
-	return font
-
-
-## Texture de dégradé horizontal (papier des pages, ombre de reliure).
-func _gradient_tex(colors: Array, offsets: Array) -> Texture2D:
-	var gradient := Gradient.new()
-	gradient.colors = PackedColorArray(colors)
-	gradient.offsets = PackedFloat32Array(offsets)
-	var tex := GradientTexture2D.new()
-	tex.gradient = gradient
-	tex.width = 512
-	tex.height = 2
-	tex.fill_from = Vector2.ZERO
-	tex.fill_to = Vector2(1, 0)
-	return tex
-
-
-## Papier d'une page : dégradé parchemin de icon.svg (plus sombre côté
-## reliure, resserré près du pli pour ne pas assombrir la zone de lecture).
-func _make_paper(left_side: bool) -> TextureRect:
-	var paper := TextureRect.new()
-	if left_side:
-		paper.texture = _gradient_tex(
-				[Color("efe3c4"), Color("e6d6b2"), Color("bda678")], [0.0, 0.86, 1.0])
-	else:
-		paper.texture = _gradient_tex(
-				[Color("bda678"), Color("e6d6b2"), Color("f3e9cd")], [0.0, 0.14, 1.0])
-	paper.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return paper
-
-
-## Page de gauche : planche d'illustration (cadrée au ratio de son gabarit,
-## bouton plein écran au coin) + médaillon du personnage incarné en bas.
+## Page de gauche (verso) : titre courant de l'histoire, planche d'illustration
+## (cadrée au ratio de son gabarit, bouton plein écran au coin) + médaillon du
+## personnage incarné en bas.
 func _build_left_page() -> Control:
 	var page := PanelContainer.new()
 	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	page.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	page.add_child(_make_paper(true))
+	page.add_child(BookTheme.paper(true))
+	page.add_child(BookTheme.page_wear(11))
 
 	var inner := MarginContainer.new()
 	inner.add_theme_constant_override("margin_left", 38)
 	inner.add_theme_constant_override("margin_right", 30)  # côté reliure
-	inner.add_theme_constant_override("margin_top", 36)
+	inner.add_theme_constant_override("margin_top", 30)
 	inner.add_theme_constant_override("margin_bottom", 26)
 	page.add_child(inner)
 
-	# Canevas en superposition : la planche occupe le haut, le médaillon reste
-	# ANCRÉ en bas de page même quand la planche est absente.
+	# Canevas en superposition : titre courant en tête, planche au-dessous,
+	# médaillon ANCRÉ en bas de page même quand la planche est absente.
 	var canvas := Control.new()
 	canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	inner.add_child(canvas)
 
+	# Titre courant (nom de l'histoire), comme le verso d'un vrai livre.
+	_verso_title = BookTheme.make_label("", 15, BookTheme.INK_MUTED, true)
+	_verso_title.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_verso_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	canvas.add_child(_verso_title)
+
 	# La planche, cadrée au ratio du gabarit courant (cf. _show_illustration).
 	_plate_holder = AspectRatioContainer.new()
 	_plate_holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_plate_holder.offset_top = 36    # sous le titre courant
 	_plate_holder.offset_bottom = -66  # réserve la bande du médaillon
-	# Planche alignée en haut de page (au niveau du titre de la page de droite).
+	# Planche alignée en haut de page (au niveau du texte de la page de droite).
 	_plate_holder.alignment_vertical = AspectRatioContainer.ALIGNMENT_BEGIN
 	_plate_holder.visible = false
 	canvas.add_child(_plate_holder)
@@ -296,7 +248,7 @@ func _build_left_page() -> Control:
 	var plate_style := StyleBoxFlat.new()
 	plate_style.bg_color = Color(0, 0, 0, 0.07)
 	plate_style.set_border_width_all(2)
-	plate_style.border_color = PAGE_EDGE
+	plate_style.border_color = BookTheme.PAGE_EDGE
 	plate_style.set_corner_radius_all(3)
 	plate_style.set_content_margin_all(7)  # passe-partout autour de l'image
 	_plate.add_theme_stylebox_override("panel", plate_style)
@@ -319,12 +271,14 @@ func _build_left_page() -> Control:
 	return page
 
 
-## Page de droite : titre de scène, filet, texte du récit, choix, pied de page.
+## Page de droite (recto) : titre de scène, fleuron, texte du récit, choix,
+## pied de page — et balayage d'ombre au tournage de page.
 func _build_right_page() -> Control:
 	var page := PanelContainer.new()
 	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	page.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	page.add_child(_make_paper(false))
+	page.add_child(BookTheme.paper(false))
+	page.add_child(BookTheme.page_wear(23))
 
 	var inner := MarginContainer.new()
 	inner.add_theme_constant_override("margin_left", 32)  # côté reliure
@@ -334,31 +288,26 @@ func _build_right_page() -> Control:
 	page.add_child(inner)
 
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 14)
+	col.add_theme_constant_override("separation", 12)
 	inner.add_child(col)
 
-	_header = Label.new()
+	_header = BookTheme.make_label("", 15, BookTheme.INK_MUTED, true)
 	_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_header.clip_text = true
-	_header.add_theme_font_override("font", _font_italic)
-	_header.add_theme_font_size_override("font_size", 15)
-	_header.add_theme_color_override("font_color", INK_MUTED)
 	col.add_child(_header)
 
-	var rule := ColorRect.new()
-	rule.color = Color(PAGE_EDGE, 0.55)
-	rule.custom_minimum_size = Vector2(0, 1)
-	col.add_child(rule)
+	col.add_child(BookTheme.make_fleuron())
 
 	_text_label = RichTextLabel.new()
 	_text_label.bbcode_enabled = true
 	_text_label.fit_content = true
 	_text_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_text_label.add_theme_font_override("normal_font", _font_body)
-	_text_label.add_theme_font_override("italics_font", _font_italic)
-	_text_label.add_theme_font_override("bold_font", _font_bold)
+	_text_label.add_theme_font_override("normal_font", BookTheme.serif())
+	_text_label.add_theme_font_override("italics_font", BookTheme.serif(true))
+	_text_label.add_theme_font_override("bold_font", BookTheme.serif(false, true))
+	_text_label.add_theme_font_override("bold_italics_font", BookTheme.serif(true, true))
 	_text_label.add_theme_font_size_override("normal_font_size", 19)
-	_text_label.add_theme_color_override("default_color", INK)
+	_text_label.add_theme_color_override("default_color", BookTheme.INK)
 	_text_label.add_theme_constant_override("line_separation", 6)
 	# Clic sur le texte = affichage instantané (cf. _on_text_input).
 	_text_label.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -380,12 +329,38 @@ func _build_right_page() -> Control:
 	var footer_spacer := Control.new()
 	footer_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer.add_child(footer_spacer)
-	_progress_label = Label.new()
-	_progress_label.add_theme_font_override("font", _font_italic)
-	_progress_label.add_theme_font_size_override("font_size", 13)
-	_progress_label.add_theme_color_override("font_color", INK_FADED)
+	_progress_label = BookTheme.make_label("", 13, BookTheme.INK_FADED, true)
 	footer.add_child(_progress_label)
+
+	# Surcouche du balayage d'ombre (cf. _play_page_sweep).
+	_sweep_band = BookTheme.gradient_tex(
+			[Color(BookTheme.SPINE, 0.0), Color(BookTheme.SPINE, 0.30),
+			Color(BookTheme.SPINE, 0.0)], [0.0, 0.5, 1.0])
+	_sweep = Control.new()
+	_sweep.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sweep.draw.connect(_draw_sweep)
+	page.add_child(_sweep)
 	return page
+
+
+## Ombre verticale qui traverse la page de droite au changement de nœud —
+## l'évocation d'une page qu'on tourne, sans animation de papier.
+func _draw_sweep() -> void:
+	if _sweep_pos > 1.6:
+		return
+	var band_width := _sweep.size.x * 0.34
+	var x := _sweep.size.x * _sweep_pos - band_width / 2.0
+	_sweep.draw_texture_rect(_sweep_band, Rect2(x, 0, band_width, _sweep.size.y), false)
+
+
+func _play_page_sweep() -> void:
+	if _sweep_tween != null and _sweep_tween.is_running():
+		_sweep_tween.kill()
+	_sweep_tween = create_tween()
+	_sweep_tween.tween_method(func(value: float) -> void:
+		_sweep_pos = value
+		_sweep.queue_redraw(), -0.4, 1.6, 0.55) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 
 ## Bouton « plein écran » : pastille sombre aux coins dessinés (pas de glyphe
@@ -436,7 +411,7 @@ func _make_medallion(character: CharacterData) -> Control:
 	medallion.custom_minimum_size = Vector2(52, 52)
 	medallion.clip_contents = true
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(SPINE, 0.25)
+	style.bg_color = Color(BookTheme.SPINE, 0.25)
 	style.set_border_width_all(2)
 	style.border_color = character.color
 	style.set_corner_radius_all(8)
@@ -448,12 +423,9 @@ func _make_medallion(character: CharacterData) -> Control:
 	medallion.add_child(portrait)
 	row.add_child(medallion)
 
-	var name_label := Label.new()
-	name_label.text = character.display_name
+	var name_label := BookTheme.make_label(character.display_name, 16,
+			character.color.lerp(BookTheme.INK, 0.5), false, true)
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_override("font", _font_bold)
-	name_label.add_theme_font_size_override("font_size", 16)
-	name_label.add_theme_color_override("font_color", character.color.lerp(INK, 0.5))
 	row.add_child(name_label)
 	return row
 
@@ -467,6 +439,9 @@ func _clear_choices() -> void:
 
 func _on_display_text(text: String, node_id: String, tags: Array) -> void:
 	_clear_choices()
+	# Nouveau passage : l'ombre du tournage de page balaie la page de droite.
+	if node_id != _current_node:
+		_play_page_sweep()
 	_current_node = node_id
 
 	_header.text = _build_header(node_id, tags)
@@ -475,7 +450,7 @@ func _on_display_text(text: String, node_id: String, tags: Array) -> void:
 	# plus, et chaque pause connaît son rang en caractères VISIBLES.
 	_display_raw = text
 	var prepared := _prepare_dramatic_text(_display_raw)
-	_text_label.text = prepared["text"]
+	_text_label.text = _with_drop_cap(prepared["text"])
 	# La secousse « shock » repart depuis l'apparition de ce texte.
 	if _fx_shock != null and _fx_shock.has_method("restart"):
 		_fx_shock.restart()
@@ -553,6 +528,25 @@ static func _prepare_dramatic_text(raw: String) -> Dictionary:
 	return {"text": clean, "pauses": pauses}
 
 
+## Lettrine : la première lettre du passage est grossie à l'encre du ruban,
+## comme en tête de chapitre. Pas de lettrine si le passage s'ouvre sur une
+## balise BBCode ou un signe (« — », guillemet…) : on laisse tel quel.
+## Les balises ajoutées ne comptent pas comme caractères visibles — la machine
+## à écrire et les pauses [Soupir] restent calées.
+func _with_drop_cap(text: String) -> String:
+	var i := 0
+	while i < text.length() and text[i] in [" ", "\t", "\n"]:
+		i += 1
+	if i >= text.length():
+		return text
+	var first := text[i]
+	if first == "[" or first.to_upper() == first.to_lower():
+		return text
+	return text.substr(0, i) \
+			+ "[font_size=44][color=#7a3126]%s[/color][/font_size]" % first \
+			+ text.substr(i + 1)
+
+
 ## Clic sur la zone de texte : si la frappe est en cours, tout afficher d'un coup
 ## (on tue la séquence et on révèle le texte entier). Sinon, ne rien faire ici.
 func _on_text_input(event: InputEvent) -> void:
@@ -598,7 +592,7 @@ func _append_dialogue(lines: Array) -> void:
 
 	_display_raw += "\n" + "\n".join(PackedStringArray(lines))
 	var prepared := _prepare_dramatic_text(_display_raw)
-	_text_label.text = prepared["text"]
+	_text_label.text = _with_drop_cap(prepared["text"])
 	var total := _text_label.get_total_character_count()
 	if total <= shown:
 		_text_label.visible_ratio = 1.0
@@ -649,29 +643,9 @@ func _on_present_choices(choices: Array) -> void:
 		_choices_box.add_child(button)
 
 
-## Habille un choix comme une réplique du livre : encre sur parchemin, survol
-## au rouge du ruban marque-page. `read` = réponse déjà choisie (encre passée).
+## Habillage des choix : cf. BookTheme.style_choice (réplique à l'encre).
 func _style_choice(button: Button, read: bool) -> void:
-	button.focus_mode = Control.FOCUS_NONE
-	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	button.add_theme_font_override("font", _font_body)
-	button.add_theme_font_size_override("font_size", 18)
-	var ink := INK_FADED if read else INK
-	button.add_theme_color_override("font_color", ink)
-	button.add_theme_color_override("font_focus_color", ink)
-	for state in ["font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
-		button.add_theme_color_override(state, RIBBON)
-	var normal := StyleBoxEmpty.new()
-	normal.set_content_margin_all(6)
-	button.add_theme_stylebox_override("normal", normal)
-	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	var hover := StyleBoxFlat.new()
-	hover.bg_color = Color(SPINE, 0.12)
-	hover.set_corner_radius_all(4)
-	hover.set_content_margin_all(6)
-	button.add_theme_stylebox_override("hover", hover)
-	button.add_theme_stylebox_override("pressed", hover)
+	BookTheme.style_choice(button, read)
 
 
 func _on_node_visited(node_id: String) -> void:

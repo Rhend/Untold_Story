@@ -21,15 +21,12 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
-	var bg := ColorRect.new()
-	bg.color = Color(0.07, 0.06, 0.09)
-	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
+	add_child(BookTheme.make_desk())
 
 	var root := VBoxContainer.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.alignment = BoxContainer.ALIGNMENT_CENTER
-	root.add_theme_constant_override("separation", 32)
+	root.add_theme_constant_override("separation", 36)
 	add_child(root)
 
 	# Retour au hub : le joueur n'est pas enfermé dans une histoire une fois
@@ -37,20 +34,20 @@ func _build_ui() -> void:
 	# gauche, hors du flux centré.
 	var back := Button.new()
 	back.text = "↩  Changer d'histoire"
+	BookTheme.style_choice(back, false, 16, true)
 	back.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	back.position = Vector2(24, 24)
+	back.position = Vector2(24, 20)
 	back.pressed.connect(func() -> void: get_tree().change_scene_to_file(HUB_SCENE))
 	add_child(back)
 
-	var title := Label.new()
-	title.text = "Choisis ton personnage"
+	var title := BookTheme.make_label("Choisis ton personnage", 38,
+			BookTheme.PARCHMENT, false, true)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 34)
 	root.add_child(title)
 
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 36)
+	row.add_theme_constant_override("separation", 40)
 	root.add_child(row)
 
 	# Casting scanné dans le dossier characters/ de l'histoire choisie (plus de
@@ -77,53 +74,63 @@ func _story_progress_id() -> String:
 	return entry.get_file().get_basename() if not entry.is_empty() else ""
 
 
+## Planche de personnage : feuille de parchemin (papier, usure), portrait dans
+## un cadre à la couleur du héros, textes à l'encre, action en réplique.
 func _make_card(data: CharacterData, progress_id: String) -> Control:
-	var card := VBoxContainer.new()
-	card.add_theme_constant_override("separation", 12)
-	card.custom_minimum_size = Vector2(300, 0)
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(310, 0)
+	card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	card.gui_input.connect(_on_card_input.bind(data))
+	var sheet_style := StyleBoxFlat.new()
+	sheet_style.bg_color = Color("e9dbb9")
+	sheet_style.set_border_width_all(1)
+	sheet_style.border_color = Color(BookTheme.PAGE_EDGE, 0.9)
+	sheet_style.set_corner_radius_all(3)
+	sheet_style.shadow_color = Color(0, 0, 0, 0.5)
+	sheet_style.shadow_size = 18
+	sheet_style.set_content_margin_all(16)
+	card.add_theme_stylebox_override("panel", sheet_style)
+	card.add_child(BookTheme.page_wear(data.character_type.hash() % 1000))
 
-	# Cadre avec outline à la couleur du héros ; cliquable pour sélectionner.
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 10)
+	card.add_child(col)
+
+	# Portrait gravé : cadre sombre à l'accent du héros.
 	var bust_frame := PanelContainer.new()
-	bust_frame.custom_minimum_size = Vector2(300, 380)
-	bust_frame.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	bust_frame.gui_input.connect(_on_card_input.bind(data))
+	bust_frame.custom_minimum_size = Vector2(278, 330)
+	bust_frame.clip_contents = true
 	var frame_style := StyleBoxFlat.new()
-	frame_style.bg_color = Color(0.1, 0.09, 0.12)
-	frame_style.set_border_width_all(3)
+	frame_style.bg_color = Color("241c12")
+	frame_style.set_border_width_all(2)
 	frame_style.border_color = data.color
-	frame_style.set_corner_radius_all(8)
-	frame_style.set_content_margin_all(6)
+	frame_style.set_corner_radius_all(3)
+	frame_style.set_content_margin_all(4)
 	bust_frame.add_theme_stylebox_override("panel", frame_style)
-
 	var bust := TextureRect.new()
 	bust.texture = data.bust
 	bust.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bust.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	bust.mouse_filter = Control.MOUSE_FILTER_IGNORE  # le clic passe au cadre
+	bust.mouse_filter = Control.MOUSE_FILTER_IGNORE  # le clic passe à la planche
 	bust_frame.add_child(bust)
-	card.add_child(bust_frame)
+	col.add_child(bust_frame)
 
-	var name_label := Label.new()
-	name_label.text = data.display_name
+	var name_label := BookTheme.make_label(data.display_name, 24,
+			data.color.lerp(BookTheme.INK, 0.35), false, true)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 24)
-	name_label.add_theme_color_override("font_color", data.color)
-	card.add_child(name_label)
+	col.add_child(name_label)
 
-	var subtitle := Label.new()
-	subtitle.text = "%s  ·  %s" % [data.character_type, data.attribute]
+	var subtitle := BookTheme.make_label("%s  ·  %s" % [data.character_type, data.attribute],
+			14, BookTheme.INK_MUTED, true)
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.modulate = Color(0.7, 0.7, 0.82)
-	card.add_child(subtitle)
+	col.add_child(subtitle)
 
 	if not data.description.is_empty():
-		var desc := Label.new()
-		desc.text = data.description
+		var desc := BookTheme.make_label(data.description, 13, BookTheme.INK)
 		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		desc.custom_minimum_size = Vector2(300, 0)
-		desc.modulate = Color(0.6, 0.6, 0.72)
-		card.add_child(desc)
+		desc.custom_minimum_size = Vector2(278, 0)
+		col.add_child(desc)
 
 	# Le libellé annonce la suite : reprise de la partie en cours (point de
 	# reprise enregistré pour ce personnage) ou départ d'une nouvelle histoire.
@@ -131,12 +138,14 @@ func _make_card(data: CharacterData, progress_id: String) -> Control:
 			and not Progress.resume_node(progress_id, data.character_type).is_empty()
 	var button := Button.new()
 	if has_run:
-		button.text = "▶  Continuer l'histoire"
+		button.text = "—  Continuer l'histoire"
 		button.tooltip_text = "Reprend au dernier point de choix"
 	else:
-		button.text = "Commencer une nouvelle histoire"
+		button.text = "—  Commencer une nouvelle histoire"
+	BookTheme.style_choice(button, false, 15)
+	button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	button.pressed.connect(_on_choose.bind(data))
-	card.add_child(button)
+	col.add_child(button)
 
 	return card
 
