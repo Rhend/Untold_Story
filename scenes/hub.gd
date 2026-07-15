@@ -130,21 +130,27 @@ func _make_card(story: Dictionary) -> Control:
 	col.add_child(BookTheme.make_fleuron())
 
 	var button := Button.new()
-	button.text = "Verrouillée" if locked else "—  Ouvrir"
+	button.text = "Verrouillée" if locked else "•  Ouvrir"
 	button.disabled = locked
 	BookTheme.style_choice(button, false, 17, true)
 	button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	button.pressed.connect(_on_choose.bind(story))
 	col.add_child(button)
 
-	# Marque d'éditeur au bas de la couverture.
+	# Marque d'éditeur au bas de la couverture. Le PanelContainer étire ses
+	# enfants directs : on passe par un canevas intermédiaire pour ancrer.
+	var mark_holder := Control.new()
+	mark_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cover.add_child(mark_holder)
 	var mark := BookTheme.make_label("·  UNTOLD  ·", 12, Color(BookTheme.PAGE_EDGE, 0.75))
-	mark.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	mark.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	mark.offset_bottom = -12
+	mark.anchor_top = 1.0
+	mark.anchor_bottom = 1.0
+	mark.anchor_right = 1.0
+	mark.offset_top = -26
+	mark.offset_bottom = -8
 	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cover.add_child(mark)
+	mark_holder.add_child(mark)
 
 	# Ruban marque-page élimé (cf. icon.svg), sur les tomes disponibles.
 	if not locked:

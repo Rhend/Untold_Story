@@ -239,8 +239,8 @@ func _build_left_page() -> Control:
 	_plate_holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_plate_holder.offset_top = 36    # sous le titre courant
 	_plate_holder.offset_bottom = -66  # réserve la bande du médaillon
-	# Planche alignée en haut de page (au niveau du texte de la page de droite).
-	_plate_holder.alignment_vertical = AspectRatioContainer.ALIGNMENT_BEGIN
+	# Planche CENTRÉE verticalement dans la page (entre titre et médaillon).
+	_plate_holder.alignment_vertical = AspectRatioContainer.ALIGNMENT_CENTER
 	_plate_holder.visible = false
 	canvas.add_child(_plate_holder)
 
@@ -298,10 +298,11 @@ func _build_right_page() -> Control:
 
 	col.add_child(BookTheme.make_fleuron())
 
+	# Le texte prend sa hauteur naturelle : les choix viennent JUSTE dessous
+	# (le remplissage plus bas pousse le pied de page au bas de la page).
 	_text_label = RichTextLabel.new()
 	_text_label.bbcode_enabled = true
 	_text_label.fit_content = true
-	_text_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_text_label.add_theme_font_override("normal_font", BookTheme.serif())
 	_text_label.add_theme_font_override("italics_font", BookTheme.serif(true))
 	_text_label.add_theme_font_override("bold_font", BookTheme.serif(false, true))
@@ -320,8 +321,14 @@ func _build_right_page() -> Control:
 	col.add_child(_text_label)
 
 	_choices_box = VBoxContainer.new()
-	_choices_box.add_theme_constant_override("separation", 4)
+	_choices_box.add_theme_constant_override("separation", 6)
 	col.add_child(_choices_box)
+
+	# Remplissage : absorbe l'espace restant pour ancrer le pied en bas.
+	var filler := Control.new()
+	filler.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	filler.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(filler)
 
 	# Pied de page : la progression tient lieu de numéro de page.
 	var footer := HBoxContainer.new()
@@ -634,7 +641,7 @@ func _on_present_choices(choices: Array) -> void:
 		# l'encre passée, pour que les réponses encore inexplorées ressortent.
 		var choosers: Array = Progress.choice_choosers(choice["node"], choice["text"])
 		if choosers.is_empty():
-			button.text = "—  " + choice["text"]
+			button.text = "•  " + choice["text"]
 		else:
 			button.text = "✓  " + choice["text"]
 			button.tooltip_text = "Déjà choisie avec : " + ", ".join(PackedStringArray(choosers))
@@ -643,9 +650,11 @@ func _on_present_choices(choices: Array) -> void:
 		_choices_box.add_child(button)
 
 
-## Habillage des choix : cf. BookTheme.style_choice (réplique à l'encre).
+## Habillage des choix : réplique à l'encre (BookTheme), CENTRÉE sous le texte.
 func _style_choice(button: Button, read: bool) -> void:
 	BookTheme.style_choice(button, read)
+	button.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
 
 func _on_node_visited(node_id: String) -> void:

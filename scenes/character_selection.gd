@@ -138,10 +138,10 @@ func _make_card(data: CharacterData, progress_id: String) -> Control:
 			and not Progress.resume_node(progress_id, data.character_type).is_empty()
 	var button := Button.new()
 	if has_run:
-		button.text = "—  Continuer l'histoire"
+		button.text = "•  Continuer l'histoire"
 		button.tooltip_text = "Reprend au dernier point de choix"
 	else:
-		button.text = "—  Commencer une nouvelle histoire"
+		button.text = "•  Commencer une nouvelle histoire"
 	BookTheme.style_choice(button, false, 15)
 	button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	button.pressed.connect(_on_choose.bind(data))

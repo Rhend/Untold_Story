@@ -92,8 +92,9 @@ static func sheet_paper() -> TextureRect:
 
 # ------------------------------------------------------------------ Fonds
 
-## La table : fond de cuir sombre + vignette radiale qui concentre le regard.
-## À ajouter en premier enfant d'une scène plein écran.
+## La table : fond de cuir sombre, lucioles sépia qui montent lentement
+## (profondeur, casse le noir uni) et vignette radiale qui concentre le
+## regard. À ajouter en premier enfant d'une scène plein écran.
 static func make_desk() -> Control:
 	var desk := Control.new()
 	desk.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -105,6 +106,14 @@ static func make_desk() -> Control:
 	base.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	desk.add_child(base)
 
+	var motes := _make_motes()
+	desk.add_child(motes)
+	# L'émetteur suit la taille de l'écran (spawn sur toute la surface, un peu
+	# au-delà du bas pour que des lucioles « entrent » dans l'image).
+	desk.resized.connect(func() -> void:
+		motes.position = desk.size / 2.0
+		motes.emission_rect_extents = Vector2(desk.size.x / 2.0, desk.size.y / 2.0 + 80.0))
+
 	var vignette := TextureRect.new()
 	vignette.texture = gradient_tex(
 			[Color(0, 0, 0, 0.0), Color(0, 0, 0, 0.0), Color(0, 0, 0, 0.4)],
@@ -113,6 +122,39 @@ static func make_desk() -> Control:
 	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	desk.add_child(vignette)
 	return desk
+
+
+## Lucioles : petites boules de lumière sépia qui flottent vers le haut,
+## en fondu additif — déjà réparties à l'ouverture (preprocess).
+static func _make_motes() -> CPUParticles2D:
+	var motes := CPUParticles2D.new()
+	motes.amount = 26
+	motes.lifetime = 16.0
+	motes.preprocess = 16.0
+	motes.texture = gradient_tex(
+			[Color("e6c98a", 0.9), Color("c9a86a", 0.3), Color("c9a86a", 0.0)],
+			[0.0, 0.45, 1.0], true)
+	var additive := CanvasItemMaterial.new()
+	additive.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	motes.material = additive
+
+	motes.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	motes.emission_rect_extents = Vector2(960, 620)  # recalé par make_desk
+	motes.direction = Vector2(0, -1)
+	motes.spread = 22.0
+	motes.gravity = Vector2(0, -4)
+	motes.initial_velocity_min = 6.0
+	motes.initial_velocity_max = 22.0
+	motes.scale_amount_min = 0.03
+	motes.scale_amount_max = 0.11  # texture 512 px → boules de ~15 à 56 px
+
+	# Fondu d'apparition/disparition le long de la vie de chaque luciole.
+	var fade := Gradient.new()
+	fade.colors = PackedColorArray([Color(1, 1, 1, 0.0), Color(1, 1, 1, 0.55),
+			Color(1, 1, 1, 0.55), Color(1, 1, 1, 0.0)])
+	fade.offsets = PackedFloat32Array([0.0, 0.2, 0.8, 1.0])
+	motes.color_ramp = fade
+	return motes
 
 
 ## Couverture de cuir (livre, cartes du hub).
@@ -221,3 +263,22 @@ static func style_choice(button: Button, read := false, size := 18, on_dark := f
 	hover_box.set_content_margin_all(6)
 	button.add_theme_stylebox_override("hover", hover_box)
 	button.add_theme_stylebox_override("pressed", hover_box)
+	# Mise en évidence du survol : léger grossissement depuis le centre, en
+	# plus du passage à la couleur d'accent (les boutons désactivés restent tels).
+	button.mouse_entered.connect(func() -> void:
+		if not button.disabled:
+			_animate_scale(button, 1.06))
+	button.mouse_exited.connect(func() -> void: _animate_scale(button, 1.0))
+
+
+## Grossit/repose un bouton au survol (pivot recentré à chaque fois : la
+## taille n'est connue qu'après la mise en page).
+static func _animate_scale(button: Button, target: float) -> void:
+	var previous: Variant = button.get_meta("hover_tween") if button.has_meta("hover_tween") else null
+	if previous is Tween and (previous as Tween).is_valid():
+		(previous as Tween).kill()
+	button.pivot_offset = button.size / 2.0
+	var tween := button.create_tween()
+	tween.tween_property(button, "scale", Vector2.ONE * target, 0.14) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	button.set_meta("hover_tween", tween)
