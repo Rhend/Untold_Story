@@ -2,6 +2,10 @@ extends Control
 ## Écran de sélection de personnage (L3).
 ## Affiche une carte par personnage (buste + nom + attribut + description),
 ## renseigne GameState au clic puis lance la scène d'histoire.
+## Le bouton de chaque carte annonce ce que le clic fera : « Continuer
+## l'histoire » si ce personnage a une partie en cours (point de reprise
+## enregistré — la scène d'histoire reprendra au dernier point de choix),
+## sinon « Commencer une nouvelle histoire ».
 ## UI construite en code pour cette tranche (passage en .tscn éditable plus tard).
 
 const STORY_SCENE := "res://scenes/story.tscn"
@@ -51,15 +55,29 @@ func _build_ui() -> void:
 
 	# Casting scanné dans le dossier characters/ de l'histoire choisie (plus de
 	# liste en dur) : chaque histoire apporte ses propres personnages.
+	var progress_id := _story_progress_id()
 	for path in GameState.character_paths():
 		var data: CharacterData = load(path)
 		if data == null:
 			push_error("Sélection : personnage introuvable : " + path)
 			continue
-		row.add_child(_make_card(data))
+		row.add_child(_make_card(data, progress_id))
 
 
-func _make_card(data: CharacterData) -> Control:
+## Id de progression de l'histoire courante : le nom de base de son .untold
+## (celui sous lequel Progress range reprise et découverte, cf. story.gd).
+## "" si le manifest est illisible — les cartes retombent alors sur le libellé
+## « nouvelle histoire ».
+func _story_progress_id() -> String:
+	var manifest_path := GameState.story_dir() + "manifest.json"
+	if not FileAccess.file_exists(manifest_path):
+		return ""
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(manifest_path))
+	var entry := str(parsed.get("entry_file", "")) if parsed is Dictionary else ""
+	return entry.get_file().get_basename() if not entry.is_empty() else ""
+
+
+func _make_card(data: CharacterData, progress_id: String) -> Control:
 	var card := VBoxContainer.new()
 	card.add_theme_constant_override("separation", 12)
 	card.custom_minimum_size = Vector2(300, 0)
@@ -107,8 +125,16 @@ func _make_card(data: CharacterData) -> Control:
 		desc.modulate = Color(0.6, 0.6, 0.72)
 		card.add_child(desc)
 
+	# Le libellé annonce la suite : reprise de la partie en cours (point de
+	# reprise enregistré pour ce personnage) ou départ d'une nouvelle histoire.
+	var has_run := not progress_id.is_empty() \
+			and not Progress.resume_node(progress_id, data.character_type).is_empty()
 	var button := Button.new()
-	button.text = "Choisir"
+	if has_run:
+		button.text = "▶  Continuer l'histoire"
+		button.tooltip_text = "Reprend au dernier point de choix"
+	else:
+		button.text = "Commencer une nouvelle histoire"
 	button.pressed.connect(_on_choose.bind(data))
 	card.add_child(button)
 
