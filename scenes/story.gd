@@ -1,6 +1,11 @@
 extends Control
 ## Vue d'histoire : charge l'histoire, la fait tourner via le StoryRunner et
-## affiche le buste du personnage + texte (effet machine à écrire) + choix.
+## la présente comme un GRIMOIRE OUVERT (ambiance de icon.svg) — page de
+## gauche : illustration « imprimée » dans une planche encadrée (+ médaillon du
+## personnage) ; page de droite : titre de scène, texte (machine à écrire,
+## police à empattements) et choix. Une icône au coin de la planche ouvre
+## l'illustration en plein écran ; le parallaxe reste discret dans la page et
+## ne joue pleinement qu'en plein écran.
 ## UI construite en code pour cette tranche (passage en .tscn éditable plus tard).
 
 const SELECTION_SCENE := "res://scenes/character_selection.tscn"
@@ -26,21 +31,34 @@ var _fx_shock: RichTextEffect
 ## lignes de dialogue ajoutées au clic d'une zone — base des ajouts suivants.
 var _display_raw := ""
 var _illustration: Illustration
-var _scrim: ColorRect
-var _content: MarginContainer
-var _has_badge := false
+## Données de l'illustration courante (pour la rejouer en plein écran).
+var _illustration_data: IllustrationData
+var _plate_holder: AspectRatioContainer  # cadre la planche au ratio du gabarit
+var _plate: PanelContainer               # la planche (bordure + illustration)
+var _fullscreen: Control                 # surimpression plein écran (ou null)
+## Polices à empattements du livre (système : Georgia/Times, sans ressource).
+var _font_body: Font
+var _font_italic: Font
+var _font_bold: Font
 ## Nœud où le récit s'est arrêté (repère « vous êtes ici » de la carte).
 var _current_node := ""
 
-## Marge gauche du texte laissant la place à la pastille de profil (px de réf.).
-const BADGE_CLEARANCE := 340
-## Bordure autour de l'illustration (px de réf.) pour aérer et faciliter la lecture.
-const BORDER := 56.0
+## Palette du grimoire — reprise de icon.svg (cuir, parchemin, encre, ruban).
+const DESK := Color("17110b")          # table sous le livre
+const LEATHER := Color("4c3826")       # couverture
+const LEATHER_DARK := Color("2d2013")  # contour de la couverture
+const PAGE_EDGE := Color("a38a5c")     # bord de page / cadre de planche
+const SPINE := Color("6b5637")         # ombre de la reliure
+const INK := Color("312216")           # encre du texte courant
+const INK_MUTED := Color("6b5637")     # encre atténuée (titres)
+const INK_FADED := Color("8a7146")     # encre passée (pied de page, choix lus)
+const RIBBON := Color("7a3126")        # ruban marque-page (survol des choix)
 
-## Gabarit Character : petit portrait carré ancré en haut à gauche. Valeurs
-## PROVISOIRES non validées par le design — à ajuster visuellement.
-const CHARACTER_SIDE := 288.0    # ~15 % de 1920 (largeur de référence)
-const CHARACTER_MARGIN := 24.0
+## Proportions du livre ouvert (largeur/hauteur des deux pages réunies).
+const BOOK_RATIO := 1.58
+## Parallaxe « imprimé » : fraction du gain plein écran tant que l'illustration
+## est dans la page — le plein écran seul retrouve le parallaxe complet.
+const PAGE_PARALLAX := 0.25
 
 
 func _ready() -> void:
@@ -156,47 +174,192 @@ func _start_story() -> void:
 # ------------------------------------------------------------------ UI
 
 func _build_ui() -> void:
-	var bg := ColorRect.new()
-	bg.color = Color(0.07, 0.06, 0.09)
-	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
+	_font_body = _serif()
+	_font_italic = _serif(true)
+	_font_bold = _serif(false, true)
 
-	# Voile sombre posé AU-DESSUS de l'illustration (insérée dynamiquement en
-	# index 1) et SOUS l'UI. Affiché seulement pour une illustration plein écran
-	# (paysage), afin de garder le texte lisible par-dessus l'image.
-	_scrim = ColorRect.new()
-	_scrim.color = Color(0, 0, 0, 0.35)
-	_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_scrim.visible = false
-	add_child(_scrim)
+	# La table, sous le livre.
+	var desk := ColorRect.new()
+	desk.color = DESK
+	desk.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(desk)
 
-	# Zone de récit (en-tête, texte, choix). Sa zone est repositionnée selon la
-	# mise en page : plein écran, ou demi-page droite pour le mode « livre ».
-	_content = MarginContainer.new()
-	_content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	# En paysage, _content couvre tout l'écran : PASS laisse les clics NON
-	# consommés par un enfant réel (texte, boutons) remonter jusqu'aux zones
-	# interactives de l'illustration en dessous. _content n'a pas de gui_input
-	# propre, donc rien de son comportement n'est perdu.
-	_content.mouse_filter = Control.MOUSE_FILTER_PASS
+	# Le livre ouvert : centré, proportions constantes quelle que soit la fenêtre.
+	var frame := MarginContainer.new()
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
-		_content.add_theme_constant_override(side, 56)
-	add_child(_content)
+		frame.add_theme_constant_override(side, 30)
+	add_child(frame)
+
+	var ratio_box := AspectRatioContainer.new()
+	ratio_box.ratio = BOOK_RATIO
+	frame.add_child(ratio_box)
+
+	var book := PanelContainer.new()
+	var leather := StyleBoxFlat.new()
+	leather.bg_color = LEATHER
+	leather.set_border_width_all(3)
+	leather.border_color = LEATHER_DARK
+	leather.set_corner_radius_all(12)
+	leather.shadow_color = Color(0, 0, 0, 0.55)
+	leather.shadow_size = 26
+	leather.set_content_margin_all(14)
+	book.add_theme_stylebox_override("panel", leather)
+	ratio_box.add_child(book)
+
+	var pages := HBoxContainer.new()
+	pages.add_theme_constant_override("separation", 0)
+	book.add_child(pages)
+	pages.add_child(_build_left_page())
+	pages.add_child(_build_right_page())
+
+	# Ombre de la reliure centrale, par-dessus les deux pages.
+	var spine := TextureRect.new()
+	spine.texture = _gradient_tex(
+			[Color(SPINE, 0.0), Color(SPINE, 0.42), Color(SPINE, 0.42), Color(SPINE, 0.0)],
+			[0.455, 0.494, 0.506, 0.545])
+	spine.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	book.add_child(spine)
+
+
+## Police à empattements SYSTÈME (Georgia, Times New Roman…) : lecture longue
+## agréable sans embarquer de ressource — repli sur la police par défaut du
+## moteur si aucune n'est installée.
+static func _serif(italic := false, bold := false) -> Font:
+	var font := SystemFont.new()
+	font.font_names = PackedStringArray(
+			["Georgia", "Times New Roman", "Palatino Linotype", "serif"])
+	font.font_italic = italic
+	font.font_weight = 700 if bold else 400
+	return font
+
+
+## Texture de dégradé horizontal (papier des pages, ombre de reliure).
+func _gradient_tex(colors: Array, offsets: Array) -> Texture2D:
+	var gradient := Gradient.new()
+	gradient.colors = PackedColorArray(colors)
+	gradient.offsets = PackedFloat32Array(offsets)
+	var tex := GradientTexture2D.new()
+	tex.gradient = gradient
+	tex.width = 512
+	tex.height = 2
+	tex.fill_from = Vector2.ZERO
+	tex.fill_to = Vector2(1, 0)
+	return tex
+
+
+## Papier d'une page : dégradé parchemin de icon.svg (plus sombre côté
+## reliure, resserré près du pli pour ne pas assombrir la zone de lecture).
+func _make_paper(left_side: bool) -> TextureRect:
+	var paper := TextureRect.new()
+	if left_side:
+		paper.texture = _gradient_tex(
+				[Color("efe3c4"), Color("e6d6b2"), Color("bda678")], [0.0, 0.86, 1.0])
+	else:
+		paper.texture = _gradient_tex(
+				[Color("bda678"), Color("e6d6b2"), Color("f3e9cd")], [0.0, 0.14, 1.0])
+	paper.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return paper
+
+
+## Page de gauche : planche d'illustration (cadrée au ratio de son gabarit,
+## bouton plein écran au coin) + médaillon du personnage incarné en bas.
+func _build_left_page() -> Control:
+	var page := PanelContainer.new()
+	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	page.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	page.add_child(_make_paper(true))
+
+	var inner := MarginContainer.new()
+	inner.add_theme_constant_override("margin_left", 38)
+	inner.add_theme_constant_override("margin_right", 30)  # côté reliure
+	inner.add_theme_constant_override("margin_top", 36)
+	inner.add_theme_constant_override("margin_bottom", 26)
+	page.add_child(inner)
+
+	# Canevas en superposition : la planche occupe le haut, le médaillon reste
+	# ANCRÉ en bas de page même quand la planche est absente.
+	var canvas := Control.new()
+	canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inner.add_child(canvas)
+
+	# La planche, cadrée au ratio du gabarit courant (cf. _show_illustration).
+	_plate_holder = AspectRatioContainer.new()
+	_plate_holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_plate_holder.offset_bottom = -66  # réserve la bande du médaillon
+	# Planche alignée en haut de page (au niveau du titre de la page de droite).
+	_plate_holder.alignment_vertical = AspectRatioContainer.ALIGNMENT_BEGIN
+	_plate_holder.visible = false
+	canvas.add_child(_plate_holder)
+
+	_plate = PanelContainer.new()
+	var plate_style := StyleBoxFlat.new()
+	plate_style.bg_color = Color(0, 0, 0, 0.07)
+	plate_style.set_border_width_all(2)
+	plate_style.border_color = PAGE_EDGE
+	plate_style.set_corner_radius_all(3)
+	plate_style.set_content_margin_all(7)  # passe-partout autour de l'image
+	_plate.add_theme_stylebox_override("panel", plate_style)
+	_plate_holder.add_child(_plate)
+
+	# Bouton plein écran, au coin haut-droit de la planche (au-dessus de
+	# l'illustration ; le reste de la surcouche laisse passer la souris —
+	# les zones interactives de l'image restent cliquables).
+	var overlay := Control.new()
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_plate.add_child(overlay)
+	overlay.add_child(_make_expand_button())
+
+	var character: CharacterData = GameState.selected_character
+	if character != null:
+		var medallion := _make_medallion(character)
+		medallion.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+		medallion.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		canvas.add_child(medallion)
+	return page
+
+
+## Page de droite : titre de scène, filet, texte du récit, choix, pied de page.
+func _build_right_page() -> Control:
+	var page := PanelContainer.new()
+	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	page.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	page.add_child(_make_paper(false))
+
+	var inner := MarginContainer.new()
+	inner.add_theme_constant_override("margin_left", 32)  # côté reliure
+	inner.add_theme_constant_override("margin_right", 42)
+	inner.add_theme_constant_override("margin_top", 30)
+	inner.add_theme_constant_override("margin_bottom", 20)
+	page.add_child(inner)
 
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 24)
-	_content.add_child(col)
+	col.add_theme_constant_override("separation", 14)
+	inner.add_child(col)
 
 	_header = Label.new()
-	_header.modulate = Color(0.55, 0.55, 0.7)
+	_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_header.clip_text = true
+	_header.add_theme_font_override("font", _font_italic)
+	_header.add_theme_font_size_override("font_size", 15)
+	_header.add_theme_color_override("font_color", INK_MUTED)
 	col.add_child(_header)
+
+	var rule := ColorRect.new()
+	rule.color = Color(PAGE_EDGE, 0.55)
+	rule.custom_minimum_size = Vector2(0, 1)
+	col.add_child(rule)
 
 	_text_label = RichTextLabel.new()
 	_text_label.bbcode_enabled = true
 	_text_label.fit_content = true
 	_text_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_text_label.add_theme_font_size_override("normal_font_size", 20)
+	_text_label.add_theme_font_override("normal_font", _font_body)
+	_text_label.add_theme_font_override("italics_font", _font_italic)
+	_text_label.add_theme_font_override("bold_font", _font_bold)
+	_text_label.add_theme_font_size_override("normal_font_size", 19)
+	_text_label.add_theme_color_override("default_color", INK)
+	_text_label.add_theme_constant_override("line_separation", 6)
 	# Clic sur le texte = affichage instantané (cf. _on_text_input).
 	_text_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	_text_label.gui_input.connect(_on_text_input)
@@ -208,69 +371,91 @@ func _build_ui() -> void:
 	col.add_child(_text_label)
 
 	_choices_box = VBoxContainer.new()
-	_choices_box.add_theme_constant_override("separation", 12)
+	_choices_box.add_theme_constant_override("separation", 4)
 	col.add_child(_choices_box)
 
-	# Compteur de progression narrative (nœuds découverts, tous personnages
-	# confondus), en haut à droite, au-dessus du reste.
+	# Pied de page : la progression tient lieu de numéro de page.
+	var footer := HBoxContainer.new()
+	col.add_child(footer)
+	var footer_spacer := Control.new()
+	footer_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	footer.add_child(footer_spacer)
 	_progress_label = Label.new()
-	_progress_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_progress_label.offset_left = -480
-	_progress_label.offset_top = 16
-	_progress_label.offset_right = -24
-	_progress_label.offset_bottom = 44
-	_progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_progress_label.modulate = Color(0.55, 0.55, 0.7)
-	_progress_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_progress_label)
-
-	# Pastille de profil du personnage, dans le coin haut-gauche.
-	var character: CharacterData = GameState.selected_character
-	_has_badge = character != null
-	if _has_badge:
-		add_child(_build_badge(character))
-		# État initial (avant toute illustration) : texte plein écran → on
-		# décale pour ne pas écrire sous la pastille.
-		_content.add_theme_constant_override("margin_left", BADGE_CLEARANCE)
+	_progress_label.add_theme_font_override("font", _font_italic)
+	_progress_label.add_theme_font_size_override("font_size", 13)
+	_progress_label.add_theme_color_override("font_color", INK_FADED)
+	footer.add_child(_progress_label)
+	return page
 
 
-## Pastille de profil : petit carré (~15 % de la largeur de référence) ancré
-## dans le coin haut-gauche, surimposé au reste.
-func _build_badge(character: CharacterData) -> Control:
-	const SIDE := 288.0  # ~15 % de 1920 (résolution de référence)
+## Bouton « plein écran » : pastille sombre aux coins dessinés (pas de glyphe
+## unicode — couverture de police incertaine), coin haut-droit de la planche.
+func _make_expand_button() -> Button:
+	var button := Button.new()
+	button.tooltip_text = "Voir l'illustration en plein écran"
+	button.focus_mode = Control.FOCUS_NONE
+	button.custom_minimum_size = Vector2(32, 32)
+	button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	button.offset_left = -40
+	button.offset_top = 8
+	button.offset_right = -8
+	button.offset_bottom = 40
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	for state in ["normal", "hover", "pressed"]:
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(0.1, 0.08, 0.05, 0.75 if state == "hover" else 0.5)
+		style.set_corner_radius_all(16)
+		button.add_theme_stylebox_override(state, style)
+	button.pressed.connect(_open_fullscreen)
 
-	var holder := VBoxContainer.new()
-	holder.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-	holder.position = Vector2(24, 24)
-	holder.add_theme_constant_override("separation", 4)
+	# Quatre équerres de coin (pictogramme « agrandir ») dessinées à la main.
+	var pict := Control.new()
+	pict.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pict.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pict.draw.connect(func() -> void:
+		var c := Color("efe3c4")
+		var s: Vector2 = pict.size
+		const M := 9.0   # marge au bord de la pastille
+		const L := 6.0   # longueur des équerres
+		for corner in [Vector2(M, M), Vector2(s.x - M, M), Vector2(M, s.y - M),
+				Vector2(s.x - M, s.y - M)]:
+			var dx: float = L if corner.x < s.x / 2.0 else -L
+			var dy: float = L if corner.y < s.y / 2.0 else -L
+			pict.draw_line(corner, corner + Vector2(dx, 0), c, 1.6, true)
+			pict.draw_line(corner, corner + Vector2(0, dy), c, 1.6, true))
+	button.add_child(pict)
+	return button
 
-	var frame := PanelContainer.new()
-	frame.custom_minimum_size = Vector2(SIDE, SIDE)
-	frame.clip_contents = true
+
+## Médaillon du personnage incarné, en bas de la page de gauche.
+func _make_medallion(character: CharacterData) -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+
+	var medallion := PanelContainer.new()
+	medallion.custom_minimum_size = Vector2(52, 52)
+	medallion.clip_contents = true
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.07, 0.06, 0.09)
-	style.set_border_width_all(3)
+	style.bg_color = Color(SPINE, 0.25)
+	style.set_border_width_all(2)
 	style.border_color = character.color
-	style.set_corner_radius_all(6)
-	frame.add_theme_stylebox_override("panel", style)
-
+	style.set_corner_radius_all(8)
+	medallion.add_theme_stylebox_override("panel", style)
 	var portrait := TextureRect.new()
 	portrait.texture = character.icon if character.icon != null else character.bust
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	portrait.custom_minimum_size = Vector2(SIDE, SIDE)
-	frame.add_child(portrait)
-	holder.add_child(frame)
+	medallion.add_child(portrait)
+	row.add_child(medallion)
 
 	var name_label := Label.new()
 	name_label.text = character.display_name
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.custom_minimum_size = Vector2(SIDE, 0)
-	name_label.add_theme_font_size_override("font_size", 18)
-	name_label.add_theme_color_override("font_color", character.color)
-	holder.add_child(name_label)
-
-	return holder
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	name_label.add_theme_font_override("font", _font_bold)
+	name_label.add_theme_font_size_override("font_size", 16)
+	name_label.add_theme_color_override("font_color", character.color.lerp(INK, 0.5))
+	row.add_child(name_label)
+	return row
 
 
 func _clear_choices() -> void:
@@ -451,17 +636,42 @@ func _on_present_choices(choices: Array) -> void:
 	for i in choices.size():
 		var choice: Dictionary = choices[i]
 		var button := Button.new()
-		# Réponse déjà choisie (par n'importe quel personnage) : cochée et
-		# atténuée, pour que les réponses encore inexplorées ressortent.
+		# Réponse déjà choisie (par n'importe quel personnage) : cochée et à
+		# l'encre passée, pour que les réponses encore inexplorées ressortent.
 		var choosers: Array = Progress.choice_choosers(choice["node"], choice["text"])
 		if choosers.is_empty():
-			button.text = choice["text"]
+			button.text = "—  " + choice["text"]
 		else:
-			button.text = "✓ " + choice["text"]
-			button.modulate = Color(1, 1, 1, 0.55)
+			button.text = "✓  " + choice["text"]
 			button.tooltip_text = "Déjà choisie avec : " + ", ".join(PackedStringArray(choosers))
+		_style_choice(button, not choosers.is_empty())
 		button.pressed.connect(_runner.choose.bind(i))
 		_choices_box.add_child(button)
+
+
+## Habille un choix comme une réplique du livre : encre sur parchemin, survol
+## au rouge du ruban marque-page. `read` = réponse déjà choisie (encre passée).
+func _style_choice(button: Button, read: bool) -> void:
+	button.focus_mode = Control.FOCUS_NONE
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.add_theme_font_override("font", _font_body)
+	button.add_theme_font_size_override("font_size", 18)
+	var ink := INK_FADED if read else INK
+	button.add_theme_color_override("font_color", ink)
+	button.add_theme_color_override("font_focus_color", ink)
+	for state in ["font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
+		button.add_theme_color_override(state, RIBBON)
+	var normal := StyleBoxEmpty.new()
+	normal.set_content_margin_all(6)
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	var hover := StyleBoxFlat.new()
+	hover.bg_color = Color(SPINE, 0.12)
+	hover.set_corner_radius_all(4)
+	hover.set_content_margin_all(6)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", hover)
 
 
 func _on_node_visited(node_id: String) -> void:
@@ -539,78 +749,91 @@ func _arg_qty(args: Array, index: int) -> int:
 	return 1
 
 
+## Installe l'illustration dans la planche de la page de gauche, cadrée au
+## ratio de son gabarit, avec un parallaxe réduit (image « imprimée »).
 func _show_illustration(illustration_name: String) -> void:
 	if _illustration != null:
 		_illustration.queue_free()
 		_illustration = null
+	_close_fullscreen()
 
 	var data := IllustrationLibrary.get_illustration(illustration_name)
 	if data == null:
 		push_warning("Illustration inconnue : " + illustration_name)
 		return
 
+	_illustration_data = data
 	_illustration = Illustration.new()
 	_illustration.interaction_clicked.connect(_on_illustration_interaction)
-	add_child(_illustration)
-	# Au-dessus du fond (index 0), sous le voile et l'UI.
-	move_child(_illustration, 1)
+	_plate.add_child(_illustration)
+	# Sous la surcouche du bouton plein écran (dernier enfant de la planche).
+	_plate.move_child(_illustration, 0)
 	_illustration.setup(data)
-	_apply_illustration_layout(data.template)
+	_illustration.parallax_gain = Settings.parallax_gain_default * PAGE_PARALLAX
+	_plate_holder.ratio = _template_ratio(data.template)
+	_plate_holder.visible = true
 
 
-## Place l'illustration et la zone de texte selon le gabarit :
-##  - PORTRAIT : mise en page « livre » — illustration sur la moitié gauche,
-##    texte sur la moitié droite.
-##  - CHARACTER : petit portrait carré en haut à gauche, texte plein écran à
-##    côté (dimensions PROVISOIRES, cf. CHARACTER_SIDE).
-##  - LANDSCAPE (défaut) : illustration plein écran, texte par-dessus (voile).
-func _apply_illustration_layout(template: int) -> void:
+## Ratio de la planche selon le gabarit : la page cadre l'image au lieu que
+## l'image ne redessine la page.
+func _template_ratio(template: int) -> float:
 	match template:
 		IllustrationData.Template.PORTRAIT:
-			# Livre : texte sur la demi-page droite, loin de la pastille → marge normale.
-			_set_rect_anchors(_illustration, 0.0, 0.0, 0.5, 1.0, BORDER)
-			_set_rect_anchors(_content, 0.5, 0.0, 1.0, 1.0)
-			_content.add_theme_constant_override("margin_left", 56)
-			_scrim.visible = false
+			return 0.75
 		IllustrationData.Template.CHARACTER:
-			# Carré ancré en haut à gauche ; le texte occupe l'écran mais dégage
-			# le coin. Réutilise le dégagement de la pastille (même emprise).
-			_set_corner_square(_illustration, CHARACTER_MARGIN, CHARACTER_SIDE)
-			_set_rect_anchors(_content, 0.0, 0.0, 1.0, 1.0)
-			_content.add_theme_constant_override("margin_left", BADGE_CLEARANCE)
-			_scrim.visible = false
+			return 1.0
 		_:
-			# Plein cadre : illustration encadrée d'une bordure (meilleure lecture),
-			# texte par-dessus ; on dégage la pastille à gauche.
-			_set_rect_anchors(_illustration, 0.0, 0.0, 1.0, 1.0, BORDER)
-			_set_rect_anchors(_content, 0.0, 0.0, 1.0, 1.0)
-			_content.add_theme_constant_override("margin_left", BADGE_CLEARANCE if _has_badge else 56)
-			_scrim.visible = true
+			return 1.65
 
 
-func _set_rect_anchors(node: Control, l: float, t: float, r: float, b: float, inset: float = 0.0) -> void:
-	node.anchor_left = l
-	node.anchor_top = t
-	node.anchor_right = r
-	node.anchor_bottom = b
-	# inset > 0 : marge intérieure sur les 4 côtés (bordure autour du décor).
-	node.offset_left = inset
-	node.offset_top = inset
-	node.offset_right = -inset
-	node.offset_bottom = -inset
+# ------------------------------------------------- Illustration plein écran
+
+## Surimpression plein écran de l'illustration courante : parallaxe COMPLET
+## (contrairement à la planche), zones interactives toujours actives.
+func _open_fullscreen() -> void:
+	if _fullscreen != null or _illustration_data == null:
+		return
+	_fullscreen = Control.new()
+	_fullscreen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(_fullscreen)
+
+	var backdrop := ColorRect.new()
+	backdrop.color = Color(0.05, 0.035, 0.02, 0.985)
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_fullscreen.add_child(backdrop)
+
+	var big := Illustration.new()
+	big.interaction_clicked.connect(_on_illustration_interaction)
+	big.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_fullscreen.add_child(big)
+	big.setup(_illustration_data)  # gain laissé au défaut → parallaxe complet
+
+	# Pastille sombre : reste lisible quelle que soit la clarté de l'image.
+	var close := Button.new()
+	close.text = "✕  Fermer"
+	close.focus_mode = Control.FOCUS_NONE
+	close.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	close.position = Vector2(-150, 16)
+	close.add_theme_color_override("font_color", Color("efe3c4"))
+	close.add_theme_color_override("font_hover_color", Color("f3e9cd"))
+	close.add_theme_color_override("font_pressed_color", Color("f3e9cd"))
+	for state in ["normal", "hover", "pressed"]:
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(0.1, 0.08, 0.05, 0.85 if state == "hover" else 0.65)
+		style.set_corner_radius_all(15)
+		style.content_margin_left = 14
+		style.content_margin_right = 14
+		style.content_margin_top = 5
+		style.content_margin_bottom = 5
+		close.add_theme_stylebox_override(state, style)
+	close.pressed.connect(_close_fullscreen)
+	_fullscreen.add_child(close)
 
 
-## Ancre un contrôle en carré (side × side) dans le coin haut-gauche, à `margin`
-## px des bords — gabarit Character.
-func _set_corner_square(node: Control, margin: float, side: float) -> void:
-	node.anchor_left = 0.0
-	node.anchor_top = 0.0
-	node.anchor_right = 0.0
-	node.anchor_bottom = 0.0
-	node.offset_left = margin
-	node.offset_top = margin
-	node.offset_right = margin + side
-	node.offset_bottom = margin + side
+func _close_fullscreen() -> void:
+	if _fullscreen != null:
+		_fullscreen.queue_free()
+		_fullscreen = null
 
 
 func _on_story_ended() -> void:
@@ -621,12 +844,14 @@ func _on_story_ended() -> void:
 	Progress.clear_checkpoint()
 
 	var restart := Button.new()
-	restart.text = "↻ Recommencer"
+	restart.text = "↻  Recommencer"
+	_style_choice(restart, false)
 	restart.pressed.connect(_start_story)
 	_choices_box.add_child(restart)
 
 	var back := Button.new()
-	back.text = "↩ Choisir un autre personnage"
+	back.text = "↩  Choisir un autre personnage"
+	_style_choice(back, false)
 	back.pressed.connect(_go_to_selection)
 	_choices_box.add_child(back)
 
