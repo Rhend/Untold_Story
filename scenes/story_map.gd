@@ -5,55 +5,76 @@ extends Control
 ## récit s'enchaîne de HAUT en BAS (défilement vertical, variantes en largeur)
 ## et la carte s'ouvre centrée sur le nœud courant.
 ##
+## La disposition automatique ne place QUE les nœuds dessinés (chaînes visitées
+## et bulles « ? ») : les nœuds encore inconnus n'occupent aucune place — la
+## carte reste compacte quel que soit le total de nœuds de l'histoire. Chaque
+## rangée est centrée sur l'axe du récit puis « redressée » : un nœud se range
+## sous le barycentre de ses parents (et au-dessus de celui de ses enfants),
+## pour des liens majoritairement verticaux.
+##
 ## Les enchaînements linéaires sont CONTRACTÉS : un nœud visité qui n'a qu'une
 ## seule sortie (pistes cachées incluses) fusionne avec son successeur visité
 ## si celui-ci n'a pas d'autre entrée. La carte montre un seul nœud par
 ## chaîne ; la relecture concatène les textes de ses membres.
 ##
-##  - nœud visité → panneau nommé + pastilles des personnages passés ;
+##  - nœud visité → pilule nommée (titre lisible du sidecar s'il existe, sinon
+##    id technique) + pastilles des personnages passés ;
 ##  - nœud courant → liseré à la couleur du personnage incarné (repère) ;
 ##  - nœud aperçu (cible d'un choix visible jamais pris) → bulle noire « ? »,
 ##    dont AUCUNE suite n'est montrée ;
-##  - lien découvert → trait continu ;
+##  - lien découvert → trait continu fléché dans le sens de lecture ;
 ##  - piste cachée (choix/saut sous condition jamais exploré) → amorce en
 ##    pointillé qui s'évanouit (fade out), sans révéler la destination.
 ##    Exception : les liens conditionnés par l'IDENTITÉ du joueur (variantes
 ##    de personnage, ex. Prologue1 → Prologue1N/S/P) ne sont pas des secrets
 ##    de l'histoire et ne laissent aucune amorce ;
-##  - nœud totalement inconnu → absent de la carte ;
+##  - nœud totalement inconnu → absent de la carte (et sans place réservée) ;
 ##  - clic sur un nœud visité → liseré sépia + volet de relecture : texte du
 ##    passage, illustration figée, personnages l'ayant découvert ou non.
 ##    Ce volet est purement consultatif : aucune interaction narrative.
+##
+## Navigation : glisser (clic gauche maintenu) pour se déplacer, Ctrl+molette
+## pour zoomer, molette seule pour défiler.
 
 signal close_requested()
 
 
-## Taille MINIMALE d'un panneau — la largeur réelle suit le libellé.
-const NODE_SIZE := Vector2(170, 46)
-const BUBBLE_SIZE := Vector2(40, 40)
-const EDGE_COLOR := Color(0.78, 0.7, 0.52, 0.8)
+## Taille MINIMALE d'une pilule — la largeur réelle suit libellé + pastilles.
+const NODE_SIZE := Vector2(96, 32)
+const BUBBLE_SIZE := Vector2(28, 28)
+const EDGE_COLOR := Color(0.78, 0.7, 0.52, 0.55)
 const HIDDEN_COLOR := Color(0.6, 0.55, 0.7)
-const MARGIN := Vector2(60, 90)
+const MARGIN := Vector2(80, 70)
 ## Disposition auto verticale : écart entre deux profondeurs (vers le bas) et
 ## écart horizontal entre deux variantes d'une même profondeur.
-const DEPTH_GAP := 120.0
-const H_GAP := 60.0
+const DEPTH_GAP := 92.0
+const H_GAP := 30.0
 ## Courbure des connecteurs : fraction de la distance (projetée sur l'axe du
 ## flux) dont on décale les points de contrôle de la Bézier (0 = trait droit).
 const EDGE_CURVATURE := 0.4
 ## Balayages de l'heuristique du barycentre (aller/retour) pour ranger les
 ## rangées et réduire les croisements de liens.
 const BARYCENTER_PASSES := 4
-## Police des libellés de nœud (sert aussi à mesurer la largeur des panneaux).
+## Balayages de redressement (aller/retour) : chaque rangée s'aligne sous le
+## barycentre de ses voisines pour rendre les liens verticaux.
+const ALIGN_PASSES := 3
+## Police des libellés de nœud (sert aussi à mesurer la largeur des pilules).
 const LABEL_FONT_SIZE := 13
+## Pastille de personnage dans une pilule (côté, px).
+const CHIP := 16.0
 ## Liseré du nœud sélectionné (relecture) — sépia, distinct du nœud courant.
 const SEPIA := Color(0.85, 0.64, 0.38)
-const RECAP_WIDTH := 480.0
+const PARCHMENT := Color(0.9, 0.86, 0.74)
+const RECAP_WIDTH := 460.0
+const HEADER_H := 52.0
+const MIN_ZOOM := 0.5
+const MAX_ZOOM := 2.0
 ## Marqueur "glue" du format .untold (cf. StoryRunner.GLUE).
 const GLUE := "<>"
 
 var _story: Story
 var _graph: StoryGraph
+var _meta: StoryMeta              # titres lisibles + positions d'auteur
 var _positions: Dictionary = {}   # rep -> Vector2 (coin haut-gauche du widget)
 var _sizes: Dictionary = {}       # rep -> Vector2 (taille réelle du widget)
 var _revealed: Dictionary = {}    # id -> "visited" | "known" (nœuds d'origine)
@@ -69,11 +90,16 @@ var _player_color := Color.WHITE  # couleur du personnage incarné
 var _selected_id := ""            # chaîne sélectionnée (volet de relecture)
 var _panels: Dictionary = {}      # rep -> PanelContainer des chaînes visitées
 var _recap: Control
+var _zoom := 1.0
+var _panning := false             # glisser-déplacer en cours sur le canevas
+var _pan_moved := false           # le glisser a bougé (≠ simple clic à vide)
+var _pan_last := Vector2.ZERO     # dernière position globale du curseur
 
 
 func setup(story: Story, untold_path: String, current_node := "") -> void:
 	_story = story
 	_graph = StoryGraph.build(story)
+	_meta = StoryMeta.load_for(untold_path)
 	_current_id = current_node
 	for path in GameState.character_paths():
 		var data: CharacterData = load(path)
@@ -85,7 +111,7 @@ func setup(story: Story, untold_path: String, current_node := "") -> void:
 	_compute_revealed()
 	_build_chains()
 	_compute_sizes()
-	_compute_positions(untold_path)
+	_compute_positions()
 	_build_ui()
 
 
@@ -164,20 +190,29 @@ func _real_outgoing(id: String) -> Array:
 				return _story.has_node(link["target"]) and not _map_hidden.has(link["target"]))
 
 
-## Libellé affiché : id du premier membre, suffixé du nombre de nœuds absorbés.
+## Nom montré au joueur : titre lisible du sidecar s'il existe, sinon id brut.
+func _display_name(id: String) -> String:
+	var title := _meta.get_title(id) if _meta != null else ""
+	return title if not title.is_empty() else id
+
+
+## Libellé affiché : nom du premier membre, suffixé du nombre de nœuds absorbés.
 func _label_of(rep: String) -> String:
 	var count: int = _chains.get(rep, [rep]).size()
-	return rep if count == 1 else "%s  (+%d)" % [rep, count - 1]
+	var name := _display_name(rep)
+	return name if count == 1 else "%s  +%d" % [name, count - 1]
 
 
-## Taille réelle de chaque widget : la largeur suit le libellé (les ids longs
-## ne débordent plus sur leurs voisins ni ne faussent l'ancrage des liens).
+## Taille réelle de chaque widget : la largeur suit le libellé et les pastilles
+## (les ids longs ne débordent plus sur leurs voisins ni ne faussent les liens).
 func _compute_sizes() -> void:
 	var font := ThemeDB.fallback_font
 	for rep in _chains:
 		var text_width := font.get_string_size(
 				_label_of(rep), HORIZONTAL_ALIGNMENT_LEFT, -1, LABEL_FONT_SIZE).x
-		_sizes[rep] = Vector2(maxf(NODE_SIZE.x, text_width + 28.0), NODE_SIZE.y)
+		var chips: int = _chain_visitors(rep).size()
+		var chips_width := 6.0 + chips * CHIP + maxf(chips - 1, 0) * 3.0 if chips > 0 else 0.0
+		_sizes[rep] = Vector2(maxf(NODE_SIZE.x, text_width + 24.0 + chips_width), NODE_SIZE.y)
 	for id in _revealed:
 		if _revealed[id] == "known":
 			_sizes[id] = BUBBLE_SIZE
@@ -201,23 +236,41 @@ func _contracted_targets(rep: String) -> Array:
 	return result
 
 
+## Cibles DESSINÉES d'une chaîne : celles reliées par un trait plein sur la
+## carte (chaîne visitée ou bulle « ? » d'un choix aperçu). Une bulle n'a
+## jamais de suite. Base de la disposition auto ET du dessin des liens.
+func _drawn_children(rep: String) -> Array:
+	if _revealed.get(rep) == "known":
+		return []
+	var members: Array = _chains.get(rep, [rep])
+	var result: Array = []
+	for link in _real_outgoing(members.back()):
+		var target: String = link["target"]
+		var target_rep: String = _rep_of.get(target, target)
+		if target_rep == rep or result.has(target_rep):
+			continue
+		var target_visited: bool = _revealed.get(target) == "visited"
+		var seen_choice: bool = link["kind"] == "choice" and not link["guarded"]
+		if target_visited or (seen_choice and _revealed.has(target)):
+			result.append(target_rep)
+	return result
+
+
 ## Positions des représentants : celles de l'outil narratif (sidecar
 ## .meta.json) si présentes, sinon disposition automatique VERTICALE — le
 ## récit descend (profondeur = rangée, défilement de haut en bas), les
 ## variantes d'une même profondeur se partagent la largeur selon leur taille
 ## réelle. Recalées pour partir de MARGIN.
-func _compute_positions(untold_path: String) -> void:
-	var meta := StoryMeta.load_for(untold_path)
-	var authored: Dictionary = meta.positions()
+func _compute_positions() -> void:
+	var authored: Dictionary = _meta.positions()
 	if authored.is_empty():
 		_auto_layout_vertical()
 	else:
 		# Disposition d'auteur : on reste dans son espace de coordonnées,
 		# complété par la disposition auto horizontale d'origine.
 		var auto: Dictionary = {}
-		for id in _story.nodes:
-			var rep: String = _rep_of.get(id, id)
-			if rep != id or _positions.has(rep):
+		for rep in _drawn_reps():
+			if _positions.has(rep):
 				continue
 			if authored.has(rep):
 				_positions[rep] = authored[rep]
@@ -235,53 +288,72 @@ func _compute_positions(untold_path: String) -> void:
 		_positions[rep] = _positions[rep] - top_left + MARGIN
 
 
+## Disposition auto : ne place QUE les nœuds dessinés. Profondeur (BFS sur le
+## graphe dessiné) = rangée ; chaque rangée est ordonnée (barycentre), paquetée
+## centrée sur l'axe du récit, puis redressée sous ses voisines (_straighten).
 func _auto_layout_vertical() -> void:
+	var drawn := _drawn_reps()
+	if drawn.is_empty():
+		return
+	var drawn_set: Dictionary = {}
+	for rep in drawn:
+		drawn_set[rep] = true
+
 	var start_rep: String = _rep_of.get(_story.start_node, _story.start_node)
-	var depth: Dictionary = {start_rep: 0}
-	var queue: Array = [start_rep]
+	var depth: Dictionary = {}
 	var max_depth := 0
-	while not queue.is_empty():
-		var rep: String = queue.pop_front()
-		for target in _contracted_targets(rep):
-			if not depth.has(target):
-				depth[target] = depth[rep] + 1
-				max_depth = maxi(max_depth, depth[target])
-				queue.append(target)
+	if drawn_set.has(start_rep):
+		depth[start_rep] = 0
+		var queue: Array = [start_rep]
+		while not queue.is_empty():
+			var rep: String = queue.pop_front()
+			for child in _drawn_children(rep):
+				if not depth.has(child):
+					depth[child] = depth[rep] + 1
+					max_depth = maxi(max_depth, depth[child])
+					queue.append(child)
 
 	# Rangée (= profondeur) → représentants, dans l'ordre du fichier au départ.
+	# Les dessinés inatteignables (cas limite) forment une rangée finale.
 	var rows: Dictionary = {}  # row:int -> Array[rep]
+	var max_row := 0
 	for id in _story.nodes:  # l'ordre du fichier rend la disposition stable
 		var rep: String = _rep_of.get(id, id)
-		if rep != id or _map_hidden.has(rep):
+		if rep != id or not drawn_set.has(rep):
 			continue
 		var row: int = depth.get(rep, max_depth + 1)
-		if not rows.has(row):
-			rows[row] = []
-		rows[row].append(rep)
+		max_row = maxi(max_row, row)
+		rows.get_or_add(row, []).append(rep)
 
 	# Heuristique du barycentre (Sugiyama) : réordonne chaque rangée pour réduire
 	# les croisements, puis pose les abscisses selon l'ordre obtenu.
-	var adj := _row_adjacency(depth, max_depth)
-	_order_by_barycenter(rows, max_depth, adj["parents"], adj["children"])
+	var adj := _row_adjacency(depth)
+	_order_by_barycenter(rows, max_row, adj["parents"], adj["children"])
+
+	# Paquetage initial : chaque rangée centrée sur l'axe x = 0.
 	for row in rows:
-		var x := 0.0
+		var total := -H_GAP
+		for rep in rows[row]:
+			total += _size_of(rep).x + H_GAP
+		var x := -total / 2.0
 		for rep in rows[row]:
 			_positions[rep] = Vector2(x, row * DEPTH_GAP)
 			x += _size_of(rep).x + H_GAP
 
+	_straighten(rows, max_row, adj)
 
-## Liens entre rangées ADJACENTES (profondeur r → r+1) dans le graphe contracté :
+
+## Liens entre rangées ADJACENTES (profondeur r → r+1) dans le graphe dessiné :
 ##   { "parents": rep -> [reps de la rangée du dessus],
 ##     "children": rep -> [reps de la rangée du dessous] }.
 ## Les liens qui sautent des rangées sont ignorés (ils croiseront de toute façon).
-func _row_adjacency(depth: Dictionary, _max_depth: int) -> Dictionary:
+func _row_adjacency(depth: Dictionary) -> Dictionary:
 	var parents: Dictionary = {}
 	var children: Dictionary = {}
-	for id in _story.nodes:
-		var rep: String = _rep_of.get(id, id)
-		if rep != id or _map_hidden.has(rep) or not depth.has(rep):
+	for rep in _chains:
+		if not depth.has(rep):
 			continue
-		for target in _contracted_targets(rep):
+		for target in _drawn_children(rep):
 			if depth.get(target, -1) != depth[rep] + 1:
 				continue
 			children.get_or_add(rep, []).append(target)
@@ -337,6 +409,74 @@ func _sort_row(rows: Dictionary, row: int, rank: Dictionary, neighbors: Dictiona
 		rank[rows[row][i]] = i
 
 
+## Redressement des abscisses : balayages alternés haut→bas (chaque nœud vise le
+## barycentre de ses parents) et bas→haut (celui de ses enfants). L'ordre de la
+## rangée est préservé ; les chevauchements se résolvent en poussant depuis la
+## gauche ou la droite selon le balayage — les liens deviennent verticaux.
+## Le nombre de balayages est IMPAIR : le dernier descend, l'alignement sous
+## les parents a le dernier mot (les feuilles restent près de leur source).
+func _straighten(rows: Dictionary, max_row: int, adj: Dictionary) -> void:
+	for sweep in ALIGN_PASSES * 2 + 1:
+		var down := sweep % 2 == 0
+		var neighbors: Dictionary = adj["parents"] if down else adj["children"]
+		var from_left := (sweep % 4) < 2
+		var seq: Array = range(1, max_row + 1) if down else range(max_row - 1, -1, -1)
+		for row in seq:
+			if rows.has(row):
+				_align_row(rows[row], neighbors, from_left)
+
+
+## Aligne une rangée sur les centres visés (barycentre des voisins), en résolvant
+## les collisions par un passage glouton depuis la gauche ou depuis la droite.
+func _align_row(reps: Array, neighbors: Dictionary, from_left: bool) -> void:
+	var want: Array = []
+	for rep in reps:
+		var neigh: Array = neighbors.get(rep, [])
+		if neigh.is_empty():
+			want.append(_center_of(rep).x)
+		else:
+			var sum := 0.0
+			for n in neigh:
+				sum += _center_of(n).x
+			want.append(sum / neigh.size())
+	_spread_sibling_targets(reps, want)
+	if from_left:
+		var cursor := -INF
+		for i in reps.size():
+			var w := _size_of(reps[i]).x
+			var x := maxf(want[i] - w / 2.0, cursor)
+			_positions[reps[i]] = Vector2(x, _positions[reps[i]].y)
+			cursor = x + w + H_GAP
+	else:
+		var cursor := INF
+		for i in range(reps.size() - 1, -1, -1):
+			var w := _size_of(reps[i]).x
+			var x := minf(want[i] - w / 2.0, cursor - w)
+			_positions[reps[i]] = Vector2(x, _positions[reps[i]].y)
+			cursor = x - H_GAP
+
+
+## Des voisins de rangée qui visent le MÊME centre (frères d'un même parent) se
+## pousseraient en chaîne d'un seul côté : on les répartit plutôt autour du
+## centre commun, chacun à sa place dans l'ordre de la rangée.
+func _spread_sibling_targets(reps: Array, want: Array) -> void:
+	var i := 0
+	while i < reps.size():
+		var j := i
+		while j + 1 < reps.size() and absf(want[j + 1] - want[i]) < 0.5:
+			j += 1
+		if j > i:
+			var total := -H_GAP
+			for k in range(i, j + 1):
+				total += _size_of(reps[k]).x + H_GAP
+			var x: float = want[i] - total / 2.0
+			for k in range(i, j + 1):
+				var w := _size_of(reps[k]).x
+				want[k] = x + w / 2.0
+				x += w + H_GAP
+		i = j + 1
+
+
 ## Représentants effectivement dessinés : chaînes visitées + bulles « ? ».
 func _drawn_reps() -> Array:
 	var reps: Array = _chains.keys()
@@ -358,14 +498,23 @@ func _build_ui() -> void:
 
 	_scroll = ScrollContainer.new()
 	_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_scroll.offset_top = 64
+	_scroll.offset_top = HEADER_H
 	add_child(_scroll)
+
+	# Le conteneur centreur occupe toute la zone visible : une carte encore
+	# petite (début de partie) s'affiche au centre plutôt que collée en haut à
+	# gauche. Il relaie aussi la navigation depuis le vide autour du canevas.
+	var center := CenterContainer.new()
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	center.gui_input.connect(_on_canvas_input)
+	_scroll.add_child(center)
 
 	_canvas = Control.new()
 	_canvas.custom_minimum_size = _canvas_bounds()
 	_canvas.draw.connect(_draw_edges)
 	_canvas.gui_input.connect(_on_canvas_input)
-	_scroll.add_child(_canvas)
+	center.add_child(_canvas)
 
 	for rep in _drawn_reps():
 		_canvas.add_child(_make_widget(rep))
@@ -375,24 +524,145 @@ func _build_ui() -> void:
 	if _panels.has(_current_rep):
 		_center_on.call_deferred(_current_rep)
 
+	add_child(_build_header())
+	add_child(_build_footer_hint())
+
+
+## Barre d'en-tête : titre, progression (compteur + jauge), légende, fermeture.
+func _build_header() -> Control:
+	var header := PanelContainer.new()
+	header.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	header.custom_minimum_size = Vector2(0, HEADER_H)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.07, 0.11)
+	style.border_width_bottom = 1
+	style.border_color = Color(0.5, 0.45, 0.35, 0.35)
+	style.content_margin_left = 20
+	style.content_margin_right = 12
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	header.add_theme_stylebox_override("panel", style)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 18)
+	header.add_child(row)
+
 	var title := Label.new()
-	var seen: int = Progress.visited_count()
-	title.text = "Carte de l'histoire   —   %d / %d nœuds découverts" % [seen, _story.nodes.size()]
-	title.position = Vector2(24, 18)
-	title.add_theme_font_size_override("font_size", 22)
-	title.modulate = Color(0.85, 0.8, 0.65)
-	add_child(title)
+	title.text = "Carte de l'histoire"
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 17)
+	title.add_theme_color_override("font_color", PARCHMENT)
+	row.add_child(title)
+
+	row.add_child(_build_progress_box())
+
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(spacer)
+
+	row.add_child(_legend_item("current", "Vous êtes ici"))
+	row.add_child(_legend_item("bubble", "Entrevu"))
+	row.add_child(_legend_item("hidden", "Piste cachée"))
 
 	var close := Button.new()
-	close.text = "✕  Fermer (M)"
-	close.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	close.position = Vector2(-180, 14)
+	close.text = "✕  Fermer"
+	close.tooltip_text = "Touche M"
+	close.flat = true
+	close.focus_mode = Control.FOCUS_NONE
+	close.add_theme_font_size_override("font_size", 13)
 	close.pressed.connect(func() -> void: close_requested.emit())
-	add_child(close)
+	row.add_child(close)
+	return header
+
+
+## Compteur de découverte : « n / total » au-dessus d'une fine jauge sépia.
+func _build_progress_box() -> Control:
+	var seen: int = Progress.visited_count()
+	var total: int = _story.nodes.size()
+
+	var box := VBoxContainer.new()
+	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	box.add_theme_constant_override("separation", 4)
+
+	var label := Label.new()
+	label.text = "%d / %d nœuds découverts" % [seen, total]
+	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_color_override("font_color", Color(0.7, 0.66, 0.58))
+	box.add_child(label)
+
+	var bar := ProgressBar.new()
+	bar.custom_minimum_size = Vector2(150, 5)
+	bar.max_value = maxi(total, 1)
+	bar.value = seen
+	bar.show_percentage = false
+	var bar_bg := StyleBoxFlat.new()
+	bar_bg.bg_color = Color(1, 1, 1, 0.08)
+	bar_bg.set_corner_radius_all(2)
+	var bar_fill := StyleBoxFlat.new()
+	bar_fill.bg_color = SEPIA
+	bar_fill.set_corner_radius_all(2)
+	bar.add_theme_stylebox_override("background", bar_bg)
+	bar.add_theme_stylebox_override("fill", bar_fill)
+	box.add_child(bar)
+	return box
+
+
+## Entrée de légende : petit glyphe dessiné + libellé discret.
+func _legend_item(kind: String, text: String) -> Control:
+	var item := HBoxContainer.new()
+	item.add_theme_constant_override("separation", 6)
+
+	var glyph := Control.new()
+	glyph.custom_minimum_size = Vector2(24, 16)
+	glyph.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	glyph.draw.connect(func() -> void: _draw_legend_glyph(glyph, kind))
+	item.add_child(glyph)
+
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_color_override("font_color", Color(0.7, 0.66, 0.58))
+	item.add_child(label)
+	return item
+
+
+func _draw_legend_glyph(glyph: Control, kind: String) -> void:
+	match kind:
+		"current":
+			var pill := StyleBoxFlat.new()
+			pill.bg_color = Color(0.12, 0.11, 0.16)
+			pill.set_border_width_all(2)
+			pill.border_color = _player_color
+			pill.set_corner_radius_all(8)
+			pill.draw(glyph.get_canvas_item(), Rect2(0, 0, 24, 16))
+		"bubble":
+			glyph.draw_circle(Vector2(12, 8), 7.0, Color(0.02, 0.02, 0.03))
+			glyph.draw_arc(Vector2(12, 8), 7.0, 0.0, TAU, 24, Color(0.35, 0.35, 0.4), 1.5, true)
+			glyph.draw_string(ThemeDB.fallback_font, Vector2(9.5, 12), "?",
+					HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color.WHITE)
+		"hidden":
+			var x := 1.0
+			for i in 3:
+				var alpha := 0.8 * (1.0 - float(i) / 3.0)
+				glyph.draw_line(Vector2(x, 8), Vector2(x + 5, 8),
+						Color(HIDDEN_COLOR.r, HIDDEN_COLOR.g, HIDDEN_COLOR.b, alpha), 1.6, true)
+				x += 9.0
+
+
+## Rappel discret des commandes de navigation, hors du chemin du regard.
+func _build_footer_hint() -> Control:
+	var hint := Label.new()
+	hint.text = "Glisser : déplacer   ·   Ctrl + molette : zoom   ·   M : fermer"
+	hint.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	hint.position = Vector2(20, -34)
+	hint.add_theme_font_size_override("font_size", 12)
+	hint.modulate = Color(1, 1, 1, 0.4)
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return hint
 
 
 func _center_on(rep: String) -> void:
-	var center := _center_of(rep)
+	var center := _center_of(rep) * _zoom
 	_scroll.scroll_horizontal = int(center.x - _scroll.size.x / 2.0)
 	_scroll.scroll_vertical = int(center.y - _scroll.size.y / 2.0)
 
@@ -410,33 +680,36 @@ func _make_widget(rep: String) -> Control:
 	return _make_node_panel(rep)
 
 
-## Chaîne visitée : panneau nommé + pastilles des personnages qui y sont
-## passés (union des membres). Cliquable (sélection → volet de relecture).
+## Chaîne visitée : pilule sur UNE ligne — libellé + pastilles des personnages
+## qui y sont passés (union des membres). Cliquable (sélection → relecture).
 func _make_node_panel(rep: String) -> Control:
 	var panel := PanelContainer.new()
 	panel.position = _positions[rep]
 	panel.custom_minimum_size = _size_of(rep)
 	panel.add_theme_stylebox_override("panel", _panel_style(rep))
 	panel.gui_input.connect(_on_panel_input.bind(rep))
+	panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	var members: Array = _chains.get(rep, [rep])
 	panel.tooltip_text = " → ".join(PackedStringArray(members)) if members.size() > 1 else String(rep)
 	if rep == _current_rep:
 		panel.tooltip_text += "\nVous êtes ici"
 	_panels[rep] = panel
 
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 2)
-	panel.add_child(col)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	panel.add_child(row)
 
 	var name_label := Label.new()
 	name_label.text = _label_of(rep)
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	name_label.add_theme_font_size_override("font_size", LABEL_FONT_SIZE)
-	name_label.add_theme_color_override("font_color", Color(0.9, 0.86, 0.74))
-	col.add_child(name_label)
+	name_label.add_theme_color_override("font_color", PARCHMENT)
+	row.add_child(name_label)
 
 	var visitors := HBoxContainer.new()
-	visitors.add_theme_constant_override("separation", 4)
-	col.add_child(visitors)
+	visitors.add_theme_constant_override("separation", 3)
+	visitors.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(visitors)
 	for character in _chain_visitors(rep):
 		visitors.add_child(_make_visitor_chip(str(character)))
 
@@ -452,7 +725,7 @@ func _chain_visitors(rep: String) -> Array:
 	return seen.keys()
 
 
-## Style du panneau (pilule) :
+## Style de la pilule :
 ##  - fond/bordure teintés par le personnage quand UN SEUL l'a traversée ;
 ##    accent neutre si plusieurs (les pastilles distinguent déjà qui) ;
 ##  - sélectionnée → liseré sépia (volet de relecture ouvert) ;
@@ -461,7 +734,10 @@ func _panel_style(rep: String) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	# Rayon = moitié de la hauteur du nœud → vrai effet pilule.
 	style.set_corner_radius_all(int(_size_of(rep).y / 2.0))
-	style.set_content_margin_all(6)
+	style.content_margin_left = 12
+	style.content_margin_right = 10
+	style.content_margin_top = 4
+	style.content_margin_bottom = 4
 
 	# Accent par personnage : couleur du seul visiteur, sinon neutre.
 	var visitors: Array = _chain_visitors(rep)
@@ -472,7 +748,7 @@ func _panel_style(rep: String) -> StyleBoxFlat:
 	else:
 		style.bg_color = Color(0.12, 0.11, 0.16)
 		style.border_color = Color(0.5, 0.45, 0.35)
-	style.set_border_width_all(2)
+	style.set_border_width_all(1)
 
 	var outline := Color.TRANSPARENT
 	if rep == _selected_id:
@@ -480,10 +756,10 @@ func _panel_style(rep: String) -> StyleBoxFlat:
 	elif rep == _current_rep:
 		outline = _player_color
 	if outline != Color.TRANSPARENT:
-		style.set_border_width_all(3)
+		style.set_border_width_all(2)
 		style.border_color = outline
 		style.shadow_color = Color(outline.r, outline.g, outline.b, 0.45)
-		style.shadow_size = 7
+		style.shadow_size = 8
 	return style
 
 
@@ -507,7 +783,7 @@ func _make_visitor_chip(character_type: String) -> Control:
 			chip.texture = texture
 			chip.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			chip.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-			chip.custom_minimum_size = Vector2(18, 18)
+			chip.custom_minimum_size = Vector2(CHIP, CHIP)
 			chip.tooltip_text = character_type
 			chip.mouse_filter = Control.MOUSE_FILTER_PASS
 			return chip
@@ -517,7 +793,7 @@ func _make_visitor_chip(character_type: String) -> Control:
 	dot.tooltip_text = character_type
 	dot.mouse_filter = Control.MOUSE_FILTER_PASS
 	dot.add_theme_color_override("font_color", _color_of(character_type))
-	dot.add_theme_font_size_override("font_size", 12)
+	dot.add_theme_font_size_override("font_size", 11)
 	return dot
 
 
@@ -529,7 +805,7 @@ func _make_bubble(id: String) -> Control:
 	bubble.tooltip_text = "Nœud non exploré"
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.02, 0.02, 0.03)
-	style.set_border_width_all(2)
+	style.set_border_width_all(1)
 	style.border_color = Color(0.35, 0.35, 0.4)
 	style.set_corner_radius_all(int(BUBBLE_SIZE.x / 2.0))
 	bubble.add_theme_stylebox_override("panel", style)
@@ -538,13 +814,13 @@ func _make_bubble(id: String) -> Control:
 	mark.text = "?"
 	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	mark.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	mark.add_theme_font_size_override("font_size", 20)
-	mark.add_theme_color_override("font_color", Color.WHITE)
+	mark.add_theme_font_size_override("font_size", 14)
+	mark.add_theme_color_override("font_color", Color(0.85, 0.85, 0.9))
 	bubble.add_child(mark)
 	return bubble
 
 
-# --------------------------------------------------------------- Sélection
+# ------------------------------------------------- Sélection et navigation
 
 func _on_panel_input(event: InputEvent, rep: String) -> void:
 	if event is InputEventMouseButton and event.pressed \
@@ -552,11 +828,53 @@ func _on_panel_input(event: InputEvent, rep: String) -> void:
 		_select(rep)
 
 
-## Clic dans le vide : referme le volet de relecture.
+## Canevas : glisser pour déplacer la vue, Ctrl+molette pour zoomer, simple
+## clic dans le vide (sans glisser) pour refermer le volet de relecture.
 func _on_canvas_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed \
-			and event.button_index == MOUSE_BUTTON_LEFT and _selected_id != "":
-		_select(_selected_id)
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				_panning = true
+				_pan_moved = false
+				_pan_last = get_global_mouse_position()
+			else:
+				_panning = false
+				if not _pan_moved and _selected_id != "":
+					_select(_selected_id)
+		elif event.pressed and event.ctrl_pressed \
+				and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			var factor := 1.15 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / 1.15
+			_set_zoom(_zoom * factor)
+			accept_event()
+	elif event is InputEventMouseMotion and _panning:
+		var pos := get_global_mouse_position()
+		var delta := pos - _pan_last
+		_pan_last = pos
+		if delta != Vector2.ZERO:
+			_pan_moved = true
+			_scroll.scroll_horizontal -= int(delta.x)
+			_scroll.scroll_vertical -= int(delta.y)
+
+
+## Zoome le canevas en gardant (au mieux) le point sous le curseur immobile.
+func _set_zoom(value: float) -> void:
+	var zoom := clampf(value, MIN_ZOOM, MAX_ZOOM)
+	if is_equal_approx(zoom, _zoom):
+		return
+	var mouse := _scroll.get_local_mouse_position()
+	var anchor := (Vector2(_scroll.scroll_horizontal, _scroll.scroll_vertical) + mouse) / _zoom
+	_zoom = zoom
+	_canvas.scale = Vector2(_zoom, _zoom)
+	_canvas.custom_minimum_size = _canvas_bounds() * _zoom
+	# Les plages de défilement ne suivent la nouvelle taille qu'à la mise en
+	# page suivante : on recale le défilement en différé.
+	var target := anchor * _zoom - mouse
+	_apply_scroll.call_deferred(target)
+
+
+func _apply_scroll(target: Vector2) -> void:
+	_scroll.scroll_horizontal = int(target.x)
+	_scroll.scroll_vertical = int(target.y)
 
 
 ## Sélectionne une chaîne (ou la désélectionne si elle l'était déjà) et met à
@@ -584,12 +902,15 @@ func _show_recap(rep: String) -> void:
 	_recap = PanelContainer.new()
 	_recap.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
 	_recap.offset_left = -RECAP_WIDTH
-	_recap.offset_top = 64
+	_recap.offset_top = HEADER_H
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.07, 0.11, 0.98)
-	style.border_width_left = 2
-	style.border_color = Color(SEPIA.r, SEPIA.g, SEPIA.b, 0.6)
-	style.set_content_margin_all(18)
+	style.bg_color = Color(0.075, 0.065, 0.105, 0.99)
+	style.border_width_left = 1
+	style.border_color = Color(SEPIA.r, SEPIA.g, SEPIA.b, 0.5)
+	style.shadow_color = Color(0, 0, 0, 0.45)
+	style.shadow_size = 18
+	style.shadow_offset = Vector2(-6, 0)
+	style.set_content_margin_all(20)
 	_recap.add_theme_stylebox_override("panel", style)
 	add_child(_recap)
 
@@ -599,18 +920,20 @@ func _show_recap(rep: String) -> void:
 
 	# En-tête : étendue de la chaîne + fermeture du volet.
 	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
 	col.add_child(head)
 	var title := Label.new()
-	title.text = String(rep) if members.size() == 1 \
-			else "%s  →  %s" % [members.front(), members.back()]
+	title.text = _display_name(rep) if members.size() == 1 \
+			else "%s  →  %s" % [_display_name(members.front()), _display_name(members.back())]
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.clip_text = true
-	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_font_size_override("font_size", 17)
 	title.add_theme_color_override("font_color", SEPIA)
 	head.add_child(title)
 	var close := Button.new()
 	close.text = "✕"
 	close.flat = true
+	close.focus_mode = Control.FOCUS_NONE
 	close.pressed.connect(func() -> void: _select(_selected_id))
 	head.add_child(close)
 
@@ -633,6 +956,11 @@ func _show_recap(rep: String) -> void:
 
 	col.add_child(_make_discovery_summary(rep))
 
+	var rule := ColorRect.new()
+	rule.color = Color(1, 1, 1, 0.08)
+	rule.custom_minimum_size = Vector2(0, 1)
+	col.add_child(rule)
+
 	# Textes des membres concaténés, relisibles mais sans aucune interaction.
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -642,7 +970,8 @@ func _show_recap(rep: String) -> void:
 	body.bbcode_enabled = true
 	body.fit_content = true
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	body.add_theme_font_size_override("normal_font_size", 16)
+	body.add_theme_font_size_override("normal_font_size", 15)
+	body.add_theme_constant_override("line_separation", 3)
 	var parts: Array = []
 	for member in members:
 		var part := _replay_text(member, reader_vars)
@@ -686,8 +1015,8 @@ func _make_discovery_row(caption_text: String, characters: Array, dimmed: bool) 
 	row.add_theme_constant_override("separation", 10)
 	var caption := Label.new()
 	caption.text = caption_text
-	caption.custom_minimum_size = Vector2(120, 0)
-	caption.add_theme_font_size_override("font_size", 14)
+	caption.custom_minimum_size = Vector2(110, 0)
+	caption.add_theme_font_size_override("font_size", 13)
 	caption.modulate = Color(0.75, 0.7, 0.6)
 	row.add_child(caption)
 	for character in characters:
@@ -696,7 +1025,7 @@ func _make_discovery_row(caption_text: String, characters: Array, dimmed: bool) 
 		cell.add_child(_make_visitor_chip(str(character)))
 		var name_label := Label.new()
 		name_label.text = str(character)
-		name_label.add_theme_font_size_override("font_size", 14)
+		name_label.add_theme_font_size_override("font_size", 13)
 		cell.add_child(name_label)
 		if dimmed:
 			cell.modulate = Color(1, 1, 1, 0.4)
@@ -790,26 +1119,90 @@ func _guard_true(groups: Array, vars: Dictionary) -> bool:
 
 # ------------------------------------------------------------------ Arêtes
 
-## Dessinées sous les widgets (les enfants du canvas passent au-dessus).
-## Les liens partent du DERNIER membre de chaque chaîne visitée ; les liens
-## internes aux chaînes n'existent plus.
+## Dessinées sous les widgets (les enfants du canvas passent au-dessus), après
+## une trame de points discrète qui donne l'échelle. Les liens partent du
+## DERNIER membre de chaque chaîne visitée ; les liens internes n'existent plus.
 func _draw_edges() -> void:
+	_draw_grid()
 	for rep in _chains:
 		var members: Array = _chains[rep]
 		var from_center := _center_of(rep)
 		for link in _real_outgoing(members.back()):
 			var target: String = link["target"]
 			var target_rep: String = _rep_of.get(target, target)
-			var to_center := _center_of(target_rep)
+			if target_rep == rep:
+				continue
 			var target_visited: bool = _revealed.get(target) == "visited"
 			var seen_choice: bool = link["kind"] == "choice" and not link["guarded"]
 			if target_visited or (seen_choice and _revealed.has(target)):
-				_canvas.draw_polyline(_edge_curve(from_center, to_center).tessellate(),
-						EDGE_COLOR, 2.0, true)
+				_draw_arrow_edge(from_center, target_rep)
 			elif not link.get("identity", false):
 				# Une variante de personnage non explorée (ex. Prologue1 selon
 				# le héros incarné) n'est PAS une piste cachée : rien à montrer.
-				_draw_hidden_stub(from_center, to_center, _size_of(rep).x)
+				_draw_hidden_stub(rep, target)
+
+
+## Trame de fond : un point discret tous les GRID_STEP px — repère d'échelle
+## pendant le glisser/zoom, sans jamais concurrencer le graphe.
+func _draw_grid() -> void:
+	const GRID_STEP := 64.0
+	var bounds := _canvas_bounds()
+	var dots := PackedVector2Array()
+	var y := GRID_STEP
+	while y < bounds.y:
+		var x := GRID_STEP
+		while x < bounds.x:
+			dots.append(Vector2(x, y))
+			dots.append(Vector2(x + 1.5, y))
+			x += GRID_STEP
+		y += GRID_STEP
+	if dots.size() >= 2:
+		_canvas.draw_multiline(dots, Color(1, 1, 1, 0.05), 1.5)
+
+
+## Lien découvert : courbe pleine, tronquée au bord du nœud cible et terminée
+## par une pointe de flèche (sens de lecture).
+func _draw_arrow_edge(from_center: Vector2, target_rep: String) -> void:
+	var to_center := _center_of(target_rep)
+	var points := _edge_curve(from_center, to_center).tessellate()
+	var rect := Rect2(_positions.get(target_rep, Vector2.ZERO), _size_of(target_rep)).grow(3.0)
+	var trimmed := _trim_to_rect(points, rect)
+	if trimmed.size() < 2:
+		return
+	_canvas.draw_polyline(trimmed, EDGE_COLOR, 1.6, true)
+	var tip: Vector2 = trimmed[trimmed.size() - 1]
+	var dir := (tip - trimmed[trimmed.size() - 2]).normalized()
+	if dir == Vector2.ZERO:
+		return
+	var side := dir.orthogonal() * 3.5
+	var base := tip - dir * 7.0
+	var head := Color(EDGE_COLOR.r, EDGE_COLOR.g, EDGE_COLOR.b, 0.9)
+	_canvas.draw_colored_polygon(PackedVector2Array([tip, base + side, base - side]), head)
+
+
+## Tronque une polyligne juste avant son entrée (finale) dans `rect` : la pointe
+## de flèche se pose sur le bord du nœud, pas en son centre.
+func _trim_to_rect(points: PackedVector2Array, rect: Rect2) -> PackedVector2Array:
+	var last := points.size() - 1
+	var outside := last
+	while outside >= 0 and rect.has_point(points[outside]):
+		outside -= 1
+	if outside < 0:
+		return PackedVector2Array()  # entièrement dans le rect : rien à dessiner
+	if outside == last:
+		return points  # la courbe ne finit pas dans le rect : inchangée
+	# Affine le point de bord entre points[outside] (dehors) et le suivant (dedans).
+	var a := points[outside]
+	var b := points[outside + 1]
+	for i in 8:
+		var mid := (a + b) * 0.5
+		if rect.has_point(mid):
+			b = mid
+		else:
+			a = mid
+	var trimmed := points.slice(0, outside + 1)
+	trimmed.append(a)
+	return trimmed
 
 
 ## Courbe d'un lien : Bézier cubique dont les points de contrôle sont décalés le
@@ -830,18 +1223,28 @@ func _edge_curve(from_center: Vector2, to_center: Vector2) -> Curve2D:
 
 
 ## Amorce de piste cachée : pointillés qui s'évanouissent EN SUIVANT LA COURBE
-## vers la cible, tronqués pour ne rien révéler de sa position exacte.
-func _draw_hidden_stub(from_center: Vector2, toward: Vector2, source_width: float) -> void:
+## vers la cible, tronqués pour ne rien révéler de sa position exacte. Une cible
+## absente de la carte (non placée) reçoit une amorce vers le bas — le sens du
+## récit — légèrement déportée pour distinguer plusieurs pistes voisines.
+func _draw_hidden_stub(rep: String, target: String) -> void:
+	var from_center := _center_of(rep)
+	var target_rep: String = _rep_of.get(target, target)
+	var toward: Vector2
+	if _positions.has(target_rep):
+		toward = _center_of(target_rep)
+	else:
+		var fan := float(int(target.hash() % 3)) - 1.0  # -1 | 0 | 1, stable par cible
+		toward = from_center + Vector2(fan * 70.0, DEPTH_GAP)
 	var curve := _edge_curve(from_center, toward)
 	var length := curve.get_baked_length()
-	const DASH := 9.0
-	const GAP := 7.0
-	const COUNT := 7
-	var cursor := source_width * 0.45  # démarre au bord du nœud source
+	const DASH := 7.0
+	const GAP := 6.0
+	const COUNT := 6
+	var cursor := _size_of(rep).y * 0.5 + 4.0  # démarre au bord du nœud source
 	for i in COUNT:
 		if cursor >= length:
 			break
-		var alpha := 0.75 * (1.0 - float(i) / COUNT)
+		var alpha := 0.7 * (1.0 - float(i) / COUNT)
 		_canvas.draw_line(curve.sample_baked(cursor), curve.sample_baked(minf(cursor + DASH, length)),
-				Color(HIDDEN_COLOR.r, HIDDEN_COLOR.g, HIDDEN_COLOR.b, alpha), 2.0, true)
+				Color(HIDDEN_COLOR.r, HIDDEN_COLOR.g, HIDDEN_COLOR.b, alpha), 1.6, true)
 		cursor += DASH + GAP
