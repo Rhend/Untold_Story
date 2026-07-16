@@ -34,6 +34,9 @@ var _display_raw := ""
 var _illustration: Illustration
 ## Données de l'illustration courante (pour la rejouer en plein écran).
 var _illustration_data: IllustrationData
+## Texte complet du passage à restaurer au premier affichage après une reprise
+## ("" sinon) — consommé par _on_display_text (cf. _start_story).
+var _resume_text := ""
 var _plate_holder: AspectRatioContainer  # cadre la planche au ratio de l'image
 var _plate: PanelContainer               # la planche (bordure + illustration)
 ## Ratio (largeur/hauteur) de la texture de l'illustration courante — la
@@ -181,6 +184,11 @@ func _start_story() -> void:
 		var last_illustration := Progress.resume_illustration()
 		if not last_illustration.is_empty():
 			_show_illustration(last_illustration)
+
+	# Même logique pour la page de droite : le texte complet du passage laissé
+	# (nœuds enchaînés + dialogues de zones) remplacera le rejeu tronqué du seul
+	# nœud de checkpoint, au premier display_text (cf. _on_display_text).
+	_resume_text = Progress.resume_passage_text() if not resume.is_empty() else ""
 
 	_runner.start(_story, {
 		"character": GameState.character_type,
@@ -573,6 +581,17 @@ func _clear_choices() -> void:
 # ------------------------------------------------------------- Signaux runner
 
 func _on_display_text(text: String, node_id: String, tags: Array) -> void:
+	# Reprise : le runner ne rejoue que le nœud de checkpoint, or le passage
+	# affiché avait pu accumuler le texte de nœuds enchaînés en amont et des
+	# dialogues de zones. On restaure le passage COMPLET tel que laissé
+	# (une seule fois : les affichages suivants reprennent le cours normal).
+	if not _resume_text.is_empty():
+		text = _resume_text
+		_resume_text = ""
+	# Trace de reprise du passage (cf. ci-dessus) — après la restauration,
+	# pour ne pas écraser le texte complet par la version tronquée du rejeu.
+	Progress.record_passage_text(text)
+
 	_pending_reveal = Callable()  # purge une révélation d'un passage précédent
 	# Nouveau passage : la page se tourne, et le contenu change page fermée.
 	# Le tout premier passage et les ré-affichages du même nœud (reprise,
@@ -754,6 +773,8 @@ func _append_dialogue(lines: Array) -> void:
 	var shown := _text_label.get_total_character_count()
 
 	_display_raw += "\n" + "\n".join(PackedStringArray(lines))
+	# Le dialogue ajouté fait partie du passage : la reprise doit le retrouver.
+	Progress.record_passage_text(_display_raw)
 	var prepared := _prepare_dramatic_text(_display_raw)
 	_text_label.text = _with_drop_cap(prepared["text"])
 	var total := _text_label.get_total_character_count()

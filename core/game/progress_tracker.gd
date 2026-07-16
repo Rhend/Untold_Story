@@ -56,6 +56,14 @@ var _inventory: Dictionary = {}
 ## { story_id: { personnage: nom d'illustration } }
 var _illustration: Dictionary = {}
 
+## Texte complet du passage affiché au moment du checkpoint, par personnage.
+## Un passage accumule le texte de PLUSIEURS nœuds enchaînés par des sauts, plus
+## les dialogues débloqués au clic des zones — or le checkpoint ne rejoue que son
+## propre nœud : sans cette trace, la reprise tronquerait la page de droite au
+## dernier nœud de la chaîne. Mêmes règles de vie que _position.
+## { story_id: { personnage: texte brut du passage } }
+var _passage_text: Dictionary = {}
+
 
 func _ready() -> void:
 	_load()
@@ -197,6 +205,23 @@ func resume_illustration(story_id := "", character := "") -> String:
 	return _illustration.get(_resolve(story_id), {}).get(chr, "")
 
 
+## Enregistre le texte du passage actuellement affiché pour le personnage
+## courant — à CHAQUE affichage de passage et à chaque dialogue ajouté, pour que
+## la reprise retrouve la page de droite telle que laissée.
+func record_passage_text(text: String) -> void:
+	if not _passage_text.has(_story_id):
+		_passage_text[_story_id] = {}
+	_passage_text[_story_id][_character] = text
+	_save()
+
+
+## Texte du passage à réafficher à la reprise pour (story_id, personnage), ou ""
+## si aucun (le nœud de reprise est alors rejoué tel quel).
+func resume_passage_text(story_id := "", character := "") -> String:
+	var chr := _character if character.is_empty() else character
+	return _passage_text.get(_resolve(story_id), {}).get(chr, "")
+
+
 ## Recommence la partie de ce (story_id, personnage) : efface UNIQUEMENT sa
 ## "partie en cours" — zones cliquées, point de reprise, trace de session
 ## (gardes visited() de l'ancienne partie) ET inventaire. La section "decouverte"
@@ -223,6 +248,7 @@ func _erase_current_run(story_id: String, character: String) -> void:
 	_erase_from(_visited_session, story_id, character)
 	_erase_from(_inventory, story_id, character)
 	_erase_from(_illustration, story_id, character)
+	_erase_from(_passage_text, story_id, character)
 
 
 func _erase_from(store: Dictionary, story_id: String, character: String) -> void:
@@ -242,6 +268,7 @@ func reset() -> void:
 	_visited_session = {}
 	_inventory = {}
 	_illustration = {}
+	_passage_text = {}
 	_save()
 
 
@@ -365,6 +392,7 @@ func _save() -> void:
 			"visited_session": _visited_session,
 			"inventory": _inventory,
 			"illustration": _illustration,
+			"passage_text": _passage_text,
 		},
 	}, "\t"))
 
@@ -393,6 +421,7 @@ func _migrate(parsed: Dictionary) -> void:
 		_visited_session = current.get("visited_session", {})
 		_inventory = current.get("inventory", {})  # absent des sauvegardes pré-point-10 → {}
 		_illustration = current.get("illustration", {})  # absent des sauvegardes antérieures → {}
+		_passage_text = current.get("passage_text", {})  # idem
 		return
 	# v2 (point 4) — { "stories", "zones" }, sans point de reprise.
 	if parsed.has("stories") or parsed.has("zones"):
