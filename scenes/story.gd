@@ -1,9 +1,10 @@
 extends Control
 ## Vue d'histoire : charge l'histoire, la fait tourner via le StoryRunner et
-## la présente comme un GRIMOIRE OUVERT (ambiance de icon.svg) — page de
-## gauche : illustration « imprimée » dans une planche encadrée (+ médaillon du
-## personnage) ; page de droite : titre de scène, texte (machine à écrire,
-## police à empattements) et choix. Une icône au coin de la planche ouvre
+## la présente comme un GRIMOIRE OUVERT (ambiance de icon.svg) — un bandeau
+## d'informations en haut de l'écran (personnage, histoire en cours,
+## progression, inventaire, carte) ; page de gauche : illustration « imprimée »
+## dans une planche encadrée ; page de droite : titre de scène, texte (machine
+## à écrire, police à empattements) et choix. Une icône au coin de la planche ouvre
 ## l'illustration en plein écran ; le parallaxe reste discret dans la page et
 ## ne joue pleinement qu'en plein écran.
 ## UI construite en code pour cette tranche (passage en .tscn éditable plus tard).
@@ -33,11 +34,14 @@ var _display_raw := ""
 var _illustration: Illustration
 ## Données de l'illustration courante (pour la rejouer en plein écran).
 var _illustration_data: IllustrationData
-var _plate_holder: AspectRatioContainer  # cadre la planche au ratio du gabarit
+var _plate_holder: AspectRatioContainer  # cadre la planche au ratio de l'image
 var _plate: PanelContainer               # la planche (bordure + illustration)
+## Ratio (largeur/hauteur) de la texture de l'illustration courante — la
+## planche l'épouse exactement (cf. _update_plate_ratio). 0 = pas d'image.
+var _image_ratio := 0.0
 var _fullscreen: Control                 # surimpression plein écran (ou null)
-## Titre courant de la page verso (nom de l'histoire, lu dans le manifest).
-var _verso_title: Label
+## Titre de l'histoire en cours dans le bandeau (lu dans le manifest).
+var _title_label: Label
 var _story_title := ""
 ## Balayage d'ombre « tournage de page » sur la page de droite.
 var _sweep: Control
@@ -51,8 +55,13 @@ var _pending_reveal: Callable = Callable()
 var _current_node := ""
 
 ## Palette et habillages : BookTheme (thème « grimoire » partagé, cf. icon.svg).
-## Proportions du livre ouvert (largeur/hauteur des deux pages réunies).
-const BOOK_RATIO := 1.58
+## Proportions du livre ouvert (largeur/hauteur des deux pages réunies) —
+## élargies pour que le livre occupe davantage l'écran sous le bandeau.
+const BOOK_RATIO := 1.66
+## Hauteur du bandeau d'informations en haut de l'écran.
+const TOP_BAR_HEIGHT := 46.0
+## Épaisseur du cadre de la planche : bord (2 px) + passe-partout (7 px).
+const FRAME_PAD := 9.0
 ## Parallaxe « imprimé » : fraction du gain plein écran tant que l'illustration
 ## est dans la page — le plein écran seul retrouve le parallaxe complet.
 const PAGE_PARALLAX := 0.25
@@ -67,11 +76,6 @@ func _ready() -> void:
 	_ensure_character()
 
 	_build_ui()
-
-	# La carte du récit s'ouvre par la touche M ou depuis le menu Échap : on
-	# active l'entrée « Carte du récit » du menu tant que cette scène est active.
-	SettingsMenu.set_map_available(true)
-	SettingsMenu.map_requested.connect(_toggle_map)
 
 	# Entrée « Recommencer cette histoire » du menu, active pendant l'histoire.
 	SettingsMenu.set_restart_available(true)
@@ -100,12 +104,9 @@ func _ready() -> void:
 	_start_story()
 
 
-## En quittant la scène : on retire l'entrée « Carte du récit » du menu global
-## et on se désabonne (les autres scènes n'ont pas de carte).
+## En quittant la scène : on retire l'entrée « Recommencer » du menu global
+## et on se désabonne (les autres scènes n'ont pas d'histoire en cours).
 func _exit_tree() -> void:
-	if SettingsMenu.map_requested.is_connected(_toggle_map):
-		SettingsMenu.map_requested.disconnect(_toggle_map)
-	SettingsMenu.set_map_available(false)
 	if SettingsMenu.restart_requested.is_connected(_restart_story):
 		SettingsMenu.restart_requested.disconnect(_restart_story)
 	SettingsMenu.set_restart_available(false)
@@ -139,10 +140,10 @@ func _resolve_story_path() -> String:
 		return ""
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(manifest_path))
 	var entry := str(parsed.get("entry_file", "")) if parsed is Dictionary else ""
-	# Nom lisible de l'histoire : titre courant de la page verso.
+	# Nom lisible de l'histoire : affiché dans le bandeau du haut.
 	_story_title = str(parsed.get("display_name", "")) if parsed is Dictionary else ""
-	if _verso_title != null:
-		_verso_title.text = _story_title
+	if _title_label != null:
+		_title_label.text = _story_title
 	if entry.is_empty():
 		push_error("story: entry_file manquant dans " + manifest_path)
 		return ""
@@ -176,12 +177,15 @@ func _start_story() -> void:
 
 func _build_ui() -> void:
 	add_child(BookTheme.make_desk())
+	add_child(_build_top_bar())
 
-	# Le livre ouvert : centré, proportions constantes quelle que soit la fenêtre.
+	# Le livre ouvert : centré sous le bandeau, proportions constantes quelle
+	# que soit la fenêtre — marges resserrées pour qu'il occupe l'écran.
 	var frame := MarginContainer.new()
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.offset_top = TOP_BAR_HEIGHT
 	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
-		frame.add_theme_constant_override(side, 30)
+		frame.add_theme_constant_override(side, 10)
 	add_child(frame)
 
 	var ratio_box := AspectRatioContainer.new()
@@ -208,9 +212,115 @@ func _build_ui() -> void:
 	book.add_child(spine)
 
 
-## Page de gauche (verso) : titre courant de l'histoire, planche d'illustration
-## (cadrée au ratio de son gabarit, bouton plein écran au coin) + médaillon du
-## personnage incarné en bas.
+## Bandeau d'informations en haut de l'écran, dans la DA de la couverture
+## (cuir sombre + filet doré) : médaillon du personnage incarné, histoire en
+## cours, progression, et accès Inventaire / Carte du récit (la carte ne passe
+## plus par le menu Réglages).
+func _build_top_bar() -> Control:
+	var bar := PanelContainer.new()
+	bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	bar.custom_minimum_size = Vector2(0, TOP_BAR_HEIGHT)
+	var style := StyleBoxFlat.new()
+	style.bg_color = BookTheme.LEATHER_DARK
+	style.border_width_bottom = 2
+	style.border_color = Color(BookTheme.PAGE_EDGE, 0.55)
+	style.content_margin_left = 18
+	style.content_margin_right = 18
+	style.content_margin_top = 5
+	style.content_margin_bottom = 5
+	bar.add_theme_stylebox_override("panel", style)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	bar.add_child(row)
+
+	# Personnage incarné : petit médaillon + nom.
+	var character: CharacterData = GameState.selected_character
+	if character != null:
+		row.add_child(_make_medallion(character))
+		row.add_child(_make_bar_divider())
+
+	# Histoire en cours (titre du manifest, posé par _resolve_story_path).
+	_title_label = BookTheme.make_label(_story_title, 16, BookTheme.PARCHMENT, true)
+	_title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(_title_label)
+
+	row.add_child(_make_bar_divider())
+
+	# Progression (tenue à jour par _on_node_visited).
+	_progress_label = BookTheme.make_label("", 14, Color(BookTheme.PARCHMENT, 0.75))
+	_progress_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(_progress_label)
+
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(spacer)
+
+	row.add_child(_make_bar_button("Inventaire  (I)", _toggle_inventory))
+	row.add_child(_make_bar_divider())
+	row.add_child(_make_bar_button("Carte du récit  (M)", _toggle_map))
+	row.add_child(_make_bar_divider())
+	row.add_child(_make_settings_button())
+	return bar
+
+
+## Écrou d'ouverture des Réglages, tout à droite du bandeau : engrenage dessiné
+## à la main (pas de glyphe unicode — couverture de police incertaine), halo
+## parchemin au survol.
+func _make_settings_button() -> Button:
+	var button := Button.new()
+	button.tooltip_text = "Réglages (Échap)"
+	button.focus_mode = Control.FOCUS_NONE
+	button.custom_minimum_size = Vector2(34, 34)
+	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	for state in ["normal", "hover", "pressed"]:
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(BookTheme.PARCHMENT, 0.12 if state != "normal" else 0.0)
+		style.set_corner_radius_all(17)
+		button.add_theme_stylebox_override(state, style)
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	button.pressed.connect(SettingsMenu.open)
+
+	var pict := Control.new()
+	pict.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pict.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pict.draw.connect(func() -> void:
+		var center: Vector2 = pict.size / 2.0
+		var color := Color(BookTheme.PARCHMENT, 0.9)
+		pict.draw_arc(center, 7.5, 0.0, TAU, 24, color, 2.0, true)  # couronne
+		pict.draw_circle(center, 2.4, color)                        # moyeu
+		for i in 8:                                                 # dents
+			var dir := Vector2.RIGHT.rotated(TAU * i / 8.0)
+			pict.draw_line(center + dir * 7.5, center + dir * 12.0, color, 2.6, true))
+	button.add_child(pict)
+	return button
+
+
+## Filet vertical séparant les blocs du bandeau.
+func _make_bar_divider() -> Control:
+	var divider := Control.new()
+	divider.custom_minimum_size = Vector2(1, 0)
+	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	divider.draw.connect(func() -> void:
+		divider.draw_line(Vector2(0.5, 7), Vector2(0.5, divider.size.y - 7),
+				Color(BookTheme.PAGE_EDGE, 0.4), 1.0, true))
+	return divider
+
+
+## Bouton du bandeau : réplique parchemin sur cuir sombre (BookTheme).
+func _make_bar_button(text: String, action: Callable) -> Button:
+	var button := Button.new()
+	button.text = text
+	BookTheme.style_choice(button, false, 15, true)
+	button.pressed.connect(action)
+	return button
+
+
+## Page de gauche (verso) : planche d'illustration cadrée au ratio de son
+## gabarit, bouton plein écran au coin (le titre courant et le médaillon du
+## personnage vivent désormais dans le bandeau du haut).
 func _build_left_page() -> Control:
 	var page := PanelContainer.new()
 	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -225,24 +335,15 @@ func _build_left_page() -> Control:
 	inner.add_theme_constant_override("margin_bottom", 26)
 	page.add_child(inner)
 
-	# Canevas en superposition : titre courant en tête, planche au-dessous,
-	# médaillon ANCRÉ en bas de page même quand la planche est absente.
+	# Canevas en superposition : la planche dispose de toute la page.
 	var canvas := Control.new()
 	canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	inner.add_child(canvas)
 
-	# Titre courant (nom de l'histoire), comme le verso d'un vrai livre.
-	_verso_title = BookTheme.make_label("", 15, BookTheme.INK_MUTED, true)
-	_verso_title.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_verso_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	canvas.add_child(_verso_title)
-
-	# La planche, cadrée au ratio du gabarit courant (cf. _show_illustration).
+	# La planche, cadrée au ratio du gabarit courant (cf. _show_illustration),
+	# CENTRÉE verticalement dans la page.
 	_plate_holder = AspectRatioContainer.new()
 	_plate_holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_plate_holder.offset_top = 36    # sous le titre courant
-	_plate_holder.offset_bottom = -66  # réserve la bande du médaillon
-	# Planche CENTRÉE verticalement dans la page (entre titre et médaillon).
 	_plate_holder.alignment_vertical = AspectRatioContainer.ALIGNMENT_CENTER
 	_plate_holder.visible = false
 	canvas.add_child(_plate_holder)
@@ -256,6 +357,9 @@ func _build_left_page() -> Control:
 	plate_style.set_content_margin_all(7)  # passe-partout autour de l'image
 	_plate.add_theme_stylebox_override("panel", plate_style)
 	_plate_holder.add_child(_plate)
+	# À chaque nouvelle taille de planche, recale le ratio pour que la zone
+	# INTÉRIEURE du cadre garde exactement le ratio de l'image.
+	_plate.resized.connect(_update_plate_ratio)
 
 	# Bouton plein écran, au coin haut-droit de la planche (au-dessus de
 	# l'illustration ; le reste de la surcouche laisse passer la souris —
@@ -264,13 +368,6 @@ func _build_left_page() -> Control:
 	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_plate.add_child(overlay)
 	overlay.add_child(_make_expand_button())
-
-	var character: CharacterData = GameState.selected_character
-	if character != null:
-		var medallion := _make_medallion(character)
-		medallion.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-		medallion.grow_vertical = Control.GROW_DIRECTION_BEGIN
-		canvas.add_child(medallion)
 	return page
 
 
@@ -327,20 +424,12 @@ func _build_right_page() -> Control:
 	_choices_box.add_theme_constant_override("separation", 6)
 	col.add_child(_choices_box)
 
-	# Remplissage : absorbe l'espace restant pour ancrer le pied en bas.
+	# Remplissage : absorbe l'espace restant sous le texte et les choix
+	# (la progression vit désormais dans le bandeau du haut).
 	var filler := Control.new()
 	filler.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	filler.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(filler)
-
-	# Pied de page : la progression tient lieu de numéro de page.
-	var footer := HBoxContainer.new()
-	col.add_child(footer)
-	var footer_spacer := Control.new()
-	footer_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	footer.add_child(footer_spacer)
-	_progress_label = BookTheme.make_label("", 13, BookTheme.INK_FADED, true)
-	footer.add_child(_progress_label)
 
 	# Surcouche du balayage d'ombre (cf. _play_page_sweep).
 	_sweep_band = BookTheme.gradient_tex(
@@ -374,17 +463,20 @@ func _play_page_sweep() -> void:
 
 
 ## Bouton « plein écran » : pastille sombre aux coins dessinés (pas de glyphe
-## unicode — couverture de police incertaine), coin haut-droit de la planche.
+## unicode — couverture de police incertaine), À CHEVAL sur le coin haut-droit
+## du cadre de la planche (il déborde de l'illustration au lieu de la couvrir).
 func _make_expand_button() -> Button:
 	var button := Button.new()
 	button.tooltip_text = "Voir l'illustration en plein écran"
 	button.focus_mode = Control.FOCUS_NONE
 	button.custom_minimum_size = Vector2(32, 32)
+	# Centré sur le coin EXTÉRIEUR du cadre : la surcouche couvre la zone
+	# intérieure (sous le passe-partout), le coin du cadre est à (+9, -9).
 	button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	button.offset_left = -40
-	button.offset_top = 8
-	button.offset_right = -8
-	button.offset_bottom = 40
+	button.offset_left = FRAME_PAD - 16
+	button.offset_top = -FRAME_PAD - 16
+	button.offset_right = FRAME_PAD + 16
+	button.offset_bottom = -FRAME_PAD + 16
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	for state in ["normal", "hover", "pressed"]:
 		var style := StyleBoxFlat.new()
@@ -412,13 +504,15 @@ func _make_expand_button() -> Button:
 	return button
 
 
-## Médaillon du personnage incarné, en bas de la page de gauche.
+## Médaillon du personnage incarné, dans le bandeau du haut (portrait bordé de
+## la couleur du personnage + nom éclairci pour rester lisible sur le cuir).
 func _make_medallion(character: CharacterData) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 
 	var medallion := PanelContainer.new()
-	medallion.custom_minimum_size = Vector2(52, 52)
+	medallion.custom_minimum_size = Vector2(32, 32)
+	medallion.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	medallion.clip_contents = true
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(BookTheme.SPINE, 0.25)
@@ -434,7 +528,7 @@ func _make_medallion(character: CharacterData) -> Control:
 	row.add_child(medallion)
 
 	var name_label := BookTheme.make_label(character.display_name, 16,
-			character.color.lerp(BookTheme.INK, 0.5), false, true)
+			character.color.lerp(BookTheme.PARCHMENT, 0.45), false, true)
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(name_label)
 	return row
@@ -782,12 +876,27 @@ func _show_illustration(illustration_name: String) -> void:
 	_plate.move_child(_illustration, 0)
 	_illustration.setup(data)
 	_illustration.parallax_gain = Settings.parallax_gain_default * PAGE_PARALLAX
-	_plate_holder.ratio = _template_ratio(data.template)
+	# Le cadre épouse l'image : ratio réel de sa texture, puis affiné pour
+	# compenser l'épaisseur du cadre (cf. _update_plate_ratio).
+	_image_ratio = _illustration_ratio(data)
+	_plate_holder.ratio = _image_ratio
 	_plate_holder.visible = true
+	_update_plate_ratio()
 
 
-## Ratio de la planche selon le gabarit : la page cadre l'image au lieu que
-## l'image ne redessine la page.
+## Ratio (largeur/hauteur) RÉEL de l'illustration : celui de la texture de son
+## premier calque — le cadre colle à l'image au pixel près, là où un ratio
+## approché par gabarit laissait des bandes vides dans la planche.
+func _illustration_ratio(data: IllustrationData) -> float:
+	for layer in data.layers:
+		if layer.sprite != null:
+			var tex_size: Vector2 = layer.sprite.get_size()
+			if tex_size.y > 0.0:
+				return tex_size.x / tex_size.y
+	return _template_ratio(data.template)
+
+
+## Repli quand l'illustration n'a aucune texture : ratio approché par gabarit.
 func _template_ratio(template: int) -> float:
 	match template:
 		IllustrationData.Template.PORTRAIT:
@@ -796,6 +905,20 @@ func _template_ratio(template: int) -> float:
 			return 1.0
 		_:
 			return 1.65
+
+
+## Cale le ratio de la planche pour que sa zone INTÉRIEURE (sous le bord et le
+## passe-partout, FRAME_PAD de chaque côté) ait exactement le ratio de l'image :
+## le cadre étant d'épaisseur fixe, le ratio extérieur doit le compenser, sinon
+## de fines bandes vides subsistent. Rappelé à chaque redimensionnement de la
+## planche (converge en une passe, la garde évite les re-déclenchements).
+func _update_plate_ratio() -> void:
+	var pad := FRAME_PAD * 2.0
+	if _image_ratio <= 0.0 or _plate.size.y <= pad:
+		return
+	var target := (_image_ratio * (_plate.size.y - pad) + pad) / _plate.size.y
+	if absf(target - _plate_holder.ratio) > 0.001:
+		_plate_holder.ratio = target
 
 
 # ------------------------------------------------- Illustration plein écran
