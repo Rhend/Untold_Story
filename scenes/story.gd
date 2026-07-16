@@ -43,11 +43,13 @@ var _fullscreen: Control                 # surimpression plein écran (ou null)
 ## Titre de l'histoire en cours dans le bandeau (lu dans le manifest).
 var _title_label: Label
 var _story_title := ""
-## Balayage d'ombre « tournage de page » sur la page de droite.
-var _sweep: Control
-var _sweep_band: Texture2D
-var _sweep_pos := 2.0  # fraction de la largeur ; > 1.6 = invisible
-var _sweep_tween: Tween
+## Bascule « tourner la page » : la page de droite se replie vers la reliure
+## (dévoilant le bloc de tranches dessous, comme la page suivante), le contenu
+## change page fermée, puis elle se déplie — cf. _flip_page.
+var _right_page: Control
+var _flip_tween: Tween
+## Application différée du nouveau passage, exécutée à la page fermée.
+var _flip_apply: Callable = Callable()
 ## UI différée jusqu'à la fin de la machine à écrire (choix, boutons de fin) :
 ## les réponses n'apparaissent qu'une fois le texte entièrement révélé.
 var _pending_reveal: Callable = Callable()
@@ -55,13 +57,16 @@ var _pending_reveal: Callable = Callable()
 var _current_node := ""
 
 ## Palette et habillages : BookTheme (thème « grimoire » partagé, cf. icon.svg).
-## Proportions du livre ouvert (largeur/hauteur des deux pages réunies) —
-## élargies pour que le livre occupe davantage l'écran sous le bandeau.
-const BOOK_RATIO := 1.66
+## Proportions du livre ouvert (largeur/hauteur des deux pages réunies),
+## calées sur le format normalisé A4 (ISO 216) : chaque page fait 210×297 mm,
+## soit 420/297 = √2 ≈ 1,414 pour la double page.
+const BOOK_RATIO := 420.0 / 297.0
 ## Hauteur du bandeau d'informations en haut de l'écran.
 const TOP_BAR_HEIGHT := 46.0
 ## Épaisseur du cadre de la planche : bord (2 px) + passe-partout (7 px).
 const FRAME_PAD := 9.0
+## Débord du bloc des pages (tranches empilées) autour des pages ouvertes.
+const PAGE_BLOCK := 9.0
 ## Parallaxe « imprimé » : fraction du gain plein écran tant que l'illustration
 ## est dans la page — le plein écran seul retrouve le parallaxe complet.
 const PAGE_PARALLAX := 0.25
@@ -193,21 +198,32 @@ func _build_ui() -> void:
 	frame.add_child(ratio_box)
 
 	var book := PanelContainer.new()
-	book.add_theme_stylebox_override("panel", BookTheme.leather_style())
+	book.add_theme_stylebox_override("panel", BookTheme.leather_style(12, 18.0))
 	ratio_box.add_child(book)
+
+	# Épaisseur du livre : le bloc des pages (tranches de papier empilées)
+	# dépasse du cuir tout autour, et les pages ouvertes reposent dessus.
+	book.add_child(BookTheme.make_page_block(PAGE_BLOCK))
+	var pages_margin := MarginContainer.new()
+	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		pages_margin.add_theme_constant_override(side, int(PAGE_BLOCK))
+	book.add_child(pages_margin)
 
 	var pages := HBoxContainer.new()
 	pages.add_theme_constant_override("separation", 0)
-	book.add_child(pages)
+	pages_margin.add_child(pages)
 	pages.add_child(_build_left_page())
-	pages.add_child(_build_right_page())
+	_right_page = _build_right_page()
+	pages.add_child(_right_page)
 
-	# Ombre de la reliure centrale, par-dessus les deux pages.
+	# Reliure centrale : creux ombré ET renflement clair des pages de part et
+	# d'autre du pli — le relief que le simple dégradé n'avait pas.
 	var spine := TextureRect.new()
 	spine.texture = BookTheme.gradient_tex(
-			[Color(BookTheme.SPINE, 0.0), Color(BookTheme.SPINE, 0.42),
-			Color(BookTheme.SPINE, 0.42), Color(BookTheme.SPINE, 0.0)],
-			[0.455, 0.494, 0.506, 0.545])
+			[Color(BookTheme.SPINE, 0.0), Color(BookTheme.PARCHMENT_BRIGHT, 0.16),
+			Color(BookTheme.SPINE, 0.60), Color(BookTheme.SPINE, 0.60),
+			Color(BookTheme.PARCHMENT_BRIGHT, 0.16), Color(BookTheme.SPINE, 0.0)],
+			[0.44, 0.474, 0.494, 0.506, 0.526, 0.56])
 	spine.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	book.add_child(spine)
 
@@ -327,6 +343,7 @@ func _build_left_page() -> Control:
 	page.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	page.add_child(BookTheme.paper(true))
 	page.add_child(BookTheme.page_wear(11))
+	page.add_child(BookTheme.make_page_frame())
 
 	var inner := MarginContainer.new()
 	inner.add_theme_constant_override("margin_left", 38)
@@ -371,14 +388,14 @@ func _build_left_page() -> Control:
 	return page
 
 
-## Page de droite (recto) : titre de scène, fleuron, texte du récit, choix,
-## pied de page — et balayage d'ombre au tournage de page.
+## Page de droite (recto) : titre de scène, fleuron, texte du récit et choix.
 func _build_right_page() -> Control:
 	var page := PanelContainer.new()
 	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	page.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	page.add_child(BookTheme.paper(false))
 	page.add_child(BookTheme.page_wear(23))
+	page.add_child(BookTheme.make_page_frame())
 
 	var inner := MarginContainer.new()
 	inner.add_theme_constant_override("margin_left", 32)  # côté reliure
@@ -430,36 +447,40 @@ func _build_right_page() -> Control:
 	filler.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	filler.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(filler)
-
-	# Surcouche du balayage d'ombre (cf. _play_page_sweep).
-	_sweep_band = BookTheme.gradient_tex(
-			[Color(BookTheme.SPINE, 0.0), Color(BookTheme.SPINE, 0.30),
-			Color(BookTheme.SPINE, 0.0)], [0.0, 0.5, 1.0])
-	_sweep = Control.new()
-	_sweep.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_sweep.draw.connect(_draw_sweep)
-	page.add_child(_sweep)
 	return page
 
 
-## Ombre verticale qui traverse la page de droite au changement de nœud —
-## l'évocation d'une page qu'on tourne, sans animation de papier.
-func _draw_sweep() -> void:
-	if _sweep_pos > 1.6:
+## Tourne la page de droite : elle se replie vers la reliure (ease-in) en
+## s'assombrissant — le bloc de tranches dessous figure la page suivante —,
+## le contenu est remplacé page fermée, puis elle se déplie (ease-out) pendant
+## que la frappe du nouveau passage démarre.
+func _flip_page(apply: Callable) -> void:
+	# Bascule déjà en cours : on la termine (contenu en attente appliqué) et
+	# la nouvelle repart du repli courant.
+	if _flip_tween != null and _flip_tween.is_running():
+		_flip_tween.kill()
+		_finish_flip()
+	_flip_apply = apply
+	_right_page.pivot_offset = Vector2(0.0, _right_page.size.y / 2.0)
+	_flip_tween = create_tween()
+	_flip_tween.tween_property(_right_page, "scale:x", 0.02, 0.26) \
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	_flip_tween.parallel().tween_property(_right_page, "modulate",
+			Color(0.76, 0.70, 0.62), 0.26)
+	_flip_tween.tween_callback(_finish_flip)
+	_flip_tween.tween_property(_right_page, "scale:x", 1.0, 0.32) \
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_flip_tween.parallel().tween_property(_right_page, "modulate",
+			Color.WHITE, 0.32)
+
+
+## Applique le passage mis en attente par une bascule (à la page fermée).
+func _finish_flip() -> void:
+	if not _flip_apply.is_valid():
 		return
-	var band_width := _sweep.size.x * 0.34
-	var x := _sweep.size.x * _sweep_pos - band_width / 2.0
-	_sweep.draw_texture_rect(_sweep_band, Rect2(x, 0, band_width, _sweep.size.y), false)
-
-
-func _play_page_sweep() -> void:
-	if _sweep_tween != null and _sweep_tween.is_running():
-		_sweep_tween.kill()
-	_sweep_tween = create_tween()
-	_sweep_tween.tween_method(func(value: float) -> void:
-		_sweep_pos = value
-		_sweep.queue_redraw(), -0.4, 1.6, 0.55) \
-			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	var apply := _flip_apply
+	_flip_apply = Callable()
+	apply.call()
 
 
 ## Bouton « plein écran » : pastille sombre aux coins dessinés (pas de glyphe
@@ -542,13 +563,22 @@ func _clear_choices() -> void:
 # ------------------------------------------------------------- Signaux runner
 
 func _on_display_text(text: String, node_id: String, tags: Array) -> void:
-	_clear_choices()
 	_pending_reveal = Callable()  # purge une révélation d'un passage précédent
-	# Nouveau passage : l'ombre du tournage de page balaie la page de droite.
-	if node_id != _current_node:
-		_play_page_sweep()
+	# Nouveau passage : la page se tourne, et le contenu change page fermée.
+	# Le tout premier passage et les ré-affichages du même nœud (reprise,
+	# ajout de dialogue) s'installent sans animation.
+	var flip := node_id != _current_node and not _current_node.is_empty()
 	_current_node = node_id
+	if flip:
+		_flip_page(_apply_display_text.bind(text, node_id, tags))
+	else:
+		_apply_display_text(text, node_id, tags)
 
+
+## Installe le passage dans la page de droite (en-tête, texte, machine à
+## écrire) — immédiatement, ou à la page fermée pendant une bascule.
+func _apply_display_text(text: String, node_id: String, tags: Array) -> void:
+	_clear_choices()
 	_header.text = _build_header(node_id, tags)
 
 	# Extrait les pauses dramatiques [Soupir:X] : le texte affiché n'en contient
@@ -569,6 +599,7 @@ func _on_display_text(text: String, node_id: String, tags: Array) -> void:
 	_typewriter = null
 	if total <= 0:
 		_text_label.visible_ratio = 1.0
+		_on_typewriter_done()  # pas de frappe : révèle l'UI différée éventuelle
 		return
 	_typewriter = _build_typewriter(total, prepared["pauses"], 0)
 
@@ -752,11 +783,31 @@ func _on_present_choices(choices: Array) -> void:
 		Progress.record_checkpoint(choices[0]["node"])
 	# Les réponses n'apparaissent qu'une fois le texte entièrement révélé.
 	_pending_reveal = _build_choice_buttons.bind(choices)
+	# Pendant une bascule de page, la frappe du nouveau passage n'a pas encore
+	# commencé : la révélation attendra sa fin (déclenchée après l'application).
+	if _flip_apply.is_valid():
+		return
 	if _typewriter == null or not _typewriter.is_running():
 		_on_typewriter_done()
 
 
+## Trait de séparation entre le texte et les choix : centré, à l'encre de la
+## lettrine (rouge rubriqué, cf. _with_drop_cap). Ajouté en tête de la boîte
+## des choix, il apparaît et disparaît avec eux.
+func _make_choice_separator() -> Control:
+	var separator := Control.new()
+	separator.custom_minimum_size = Vector2(0, 14)
+	separator.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	separator.draw.connect(func() -> void:
+		var center: Vector2 = separator.size / 2.0
+		const HALF := 70.0
+		separator.draw_line(center + Vector2(-HALF, 0), center + Vector2(HALF, 0),
+				Color(BookTheme.RIBBON, 0.75), 1.4, true))
+	return separator
+
+
 func _build_choice_buttons(choices: Array) -> void:
+	_choices_box.add_child(_make_choice_separator())
 	for i in choices.size():
 		var choice: Dictionary = choices[i]
 		var button := Button.new()
@@ -978,13 +1029,17 @@ func _on_story_ended() -> void:
 	# repartira du début (reprendre une fin n'a pas de sens).
 	Progress.clear_checkpoint()
 
-	# Comme les choix : les boutons de fin attendent la fin du texte.
+	# Comme les choix : les boutons de fin attendent la fin du texte (et la
+	# fin d'une éventuelle bascule de page, cf. _on_present_choices).
 	_pending_reveal = _build_end_buttons
+	if _flip_apply.is_valid():
+		return
 	if _typewriter == null or not _typewriter.is_running():
 		_on_typewriter_done()
 
 
 func _build_end_buttons() -> void:
+	_choices_box.add_child(_make_choice_separator())
 	var restart := Button.new()
 	restart.text = "↻  Recommencer"
 	_style_choice(restart, false)

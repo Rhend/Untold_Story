@@ -183,21 +183,76 @@ static func page_wear(seed_value: int) -> Control:
 		var size := wear.size
 		var rng := RandomNumberGenerator.new()
 		rng.seed = seed_value
-		# Taches de parchemin (cf. icon.svg), très discrètes.
-		for i in 3:
+		# Taches de parchemin (cf. icon.svg), discrètes mais perceptibles.
+		for i in 4:
 			var center := Vector2(rng.randf_range(0.12, 0.88) * size.x,
 					rng.randf_range(0.15, 0.9) * size.y)
-			var radius := rng.randf_range(18.0, 42.0)
+			var radius := rng.randf_range(20.0, 48.0)
 			wear.draw_set_transform(center, 0.0, Vector2(1.0, rng.randf_range(0.5, 0.7)))
-			wear.draw_circle(Vector2.ZERO, radius, Color("bda678", 0.10))
+			wear.draw_circle(Vector2.ZERO, radius, Color("bda678", 0.16))
 			wear.draw_set_transform(Vector2.ZERO)
-		# Coins : légère ombre d'usure, proportionnée au support.
-		var corner_radius := minf(46.0, minf(size.x, size.y) * 0.11)
+		# Coins : ombre d'usure, proportionnée au support.
+		var corner_radius := minf(52.0, minf(size.x, size.y) * 0.12)
 		for corner in [Vector2.ZERO, Vector2(size.x, 0), Vector2(0, size.y), size]:
 			wear.draw_set_transform(corner, 0.0, Vector2.ONE)
-			wear.draw_circle(Vector2.ZERO, corner_radius, Color("8a7146", 0.07))
+			wear.draw_circle(Vector2.ZERO, corner_radius, Color("8a7146", 0.12))
 			wear.draw_set_transform(Vector2.ZERO))
 	return wear
+
+
+## Bloc des pages : tranches de papier empilées qui dépassent de la couverture
+## et donnent son épaisseur au livre — bandes concentriques, du bord sombre
+## vers le papier clair, séparées de fins filets. À poser entre le cuir et les
+## pages ouvertes (qui recouvrent le centre, à `depth` px des bords).
+static func make_page_block(depth := 9.0) -> Control:
+	var block := Control.new()
+	block.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	block.draw.connect(func() -> void:
+		const STEPS := 4
+		for i in STEPS:
+			var inset := depth * float(i) / float(STEPS)
+			var rect := Rect2(Vector2(inset, inset),
+					block.size - Vector2(inset, inset) * 2.0)
+			block.draw_rect(rect, Color("bda678").lerp(Color("efe3c4"),
+					float(i + 1) / float(STEPS)), true)
+			if i > 0:
+				block.draw_rect(rect, Color(PAGE_EDGE, 0.45), false, 1.0))
+	return block
+
+
+## Enluminure simple d'une page : double filet doré au trait fin, coins ornés
+## (équerres + losange rubriqué au rouge du ruban) et losanges médians haut et
+## bas. À poser au-dessus du papier et de l'usure, sous le contenu.
+static func make_page_frame() -> Control:
+	var frame := Control.new()
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.draw.connect(func() -> void:
+		var gold := Color(PAGE_EDGE, 0.65)
+		var gold_soft := Color(PAGE_EDGE, 0.35)
+		var outer := Rect2(Vector2.ZERO, frame.size).grow(-11.0)
+		frame.draw_rect(outer, gold, false, 1.2, true)
+		frame.draw_rect(outer.grow(-4.0), gold_soft, false, 1.0, true)
+
+		const ARM := 22.0  # longueur des équerres de coin
+		for corner in [outer.position, Vector2(outer.end.x, outer.position.y),
+				Vector2(outer.position.x, outer.end.y), outer.end]:
+			var dx: float = ARM if corner.x < outer.get_center().x else -ARM
+			var dy: float = ARM if corner.y < outer.get_center().y else -ARM
+			frame.draw_line(corner, corner + Vector2(dx, 0), gold, 1.8, true)
+			frame.draw_line(corner, corner + Vector2(0, dy), gold, 1.8, true)
+			_draw_diamond(frame, corner, 4.0, Color(RIBBON, 0.8))
+		for mid_y in [outer.position.y, outer.end.y]:
+			_draw_diamond(frame, Vector2(outer.get_center().x, mid_y), 3.0, gold))
+	return frame
+
+
+## Petit losange plein (ornement d'enluminure) centré sur `center`.
+static func _draw_diamond(canvas: CanvasItem, center: Vector2, radius: float,
+		color: Color) -> void:
+	canvas.draw_colored_polygon(PackedVector2Array([
+		center + Vector2(0, -radius), center + Vector2(radius, 0),
+		center + Vector2(0, radius), center + Vector2(-radius, 0)]), color)
 
 
 ## Fleuron séparateur (losange encadré de tirets), centré, à l'encre passée.

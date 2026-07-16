@@ -35,6 +35,9 @@ func _ready() -> void:
 	if not node.is_empty():
 		scene._runner.go_to(node)
 		await get_tree().process_frame
+		# Laisse la bascule « tourner la page » se terminer (contenu appliqué
+		# page fermée) avant de figer le texte et de capturer.
+		await get_tree().create_timer(0.8).timeout
 
 	# Texte affiché d'un coup (même chemin qu'un clic du joueur : la frappe est
 	# tuée puis l'UI différée — les choix — est révélée).
