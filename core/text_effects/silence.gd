@@ -14,7 +14,10 @@ const ALPHA := 0.5
 
 
 func _process_custom_fx(char_fx: CharFXTransform) -> bool:
-	char_fx.transform = char_fx.transform.scaled(Vector2(SCALE, SCALE))
+	# scaled_local : réduit le glyphe SUR PLACE (l'origine — position dans la
+	# page — est préservée). scaled() mettrait aussi l'origine à l'échelle et
+	# projetterait le texte vers le haut-gauche du label.
+	char_fx.transform = char_fx.transform.scaled_local(Vector2(SCALE, SCALE))
 	var c := char_fx.color
 	c.a *= ALPHA
 	char_fx.color = c
