@@ -48,6 +48,14 @@ var _visited_session: Dictionary = {}
 ## { story_id: { personnage: { item_id: quantité } } }
 var _inventory: Dictionary = {}
 
+## Dernière illustration affichée pendant la partie en cours, par personnage.
+## Une illustration PERSISTE sur la page de gauche bien au-delà du nœud qui l'a
+## invoquée (peu de nœuds portent une commande @illustration) : sans cette trace,
+## la reprise par checkpoint repartirait page de gauche vide. Mêmes règles de vie
+## que _position (cf. _erase_current_run).
+## { story_id: { personnage: nom d'illustration } }
+var _illustration: Dictionary = {}
+
 
 func _ready() -> void:
 	_load()
@@ -172,6 +180,23 @@ func resume_node(story_id := "", character := "") -> String:
 	return _position.get(_resolve(story_id), {}).get(chr, "")
 
 
+## Enregistre l'illustration actuellement affichée pour le personnage courant —
+## appelé à CHAQUE @illustration exécutée, pour que la reprise retrouve la page
+## de gauche telle que laissée.
+func record_illustration(name: String) -> void:
+	if not _illustration.has(_story_id):
+		_illustration[_story_id] = {}
+	_illustration[_story_id][_character] = name
+	_save()
+
+
+## Illustration à réafficher à la reprise pour (story_id, personnage), ou "" si
+## aucune (page de gauche vierge, comme en début d'histoire).
+func resume_illustration(story_id := "", character := "") -> String:
+	var chr := _character if character.is_empty() else character
+	return _illustration.get(_resolve(story_id), {}).get(chr, "")
+
+
 ## Recommence la partie de ce (story_id, personnage) : efface UNIQUEMENT sa
 ## "partie en cours" — zones cliquées, point de reprise, trace de session
 ## (gardes visited() de l'ancienne partie) ET inventaire. La section "decouverte"
@@ -197,6 +222,7 @@ func _erase_current_run(story_id: String, character: String) -> void:
 	_erase_from(_position, story_id, character)
 	_erase_from(_visited_session, story_id, character)
 	_erase_from(_inventory, story_id, character)
+	_erase_from(_illustration, story_id, character)
 
 
 func _erase_from(store: Dictionary, story_id: String, character: String) -> void:
@@ -215,6 +241,7 @@ func reset() -> void:
 	_position = {}
 	_visited_session = {}
 	_inventory = {}
+	_illustration = {}
 	_save()
 
 
@@ -337,6 +364,7 @@ func _save() -> void:
 			"position": _position,
 			"visited_session": _visited_session,
 			"inventory": _inventory,
+			"illustration": _illustration,
 		},
 	}, "\t"))
 
@@ -364,6 +392,7 @@ func _migrate(parsed: Dictionary) -> void:
 		_position = current.get("position", {})
 		_visited_session = current.get("visited_session", {})
 		_inventory = current.get("inventory", {})  # absent des sauvegardes pré-point-10 → {}
+		_illustration = current.get("illustration", {})  # absent des sauvegardes antérieures → {}
 		return
 	# v2 (point 4) — { "stories", "zones" }, sans point de reprise.
 	if parsed.has("stories") or parsed.has("zones"):

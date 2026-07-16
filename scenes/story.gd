@@ -172,6 +172,16 @@ func _start_story() -> void:
 	if not resume.is_empty() and not _story.has_node(resume):
 		resume = ""
 	var visited_ids: Array = Progress.resume_visited_set() if not resume.is_empty() else []
+
+	# Réaffiche l'illustration laissée sur la page de gauche : peu de nœuds
+	# portent une @illustration, le nœud de reprise n'en a presque jamais —
+	# sans ça, la page resterait vide. Posée AVANT le start : si le nœud de
+	# reprise invoque sa propre @illustration, elle reprend la main.
+	if not resume.is_empty():
+		var last_illustration := Progress.resume_illustration()
+		if not last_illustration.is_empty():
+			_show_illustration(last_illustration)
+
 	_runner.start(_story, {
 		"character": GameState.character_type,
 		"type": GameState.character_attribute,
@@ -918,6 +928,10 @@ func _show_illustration(illustration_name: String) -> void:
 	if data == null:
 		push_warning("Illustration inconnue : " + illustration_name)
 		return
+
+	# Trace de reprise : l'illustration persiste sur la page de gauche bien
+	# au-delà de son nœud, la reprise doit donc la retrouver (cf. _start_story).
+	Progress.record_illustration(illustration_name)
 
 	_illustration_data = data
 	_illustration = Illustration.new()
