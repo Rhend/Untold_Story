@@ -150,7 +150,7 @@ func _make_card(story: Dictionary) -> Control:
 	# Nom d'auteur sous le fleuron, comme sur une vraie couverture — rien
 	# si le manifest ne le renseigne pas.
 	if not str(story["author"]).is_empty():
-		var author := BookTheme.make_label(str(story["author"]), 19,
+		var author := BookTheme.make_label("Écrit par : " + str(story["author"]), 19,
 				Color(BookTheme.PARCHMENT, 0.85), true)
 		author.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		author.mouse_filter = Control.MOUSE_FILTER_IGNORE
