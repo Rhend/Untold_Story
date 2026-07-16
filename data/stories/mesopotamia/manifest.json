@@ -1,6 +1,8 @@
 {
 	"id": "mesopotamia",
 	"display_name": "Mésopotamia",
+	"author": "Epy",
+	"pitch": "Mesopotamia est un jeu conçu comme une histoire interactive dont vous êtes le “héraut”. Suivez ses aventures épisodiques qui vous plongeront dans les secrets aux origines de l’apogée de Babylone.\n\nVous devrez explorer les branches de l’arbre des possibles pour reconstituer la fresque de l’intrigue.\n\nArriverez-vous à en percer tous les mystères ?",
 	"entry_file": "act1_sc1.untold",
 	"locked": false
 }

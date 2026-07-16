@@ -39,6 +39,8 @@ func _capture_scene(scene_path: String, out: String) -> void:
 	add_child(scene)
 	await get_tree().process_frame
 	await get_tree().process_frame
+	# Laisse passer le fondu d'entrée de la sélection (arrivée depuis le hub).
+	await get_tree().create_timer(0.7).timeout
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(out)
 	print("capture -> " + out)
