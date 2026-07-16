@@ -275,6 +275,16 @@ func visited_count(story_id := "") -> int:
 	return _data.get(_resolve(story_id), {}).size()
 
 
+## Nombre de nœuds distincts déjà visités par UN personnage donné (découverte
+## cumulative) — alimente le % de complétion de la sélection de personnage.
+func visited_count_by(character: String, story_id := "") -> int:
+	var count := 0
+	for node in _data.get(_resolve(story_id), {}).values():
+		if (node.get("visited_by", {}) as Dictionary).has(character):
+			count += 1
+	return count
+
+
 # -------------------------------------------------------------- Persistance
 
 func _resolve(story_id: String) -> String:
