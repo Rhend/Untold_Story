@@ -1,0 +1,4 @@
+# Godot écrit tous ses fichiers texte en LF : on impose LF au checkout pour
+# que git ne réécrive jamais ces fichiers en CRLF (sinon Godot croit les
+# imports modifiés et ré-importe tous les assets à chaque chargement).
+* text=auto eol=lf
