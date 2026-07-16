@@ -123,8 +123,11 @@ func _on_fullscreen_toggled(on: bool) -> void:
 	if on:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 		return
-	# En quittant le plein écran, la fenêtre garderait sinon une taille
-	# « bordless » plein écran : on impose une taille fenêtrée et on recentre.
+	# Le retour fenêtré REPOSE sur window_width/height_override dans
+	# project.godot : sans taille fenêtrée déclarée, Godot (Windows) restaure
+	# une fenêtre couvrant tout l'écran, la re-détecte « plein écran » et
+	# ignore ensuite tout set_size/set_position — le mode fenêtré devient
+	# inatteignable. On impose ensuite la taille et on recentre.
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	var win_size := Vector2i(1280, 720)
 	DisplayServer.window_set_size(win_size)
