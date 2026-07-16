@@ -13,7 +13,12 @@ extends Control
 const SELECTION_SCENE := "res://scenes/character_selection.tscn"
 const STORIES_ROOT := "res://data/stories/"
 
+## Taille d'une couverture sur le rayon (proportions d'un in-octavo).
+const COVER_SIZE := Vector2(340, 480)
+
 var _status: Label
+## Popup « pas encore d'histoire » du tome fantôme (null tant que fermé).
+var _placeholder_popup: Control
 
 
 func _ready() -> void:
@@ -54,6 +59,8 @@ func _build_ui() -> void:
 		flow.add_child(empty)
 	for story in stories:
 		flow.add_child(_make_card(story))
+	# Tome fantôme en fin de rayon : promesse d'histoires à venir.
+	flow.add_child(_make_placeholder_card())
 
 	# Ligne de retour visuel (clic sur une histoire verrouillée).
 	_status = BookTheme.make_label("", 15, Color(0.85, 0.6, 0.5), true)
@@ -96,7 +103,7 @@ func _make_card(story: Dictionary) -> Control:
 	var locked: bool = story["locked"]
 
 	var cover := PanelContainer.new()
-	cover.custom_minimum_size = Vector2(270, 380)
+	cover.custom_minimum_size = COVER_SIZE
 	cover.add_theme_stylebox_override("panel", BookTheme.leather_style(8, 16))
 	cover.gui_input.connect(_on_card_input.bind(story))
 	if not locked:
@@ -121,7 +128,7 @@ func _make_card(story: Dictionary) -> Control:
 	col.add_theme_constant_override("separation", 18)
 	filet.add_child(col)
 
-	var name_label := BookTheme.make_label(str(story["display_name"]), 27,
+	var name_label := BookTheme.make_label(str(story["display_name"]), 31,
 			BookTheme.PARCHMENT, false, true)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -132,7 +139,7 @@ func _make_card(story: Dictionary) -> Control:
 	var button := Button.new()
 	button.text = "Verrouillée" if locked else "•  Ouvrir"
 	button.disabled = locked
-	BookTheme.style_choice(button, false, 17, true)
+	BookTheme.style_choice(button, false, 18, true)
 	button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	button.pressed.connect(_on_choose.bind(story))
 	col.add_child(button)
@@ -171,6 +178,117 @@ func _make_card(story: Dictionary) -> Control:
 		cover.add_child(ribbon)
 
 	return cover
+
+
+## Tome fantôme « Nouvelle Histoire ? » : couverture au cuir éteint, sans
+## ruban ni marque d'éditeur — un livre pas encore écrit. Clic → popup.
+func _make_placeholder_card() -> Control:
+	var cover := PanelContainer.new()
+	cover.custom_minimum_size = COVER_SIZE
+	cover.add_theme_stylebox_override("panel", BookTheme.leather_style(8, 16))
+	cover.modulate = Color(0.62, 0.62, 0.62, 0.9)
+	cover.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	cover.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed \
+				and event.button_index == MOUSE_BUTTON_LEFT:
+			_show_placeholder_popup())
+
+	# Filet doré en pointillé discret : la dorure n'est pas encore posée.
+	var filet := Control.new()
+	filet.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	filet.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	filet.draw.connect(func() -> void:
+		var rect := Rect2(Vector2.ZERO, filet.size).grow(-16.0)
+		var color := Color(BookTheme.PAGE_EDGE, 0.5)
+		for side in [[rect.position, Vector2(rect.end.x, rect.position.y)],
+				[Vector2(rect.end.x, rect.position.y), rect.end],
+				[rect.end, Vector2(rect.position.x, rect.end.y)],
+				[Vector2(rect.position.x, rect.end.y), rect.position]]:
+			filet.draw_dashed_line(side[0], side[1], color, 1.0, 7.0))
+	cover.add_child(filet)
+
+	var col := VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.add_theme_constant_override("separation", 18)
+	cover.add_child(col)
+
+	var name_label := BookTheme.make_label("Nouvelle Histoire ?", 31,
+			Color(BookTheme.PARCHMENT, 0.8), true)
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(name_label)
+
+	col.add_child(BookTheme.make_fleuron())
+
+	var hint := BookTheme.make_label("À paraître", 18,
+			Color(BookTheme.PAGE_EDGE, 0.8), true)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(hint)
+	return cover
+
+
+## Popup du tome fantôme : feuille de parchemin sur fond assombri, message et
+## fermeture (bouton, clic hors de la feuille ou Échap... via le bouton).
+func _show_placeholder_popup() -> void:
+	if _placeholder_popup != null:
+		return
+	_placeholder_popup = Control.new()
+	_placeholder_popup.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(_placeholder_popup)
+
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.55)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# Clic n'importe où sur le fond : ferme le popup.
+	dim.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed:
+			_close_placeholder_popup())
+	_placeholder_popup.add_child(dim)
+
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_placeholder_popup.add_child(center)
+
+	var sheet := PanelContainer.new()
+	sheet.custom_minimum_size = Vector2(460, 0)
+	var sheet_style := StyleBoxFlat.new()
+	sheet_style.bg_color = BookTheme.PARCHMENT
+	sheet_style.set_border_width_all(2)
+	sheet_style.border_color = BookTheme.PAGE_EDGE
+	sheet_style.set_corner_radius_all(6)
+	sheet_style.set_content_margin_all(34)
+	sheet_style.shadow_color = Color(0, 0, 0, 0.5)
+	sheet_style.shadow_size = 18
+	sheet.add_theme_stylebox_override("panel", sheet_style)
+	center.add_child(sheet)
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 20)
+	sheet.add_child(col)
+
+	var message := BookTheme.make_label(
+			"Désolé mais il n'y a pas encore d'histoire derrière ce livre...\nRevenez plus tard.",
+			19, BookTheme.INK, true)
+	message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(message)
+
+	col.add_child(BookTheme.make_fleuron())
+
+	var close := Button.new()
+	close.text = "Fermer"
+	BookTheme.style_choice(close, false, 17)
+	close.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	close.pressed.connect(_close_placeholder_popup)
+	col.add_child(close)
+
+
+func _close_placeholder_popup() -> void:
+	if _placeholder_popup != null:
+		_placeholder_popup.queue_free()
+		_placeholder_popup = null
 
 
 func _on_card_input(event: InputEvent, story: Dictionary) -> void:
