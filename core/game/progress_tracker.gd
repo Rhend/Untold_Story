@@ -64,6 +64,13 @@ var _illustration: Dictionary = {}
 ## { story_id: { personnage: texte brut du passage } }
 var _passage_text: Dictionary = {}
 
+## Variables du récit (@set : compétences, réputation...) au moment du
+## checkpoint, par personnage. Sans elles, une reprise repartirait des valeurs
+## par défaut de l'histoire — tout ce que la partie a accumulé serait perdu.
+## Mêmes règles de vie que _position (cf. _erase_current_run).
+## { story_id: { personnage: { nom: valeur } } }
+var _variables: Dictionary = {}
+
 
 func _ready() -> void:
 	_load()
@@ -164,11 +171,24 @@ func inventory_items(story_id := "", character := "") -> Dictionary:
 ## choix vient d'être présenté (PAS les nœuds intermédiaires enchaînés — le
 ## joueur ne s'y "arrête" pas). Appelé aussi à la fin de l'histoire, où il faut
 ## au contraire EFFACER la reprise (cf. clear_checkpoint).
-func record_checkpoint(node_id: String) -> void:
+## `variables` : l'état des variables du récit à cet instant (runner.variables),
+## rejoué à la reprise — les compteurs @set (compétences, réputation) survivent.
+func record_checkpoint(node_id: String, variables: Dictionary = {}) -> void:
 	if not _position.has(_story_id):
 		_position[_story_id] = {}
 	_position[_story_id][_character] = node_id
+	if not _variables.has(_story_id):
+		_variables[_story_id] = {}
+	_variables[_story_id][_character] = variables.duplicate(true)
 	_save()
+
+
+## Variables du récit au dernier checkpoint de (story_id, personnage), ou {}.
+## Copie défensive. NB : le JSON rend les entiers en float — sans importance,
+## les comparaisons et l'arithmétique du moteur sont numériques.
+func resume_variables(story_id := "", character := "") -> Dictionary:
+	var chr := _character if character.is_empty() else character
+	return (_variables.get(_resolve(story_id), {}).get(chr, {}) as Dictionary).duplicate(true)
 
 
 ## Efface l'état du run terminé (reprise + trace de session + inventaire) pour le
@@ -249,6 +269,7 @@ func _erase_current_run(story_id: String, character: String) -> void:
 	_erase_from(_inventory, story_id, character)
 	_erase_from(_illustration, story_id, character)
 	_erase_from(_passage_text, story_id, character)
+	_erase_from(_variables, story_id, character)
 
 
 func _erase_from(store: Dictionary, story_id: String, character: String) -> void:
@@ -269,6 +290,7 @@ func reset() -> void:
 	_inventory = {}
 	_illustration = {}
 	_passage_text = {}
+	_variables = {}
 	_save()
 
 
@@ -379,10 +401,16 @@ func _inventory_entry() -> Dictionary:
 ##     "partie_en_cours": { "zones", "position", "visited_session", "inventory" } }
 ## La section "partie_en_cours" peut encore grossir : ajouter une clé ici et
 ## l'inclure dans restart_playthrough().
+##
+## Écriture ATOMIQUE : le JSON part dans un fichier temporaire, l'ancienne
+## sauvegarde devient la copie de secours (.bak), puis le temporaire prend sa
+## place. Un crash en pleine écriture ne peut donc jamais corrompre la seule
+## copie existante — au pire, la .bak a un événement de retard.
 func _save() -> void:
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	var tmp_path := SAVE_PATH + ".tmp"
+	var file := FileAccess.open(tmp_path, FileAccess.WRITE)
 	if file == null:
-		push_error("Progress: impossible d'écrire " + SAVE_PATH)
+		push_error("Progress: impossible d'écrire " + tmp_path)
 		return
 	file.store_string(JSON.stringify({
 		"decouverte": _data,
@@ -393,18 +421,37 @@ func _save() -> void:
 			"inventory": _inventory,
 			"illustration": _illustration,
 			"passage_text": _passage_text,
+			"variables": _variables,
 		},
 	}, "\t"))
+	file.close()
+
+	if FileAccess.file_exists(SAVE_PATH):
+		DirAccess.remove_absolute(SAVE_PATH + ".bak")
+		DirAccess.rename_absolute(SAVE_PATH, SAVE_PATH + ".bak")
+	if DirAccess.rename_absolute(tmp_path, SAVE_PATH) != OK:
+		push_error("Progress: impossible de remplacer " + SAVE_PATH)
 
 
 func _load() -> void:
-	if not FileAccess.file_exists(SAVE_PATH):
+	if _try_load(SAVE_PATH):
 		return
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
+	# Sauvegarde principale absente ou corrompue (crash au mauvais moment,
+	# édition manuelle...) : la copie de secours prend le relais.
+	if _try_load(SAVE_PATH + ".bak"):
+		push_warning("Progress: sauvegarde restaurée depuis la copie de secours (.bak).")
+
+
+## Charge un fichier de sauvegarde s'il existe et se parse. false sinon.
+func _try_load(path: String) -> bool:
+	if not FileAccess.file_exists(path):
+		return false
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	if not (parsed is Dictionary):
-		push_warning("Progress: sauvegarde illisible, repartie de zéro.")
-		return
+		push_warning("Progress: sauvegarde illisible : " + path)
+		return false
 	_migrate(parsed)
+	return true
 
 
 ## Charge une sauvegarde en gérant les formats successifs, du plus récent au plus
@@ -422,6 +469,7 @@ func _migrate(parsed: Dictionary) -> void:
 		_inventory = current.get("inventory", {})  # absent des sauvegardes pré-point-10 → {}
 		_illustration = current.get("illustration", {})  # absent des sauvegardes antérieures → {}
 		_passage_text = current.get("passage_text", {})  # idem
+		_variables = current.get("variables", {})  # idem
 		return
 	# v2 (point 4) — { "stories", "zones" }, sans point de reprise.
 	if parsed.has("stories") or parsed.has("zones"):

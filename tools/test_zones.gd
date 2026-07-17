@@ -21,6 +21,8 @@ func _ready() -> void:
 	_test_runner_refresh()
 	_test_progress_zones()
 	_test_migration()
+	_test_variables_checkpoint()
+	_test_atomic_save()
 	_test_hit_test()
 
 	_restore_save()
@@ -44,6 +46,48 @@ func _restore_save() -> void:
 		FileAccess.open(SAVE, FileAccess.WRITE).store_string(_backup)
 	elif FileAccess.file_exists(SAVE):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE))
+	# Résidus des tests d'écriture atomique : la .bak/.tmp appartiennent aux
+	# données de test, pas au joueur.
+	for suffix in [".bak", ".tmp"]:
+		if FileAccess.file_exists(SAVE + suffix):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE + suffix))
+
+
+## Les variables du récit (@set) suivent le checkpoint : posées avec lui,
+## relues à la reprise, effacées avec le run.
+func _test_variables_checkpoint() -> void:
+	print("Progress — variables au checkpoint :")
+	Progress.begin_story("vtest", "Nadîtum")
+	Progress.record_checkpoint("n5", {"rep": 3, "humeur": "fière"})
+	var back: Dictionary = Progress.resume_variables()
+	_check(int(back.get("rep", 0)) == 3 and str(back.get("humeur", "")) == "fière",
+			"variables relues au checkpoint")
+
+	# Elles survivent à un rechargement complet depuis le disque.
+	Progress._load()
+	back = Progress.resume_variables("vtest", "Nadîtum")
+	_check(int(back.get("rep", 0)) == 3, "variables persistées sur le disque")
+
+	Progress.restart_playthrough("vtest", "Nadîtum")
+	_check(Progress.resume_variables("vtest", "Nadîtum").is_empty(),
+			"restart efface les variables du run")
+
+
+## L'écriture atomique laisse toujours une sauvegarde saine : la principale
+## corrompue, la copie de secours (.bak) prend le relais au chargement.
+func _test_atomic_save() -> void:
+	print("Progress — sauvegarde atomique :")
+	Progress.begin_story("atest", "Nadîtum")
+	Progress.record_checkpoint("n1", {})   # écrit SAVE...
+	Progress.record_checkpoint("n2", {})   # ...et bascule l'ancienne en .bak
+	_check(FileAccess.file_exists(SAVE + ".bak"), "copie de secours créée")
+
+	# Corruption de la principale (crash simulé en pleine écriture).
+	FileAccess.open(SAVE, FileAccess.WRITE).store_string("{ corrompu")
+	Progress._load()
+	_check(Progress.resume_node("atest", "Nadîtum") == "n1",
+			"sauvegarde restaurée depuis la .bak (un événement de retard)")
+	Progress.restart_playthrough("atest", "Nadîtum")
 
 
 func _sample_story() -> Story:

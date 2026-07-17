@@ -194,10 +194,13 @@ func _start_story() -> void:
 	# nœud de checkpoint, au premier display_text (cf. _on_display_text).
 	_resume_text = Progress.resume_passage_text() if not resume.is_empty() else ""
 
-	_runner.start(_story, {
-		"character": GameState.character_type,
-		"type": GameState.character_attribute,
-	}, resume, visited_ids)
+	# Les variables du récit sauvées au checkpoint (@set : compétences,
+	# réputation...) reprennent leurs valeurs — par-dessus les défauts de
+	# l'histoire, l'identité étant reposée en dernier (source de vérité).
+	var initial_vars: Dictionary = Progress.resume_variables() if not resume.is_empty() else {}
+	initial_vars["character"] = GameState.character_type
+	initial_vars["type"] = GameState.character_attribute
+	_runner.start(_story, initial_vars, resume, visited_ids)
 
 
 # ------------------------------------------------------------------ UI
@@ -815,7 +818,9 @@ func _on_present_choices(choices: Array) -> void:
 	# présenté). Les nœuds intermédiaires enchaînés ne sont jamais un checkpoint.
 	# Enregistré TOUT DE SUITE — seul l'affichage des réponses attend le texte.
 	if not choices.is_empty():
-		Progress.record_checkpoint(choices[0]["node"])
+		# Les variables du récit accompagnent le point de reprise : les compteurs
+		# @set (compétences, réputation) survivent à la fermeture du jeu.
+		Progress.record_checkpoint(choices[0]["node"], _runner.variables)
 	# Les réponses n'apparaissent qu'une fois le texte entièrement révélé.
 	_pending_reveal = _build_choice_buttons.bind(choices)
 	# Pendant une bascule de page, la frappe du nouveau passage n'a pas encore
