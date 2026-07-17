@@ -14,10 +14,10 @@ func setup(ctx: Dictionary) -> void:
 		none.text = "(aucune — nœud terminal)"
 		none.modulate = Color(0.55, 0.55, 0.65)
 		add_child(none)
-		return
-
 	for i in links.size():
 		add_child(_make_row(ctx, i, links[i]))
+
+	_add_new_link_form(ctx)
 
 
 func _make_row(ctx: Dictionary, index: int, link: Dictionary) -> Control:
@@ -49,6 +49,49 @@ func _caption(link: Dictionary) -> String:
 			return guard_prefix + "→ saut conditionnel"
 		_:
 			return guard_prefix + "→ saut direct"
+
+
+## Formulaire d'ajout guidé : un texte (vide = saut direct « -> cible »)
+## et une cible choisie dans la liste des nœuds (+ END) — la ligne est
+## écrite en fin de bloc, sans toucher au reste.
+func _add_new_link_form(ctx: Dictionary) -> void:
+	add_child(HSeparator.new())
+	var caption := Label.new()
+	caption.text = "Ajouter une sortie :"
+	caption.modulate = Color(0.7, 0.7, 0.8)
+	add_child(caption)
+
+	var text_edit := LineEdit.new()
+	text_edit.placeholder_text = "Texte du choix (vide = saut direct)"
+	add_child(text_edit)
+
+	var row := HBoxContainer.new()
+	add_child(row)
+	var target := OptionButton.new()
+	target.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	target.fit_to_longest_item = false
+	target.add_item("END")
+	for id in ctx["source"].order:
+		if id != ctx["node_id"] and ctx["story"].has_node(id):
+			target.add_item(id)
+	row.add_child(target)
+
+	var add := Button.new()
+	add.text = "Ajouter"
+	add.tooltip_text = "Écrit « * [Texte] -> cible » (ou « -> cible » sans texte) en fin de bloc."
+	add.pressed.connect(func() -> void:
+		var target_id := target.get_item_text(target.selected)
+		# Des crochets dans le texte casseraient « * [texte] -> cible ».
+		var choice_text := text_edit.text.strip_edges().replace("[", "(").replace("]", ")")
+		var line := "-> " + target_id if choice_text.is_empty() \
+				else "* [%s] -> %s" % [choice_text, target_id]
+		ctx["source"].append_instruction(ctx["node_id"], line)
+		if ctx["source"].save():
+			ctx["editor"].set_status("Sortie ajoutée à %s : %s" % [ctx["node_id"], line])
+			ctx["editor"].reload_and_select(ctx["node_id"])
+		else:
+			ctx["editor"].set_status("Échec d'écriture du fichier source."))
+	row.add_child(add)
 
 
 func _apply(ctx: Dictionary, index: int, edit: LineEdit, old_target: String) -> void:

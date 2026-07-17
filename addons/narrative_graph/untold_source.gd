@@ -19,6 +19,11 @@ var blocks: Dictionary = {}
 ## RIEN — et l'outil peut avertir l'auteur (le jeu, lui, ne garde que le dernier).
 var duplicate_ids: Array = []
 
+## Puits d'historique optionnel, appelé avec (path, texte_disque_précédent)
+## juste avant chaque réécriture qui CHANGE le fichier — c'est ce qui alimente
+## l'annuler/rétablir de l'outil graphe sans que cette classe le connaisse.
+var history_sink: Callable = Callable()
+
 
 func load_file(p_path: String) -> bool:
 	path = p_path
@@ -62,11 +67,15 @@ func text() -> String:
 
 
 func save() -> bool:
+	var new_text := text()
+	var old_text := FileAccess.get_file_as_string(path) if FileAccess.file_exists(path) else ""
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
 		push_error("UntoldSource: impossible d'écrire " + path)
 		return false
-	file.store_string(text())
+	file.store_string(new_text)
+	if history_sink.is_valid() and old_text != new_text:
+		history_sink.call(path, old_text)
 	return true
 
 

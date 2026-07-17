@@ -43,6 +43,14 @@ var _search_matches: Array = []   # ids correspondant à la dernière recherche
 var _search_index := -1
 var _search_query := ""
 
+## Annuler/rétablir des modifications du .untold, PAR fichier (l'historique
+## survit aux rechargements et aux allers-retours entre histoires).
+## path -> {"undo": Array[String] (textes disque), "redo": Array[String]}
+const HISTORY_LIMIT := 30
+var _histories: Dictionary = {}
+var _undo_btn: Button
+var _redo_btn: Button
+
 var _source: RefCounted   # UntoldSource
 var _story: Story
 var _graph: StoryGraph
@@ -110,6 +118,20 @@ func _build_ui() -> void:
 	new_node.tooltip_text = "Ajoute un nœud à l'histoire (bloc « :: id » en fin de fichier), placé au centre de la vue."
 	new_node.pressed.connect(_prompt_new_node)
 	toolbar.add_child(new_node)
+
+	_undo_btn = Button.new()
+	_undo_btn.text = "↶"
+	_undo_btn.tooltip_text = "Annuler la dernière modification du .untold (contenu, liens, nœuds...). Les positions/commentaires ne sont pas concernés."
+	_undo_btn.disabled = true
+	_undo_btn.pressed.connect(_undo)
+	toolbar.add_child(_undo_btn)
+
+	_redo_btn = Button.new()
+	_redo_btn.text = "↷"
+	_redo_btn.tooltip_text = "Rétablir la modification annulée."
+	_redo_btn.disabled = true
+	_redo_btn.pressed.connect(_redo)
+	toolbar.add_child(_redo_btn)
 
 	var check := Button.new()
 	check.text = "Vérifier"
@@ -280,6 +302,8 @@ func _load_selected() -> void:
 	if not _source.load_file(path):
 		set_status("Lecture impossible : " + path)
 		return
+	# Chaque réécriture du fichier alimente l'annuler/rétablir de ce fichier.
+	_source.history_sink = _push_undo
 	# Ressources propres à l'histoire éditée (dossier du .untold) : personnages
 	# pour l'accent d'identité, définitions d'illustrations pour les aperçus.
 	var story_dir := path.get_base_dir() + "/"
@@ -294,6 +318,7 @@ func _load_selected() -> void:
 	_meta.data["total_nodes"] = _story.nodes.size()
 	_meta.save()
 	_rebuild_graph_view()
+	_refresh_history_buttons()
 	if not _source.duplicate_ids.is_empty():
 		set_status("⚠ id(s) déclaré(s) plusieurs fois dans le fichier : %s — à corriger (le jeu ne garde que le dernier bloc)."
 				% ", ".join(PackedStringArray(_source.duplicate_ids)))
@@ -601,6 +626,59 @@ func _set_all_collapsed(collapsed: bool) -> void:
 	_update_visibility()
 	if not collapsed:
 		set_status("Tous les nœuds sont dépliés.")
+
+
+# ------------------------------------------------------- Annuler / rétablir
+
+## Pile d'historique du fichier courant, créée au besoin.
+func _history() -> Dictionary:
+	var path := _current_path()
+	if not _histories.has(path):
+		_histories[path] = {"undo": [], "redo": []}
+	return _histories[path]
+
+
+## Alimenté par UntoldSource.save() (history_sink) : l'état disque PRÉCÉDENT
+## devient annulable, et toute nouvelle écriture invalide le rétablir.
+func _push_undo(_path: String, old_text: String) -> void:
+	var h := _history()
+	h["undo"].append(old_text)
+	if h["undo"].size() > HISTORY_LIMIT:
+		h["undo"].pop_front()
+	h["redo"].clear()
+	_refresh_history_buttons()
+
+
+func _undo() -> void:
+	_restore_from(_history()["undo"], _history()["redo"], "Modification annulée")
+
+
+func _redo() -> void:
+	_restore_from(_history()["redo"], _history()["undo"], "Modification rétablie")
+
+
+## Échange l'état disque avec le sommet de `take` (l'état actuel part dans
+## `give`), puis recharge le graphe. Commun à annuler et rétablir.
+func _restore_from(take: Array, give: Array, label: String) -> void:
+	var path := _current_path()
+	if take.is_empty() or path.is_empty():
+		return
+	give.append(FileAccess.get_file_as_string(path))
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		give.pop_back()
+		set_status("Impossible d'écrire " + path)
+		return
+	file.store_string(take.pop_back())
+	file.close()
+	_load_selected()
+	set_status("%s — %s." % [label, path.get_file()])
+
+
+func _refresh_history_buttons() -> void:
+	var h := _history()
+	_undo_btn.disabled = h["undo"].is_empty()
+	_redo_btn.disabled = h["redo"].is_empty()
 
 
 # ------------------------------------------------------ Création / recâblage

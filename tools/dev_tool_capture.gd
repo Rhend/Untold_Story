@@ -35,6 +35,21 @@ func _ready() -> void:
 	await get_tree().process_frame
 	print("TOOL OK — nœuds affichés : %d" % panel._node_names.size())
 
+	# Vérification fonctionnelle de l'annuler/rétablir : une modification du
+	# .untold doit s'annuler à l'octet près, et se rétablir.
+	var path: String = panel._current_path()
+	var before := FileAccess.get_file_as_string(path)
+	panel._source.set_body("fin", ["Texte modifié pour le test de l'undo.", "-> END"])
+	panel._source.save()
+	panel._undo()
+	print("UNDO OK" if FileAccess.get_file_as_string(path) == before else "UNDO FAIL")
+	panel._redo()
+	print("REDO OK" if FileAccess.get_file_as_string(path).contains("test de l'undo")
+			else "REDO FAIL")
+	panel._undo()  # laisse le fichier de démo dans son état d'origine
+	print("UNDO2 OK" if FileAccess.get_file_as_string(path) == before else "UNDO2 FAIL")
+	await get_tree().process_frame
+
 	if DisplayServer.get_name() != "headless":
 		await _snap(OS.get_environment("TOOL_SHOT"))
 		var node_id := OS.get_environment("TOOL_NODE")
