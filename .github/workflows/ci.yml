@@ -1,0 +1,63 @@
+# CI : toute la batterie de tests headless + la validation d'histoire, à
+# chaque push/PR sur dev. Même version de Godot que le poste de travail.
+name: tests
+
+on:
+  push:
+    branches: [dev, preprod, main]
+  pull_request:
+    branches: [dev, preprod, main]
+
+env:
+  GODOT_VERSION: "4.6.3"
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+
+      - name: Télécharger Godot ${{ env.GODOT_VERSION }}
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot
+          curl -sSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
+          chmod +x ~/godot/godot
+
+      # Premier import du projet (ressources, .godot/) — indispensable avant
+      # de lancer des scènes en headless.
+      - name: Importer le projet
+        run: ~/godot/godot --headless --path . --import
+
+      - name: Tests de l'outil narratif (parser, source, graphe, méta)
+        run: ~/godot/godot --headless --path . --script tools/test_narrative_tool.gd
+
+      - name: Test Env + titres + en-têtes
+        run: ~/godot/godot --headless --path . --script tools/test_env_header.gd
+
+      - name: Tests zones interactives + Progress (sauvegarde, variables)
+        run: ~/godot/godot --headless --path . tools/test_zones.tscn
+
+      - name: Tests carte de progression
+        run: |
+          ~/godot/godot --headless --path . tools/test_story_map.tscn
+          ~/godot/godot --headless --path . tools/test_map_features.tscn
+
+      - name: Tests effets de texte + réglages
+        run: |
+          ~/godot/godot --headless --path . tools/test_text_effects.tscn
+          ~/godot/godot --headless --path . tools/test_settings_parallax.tscn
+
+      - name: Validation de l'histoire (parcours aléatoires massifs)
+        run: ~/godot/godot --headless --path . --script tools/validate_story.gd
