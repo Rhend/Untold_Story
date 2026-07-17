@@ -27,11 +27,13 @@ fait sous Unity avec Ink. **Aucun plugin tiers** : tout est reconstruit nativeme
     nommés + pastilles des personnages passés ; nœuds aperçus en bulle noire
     « ? » sans aucune suite dévoilée ; liens découverts en trait continu ;
     pistes cachées (gardes/conditions) en pointillé qui s'évanouit.
-  - **Plugin éditeur « Narratif »** (`addons/narrative_graph/`) : graphe
-    drag & drop des `.untold` ; « Appliquer l'ordre » réécrit la source de
-    vérité (blocs réordonnés, contenu intact) ; inspecteur MODULAIRE au clic
-    (identité, events + ajout, commentaire privé à l'outil) — un volet = un
-    script hérité d'`inspector_section.gd` ajouté à `SECTIONS`.
+  - **Plugin éditeur « Narratif »** (`addons/narrative_graph/`) : l'histoire
+    s'écrit ENTIÈREMENT dans Godot — édition du contenu des nœuds, création /
+    renommage / suppression, recâblage des liens à la souris, recherche,
+    annuler/rétablir, bouton « Vérifier » (liens cassés, nœuds injoignables…).
+    Inspecteur MODULAIRE au clic — un volet = un script hérité
+    d'`inspector_section.gd` ajouté à `SECTIONS`.
+    **Guide d'utilisation pas à pas : [`addons/narrative_graph/README.md`](addons/narrative_graph/README.md).**
   - Disposition et commentaires vivent dans un sidecar `<histoire>.meta.json`
     (jamais dans le `.untold`), partagé entre la carte et l'éditeur.
 
