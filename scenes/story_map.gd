@@ -1293,8 +1293,8 @@ func _guard_true(groups: Array, vars: Dictionary) -> bool:
 		for cond in conds:
 			match cond["kind"]:
 				"var":
-					var equal: bool = str(vars.get(cond["name"], "")) == cond["value"]
-					if (cond["op"] == "==") != equal:
+					if not StoryParser.compare_values(
+							vars.get(cond["name"], ""), cond["op"], cond["value"]):
 						ok = false
 				"visited":
 					if Progress.is_visited(cond["id"]) == cond["neg"]:

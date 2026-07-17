@@ -8,9 +8,10 @@ extends RefCounted
 ## (UntoldSource repère les mêmes lignes pour les réécrire) : une divergence
 ## entre le parse et l'édition ferait modifier la mauvaise ligne.
 const CHOICE_PATTERN := "^\\*\\s*\\[(.*?)\\]\\s*->\\s*(\\S+)$"
-const COND_PATTERN := "^\\{\\s*([A-Za-z_]\\w*)\\s*==\\s*\"([^\"]*)\"\\s*->\\s*(\\S+)\\s*\\}$"
+const COND_PATTERN := "^\\{\\s*([A-Za-z_]\\w*)\\s*(==|!=|<=|>=|<|>)\\s*(\"[^\"]*\"|-?\\d+(?:\\.\\d+)?)\\s*->\\s*(\\S+)\\s*\\}$"
 const COMMAND_PATTERN := "^@([A-Za-z_]\\w*)\\((.*)\\)$"
-const ASSIGN_PATTERN := "^@(?:var|set)\\s+([A-Za-z_]\\w*)\\s*=\\s*(.+)$"
+## « += » et « -= » avant « = » : l'alternative la plus longue doit gagner.
+const ASSIGN_PATTERN := "^@(?:var|set)\\s+([A-Za-z_]\\w*)\\s*(\\+=|-=|=)\\s*(.+)$"
 ## Garde : "{ cond [and cond...] } instruction" — la condition s'applique à
 ## l'instruction qui suit sur la même ligne (texte, choix, saut, commande...).
 const GUARD_PATTERN := "^\\{\\s*([^{}]+?)\\s*\\}\\s*(\\S.*)$"
@@ -45,12 +46,12 @@ static func parse(text: String) -> Story:
 		# Variable globale : "@var nom = valeur" (avant tout nœud).
 		if line.begins_with("@var"):
 			var mv := re_assign.search(line)
-			if mv:
+			if mv and mv.get_string(2) == "=":
 				if current != null:
 					push_warning("StoryParser: « @var » après un nœud (portée globale quand même) : " + line)
-				story.variables[mv.get_string(1)] = _unquote(mv.get_string(2))
+				story.variables[mv.get_string(1)] = _parse_value(mv.get_string(3))
 			else:
-				push_warning("StoryParser: « @var » illisible ignoré : " + line)
+				push_warning("StoryParser: « @var » illisible ignoré (attendu « @var nom = valeur ») : " + line)
 			continue
 
 		# Tout le reste appartient au nœud courant.
@@ -86,14 +87,16 @@ static func parse(text: String) -> Story:
 			}, guard)
 			continue
 
-		# Saut conditionnel : '{ var == "valeur" -> noeud }'
+		# Saut conditionnel : '{ var == "valeur" -> noeud }' ou numérique
+		# '{ var >= 3 -> noeud }'.
 		var mco := re_cond.search(line)
 		if mco:
 			_append(current, {
 				"type": "cond",
 				"var": mco.get_string(1),
-				"value": mco.get_string(2),
-				"target": mco.get_string(3),
+				"op": mco.get_string(2),
+				"value": _parse_value(mco.get_string(3)),
+				"target": mco.get_string(4),
 			}, guard)
 			continue
 
@@ -105,14 +108,16 @@ static func parse(text: String) -> Story:
 			}, guard)
 			continue
 
-		# Affectation : "@set nom = valeur"
+		# Affectation : "@set nom = valeur", ou arithmétique "@set nom += 2" /
+		# "@set nom -= 1" (compteurs : compétences, réputation...).
 		if line.begins_with("@set"):
 			var ms := re_assign.search(line)
 			if ms:
 				_append(current, {
 					"type": "set",
 					"name": ms.get_string(1),
-					"value": _unquote(ms.get_string(2)),
+					"op": ms.get_string(2),
+					"value": _parse_value(ms.get_string(3)),
 				}, guard)
 			else:
 				push_warning("StoryParser: « @set » illisible ignoré : " + line)
@@ -155,6 +160,8 @@ static func _append(node: StoryNode, ins: Dictionary, guard: Array) -> void:
 ## de conditions :
 ##   var == "valeur"   → {"kind": "var", "name", "op": "==", "value"}
 ##   var != "valeur"   → {"kind": "var", "name", "op": "!=", "value"}
+##   var >= 3          → {"kind": "var", "name", "op": ">=", "value": 3}
+##                       (aussi <, <=, >, ==, != — valeur numérique)
 ##   visited(noeud)    → {"kind": "visited", "id", "neg": false}
 ##   !visited(noeud)   → {"kind": "visited", "id", "neg": true}
 ##   zone_clicked("z") → {"kind": "zone", "id", "neg": false}
@@ -165,7 +172,7 @@ static func _append(node: StoryNode, ins: Dictionary, guard: Array) -> void:
 ## Retourne [] si une des conditions est illisible.
 static func _parse_conds(s: String) -> Array:
 	var re_var := RegEx.new()
-	re_var.compile("^([A-Za-z_]\\w*)\\s*(==|!=)\\s*\"([^\"]*)\"$")
+	re_var.compile("^([A-Za-z_]\\w*)\\s*(==|!=|<=|>=|<|>)\\s*(\"[^\"]*\"|-?\\d+(?:\\.\\d+)?)$")
 	var re_visited := RegEx.new()
 	re_visited.compile("^(!)?\\s*visited\\(\\s*(\\S+?)\\s*\\)$")
 	var re_zone := RegEx.new()
@@ -184,7 +191,7 @@ static func _parse_conds(s: String) -> Array:
 					"kind": "var",
 					"name": mv.get_string(1),
 					"op": mv.get_string(2),
-					"value": mv.get_string(3),
+					"value": _parse_value(mv.get_string(3)),
 				})
 				continue
 			var mt := re_visited.search(part)
@@ -222,6 +229,58 @@ static func _unquote(s: String) -> String:
 	if t.length() >= 2 and t.begins_with("\"") and t.ends_with("\""):
 		return t.substr(1, t.length() - 2)
 	return t
+
+
+## Valeur typée d'une affectation ou d'une condition : entre guillemets →
+## String ; littéral numérique → int/float ; sinon le texte brut (String,
+## comportement historique des valeurs non citées).
+static func _parse_value(s: String) -> Variant:
+	var t := s.strip_edges()
+	if t.length() >= 2 and t.begins_with("\"") and t.ends_with("\""):
+		return t.substr(1, t.length() - 2)
+	if t.is_valid_int():
+		return t.to_int()
+	if t.is_valid_float():
+		return t.to_float()
+	return t
+
+
+## Compare la valeur COURANTE d'une variable à la valeur attendue d'une
+## condition. Les comparaisons d'ordre (<, <=, >, >=) sont numériques (faux si
+## l'une des deux valeurs n'est pas un nombre) ; l'(in)égalité est numérique
+## quand les deux valeurs sont des nombres (3 == "3"), textuelle sinon.
+## SEUL point de vérité — utilisé par le runner (exécution), la carte
+## (relecture) et tout futur consommateur de gardes.
+static func compare_values(current: Variant, op: String, expected: Variant) -> bool:
+	var a := str(current)
+	var b := str(expected)
+	var numeric := a.is_valid_float() and b.is_valid_float()
+	match op:
+		"==":
+			return a.to_float() == b.to_float() if numeric else a == b
+		"!=":
+			return a.to_float() != b.to_float() if numeric else a != b
+		"<":
+			return numeric and a.to_float() < b.to_float()
+		"<=":
+			return numeric and a.to_float() <= b.to_float()
+		">":
+			return numeric and a.to_float() > b.to_float()
+		">=":
+			return numeric and a.to_float() >= b.to_float()
+	return false
+
+
+## Applique une affectation « @set » : "=" pose la valeur telle quelle,
+## "+=" / "-=" font l'arithmétique (valeur manquante ou non numérique = 0).
+## Le résultat entier reste un entier (compteurs propres à l'affichage).
+static func apply_set(current: Variant, op: String, value: Variant) -> Variant:
+	if op == "=":
+		return value
+	var a := str(current if current != null else 0).to_float()
+	var b := str(value).to_float()
+	var r := a + b if op == "+=" else a - b
+	return int(r) if is_equal_approx(r, roundf(r)) else r
 
 
 static func _parse_args(s: String) -> Array:

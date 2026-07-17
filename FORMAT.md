@@ -20,9 +20,10 @@ de l'ancien projet Ink, sans en hériter la complexité inutile.
 | Texte narratif | toute autre ligne | `Les flots emportent la barque.` |
 | Choix | `* [Texte] -> cible` | `* [Le dieu lunaire] -> prologue2` |
 | Saut | `-> cible` | `-> fin` / `-> END` |
-| Saut conditionnel | `{ var == "valeur" -> cible }` | `{ type == "Mystique" -> route_myst }` |
+| Saut conditionnel | `{ var op valeur -> cible }` | `{ type == "Mystique" -> route_myst }`, `{ courage >= 3 -> reussite }` |
 | Garde | `{ cond } instruction` | `{ character == "Soldat" } Tu dégaines.` |
-| Affectation | `@set nom = valeur` | `@set visible = "true"` |
+| Affectation | `@set nom = valeur` | `@set visible = "true"`, `@set courage = 2` |
+| Arithmétique | `@set nom += n` / `@set nom -= n` | `@set reputation += 1` |
 | Commande moteur | `@nom("arg", ...)` | `@illustration("Statue de Sîn")` |
 | Glue | `<>` en début/fin de ligne | `Tu as dormi <>` |
 
@@ -30,12 +31,26 @@ de l'ancien projet Ink, sans en hériter la complexité inutile.
 Toute instruction (texte, choix, saut, commande, affectation) peut être
 préfixée d'une **garde** : `{ cond } instruction`. Si la condition est fausse,
 la ligne est ignorée. Conditions disponibles :
-- `var == "valeur"` / `var != "valeur"` — comparaison de variable ;
+- `var == "valeur"` / `var != "valeur"` — comparaison de texte ;
+- `var < n`, `var <= n`, `var == n`, `var != n`, `var >= n`, `var > n` —
+  comparaison **numérique** (compétences, réputation...). Une comparaison
+  d'ordre sur une valeur non numérique est fausse ;
 - `visited(id)` / `!visited(id)` — le joueur a (ou non) déjà traversé le nœud ;
 - combinaisons : `and` lie des conditions, `or` sépare des groupes
   (précédence usuelle : `a or b and c` = `a ou (b et c)`, pas de parenthèses).
 
 Exemple : `{ character == "Prêtresse" and visited(chapelle) } * [Prier] -> rite`
+
+## Variables numériques (compétences, réputation)
+`@var` et `@set` acceptent des nombres (sans guillemets) : `@var courage = 2`.
+`@set nom += n` / `@set nom -= n` incrémentent/décrémentent (une variable
+absente ou non numérique part de 0). Combiné aux comparaisons numériques :
+```
+@set reputation += 1
+{ reputation >= 3 } * [User de ton influence] -> palais
+{ courage >= 2 -> reussite }
+-> echec
+```
 
 ## Glue
 Une ligne de texte terminée (ou commencée) par `<>` se colle à la ligne de
@@ -81,6 +96,6 @@ La conversion est automatisée par `tools/ink2untold.mjs` :
 `@minigame(...)` puis enchaînent sur la branche succès (mécanique à venir).
 
 ## Limites actuelles (à étendre)
-- Pas encore : parenthèses dans les gardes, variables numériques,
-  texte conditionnel inline (le convertisseur les expanse en lignes gardées).
+- Pas encore : parenthèses dans les gardes, texte conditionnel inline
+  (le convertisseur les expanse en lignes gardées).
   À ajouter selon les besoins réels.

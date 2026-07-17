@@ -6,9 +6,10 @@ extends Resource
 ## Le contenu est une liste ordonnée d'instructions exécutées de haut en bas
 ## par le StoryRunner. Chaque instruction est un Dictionary avec une clé "type" :
 ##   - {"type": "text",    "value": String}
-##   - {"type": "set",     "name": String, "value": String}
+##   - {"type": "set",     "name": String, "op": "="|"+="|"-=", "value": Variant}
 ##   - {"type": "command", "name": String, "args": Array}      (ex: illustration, minigame)
-##   - {"type": "cond",    "var": String, "value": String, "target": String}  (saut conditionnel)
+##   - {"type": "cond",    "var": String, "op": String, "value": Variant, "target": String}
+##                          (saut conditionnel ; op : == != < <= > >=)
 ##   - {"type": "divert",  "target": String}                   ("-> autre_noeud" ou "-> END")
 ##   - {"type": "choice",  "text": String, "target": String}
 ##

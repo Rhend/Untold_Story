@@ -222,10 +222,12 @@ func _character_universe() -> Array:
 				"choice", "divert":
 					for group in ins.get("if", []):
 						for cond in group:
-							if cond["kind"] == "var" and cond["name"] == "character":
+							if cond["kind"] == "var" and cond["name"] == "character" \
+									and cond["value"] is String:
 								seen[cond["value"]] = true
 				"cond":
-					if ins["var"] == "character":
+					if ins["var"] == "character" and ins["value"] is String \
+							and ins.get("op", "==") in ["==", "!="]:
 						seen[ins["value"]] = true
 	return seen.keys()
 
@@ -244,8 +246,12 @@ func _identity_edges(id: String, universe: Array) -> Array:
 				edges.append({"target": ins["target"], "filter": filter})
 			"cond":
 				var f: Array = universe
-				if IDENTITY_VARS.has(ins["var"]) and _guard_identity_only(ins):
-					f = [ins["value"]] if ins["var"] == "character" else universe
+				if ins["var"] == "character" and _guard_identity_only(ins):
+					match ins.get("op", "=="):
+						"==":
+							f = [ins["value"]]
+						"!=":
+							f = universe.filter(func(c: Variant) -> bool: return c != ins["value"])
 				edges.append({"target": ins["target"], "filter": f})
 	return edges
 
@@ -262,12 +268,14 @@ func _char_filter_from_guard(groups: Array, universe: Array) -> Array:
 		for cond in group:
 			if cond["kind"] != "var" or cond["name"] != "character":
 				continue
+			# Seules == et != restreignent l'ensemble ; une comparaison d'ordre
+			# sur `character` n'a pas de sens (aucun resserrement).
 			if cond["op"] == "==":
 				var only: Dictionary = {}
 				if cand.has(cond["value"]):
 					only[cond["value"]] = true
 				cand = only
-			else:
+			elif cond["op"] == "!=":
 				cand.erase(cond["value"])
 		for c in cand:
 			result[c] = true

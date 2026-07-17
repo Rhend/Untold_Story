@@ -155,7 +155,8 @@ func _run_from(start_id: String) -> void:
 				"text":
 					buffer = _append_line(buffer, ins["value"])
 				"set":
-					variables[ins["name"]] = ins["value"]
+					variables[ins["name"]] = StoryParser.apply_set(
+							variables.get(ins["name"]), ins.get("op", "="), ins["value"])
 				"command":
 					command.emit(ins["name"], ins["args"])
 				"choice":
@@ -163,7 +164,8 @@ func _run_from(start_id: String) -> void:
 				"cond":
 					# Un point de choix ouvert arrête le flux (sémantique Ink) :
 					# les sauts qui suivent des choix sont ignorés.
-					if choices.is_empty() and str(variables.get(ins["var"], "")) == ins["value"]:
+					if choices.is_empty() and StoryParser.compare_values(
+							variables.get(ins["var"], ""), ins.get("op", "=="), ins["value"]):
 						id = ins["target"]
 						jumped = true
 						break
@@ -222,8 +224,8 @@ func _check_group(conds: Array) -> bool:
 	for cond in conds:
 		match cond["kind"]:
 			"var":
-				var equal: bool = str(variables.get(cond["name"], "")) == cond["value"]
-				if (cond["op"] == "==") != equal:
+				if not StoryParser.compare_values(
+						variables.get(cond["name"], ""), cond["op"], cond["value"]):
 					return false
 			"visited":
 				if _visited.has(cond["id"]) == cond["neg"]:

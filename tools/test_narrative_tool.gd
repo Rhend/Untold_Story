@@ -18,6 +18,7 @@ func _initialize() -> void:
 	_test_duplicate_ids()
 	_test_node_operations()
 	_test_runner_cycle_guard()
+	_test_numeric_variables()
 	_test_story_graph()
 	_test_story_meta()
 	if _failures == 0:
@@ -177,6 +178,82 @@ func _test_runner_cycle_guard() -> void:
 	runner.start(story)
 	_check(ended[0], "l'histoire se termine au lieu de boucler")
 	runner.free()
+
+
+## Variables numériques : @set arithmétique (+=, -=), gardes et sauts
+## conditionnels avec < <= == != >= > — la base des compétences/réputation.
+func _test_numeric_variables() -> void:
+	print("[Moteur — variables numériques]")
+
+	# La comparaison partagée, directement.
+	_check(StoryParser.compare_values(3, ">=", 3), "3 >= 3")
+	_check(not StoryParser.compare_values(2, ">", 3), "2 > 3 est faux")
+	_check(StoryParser.compare_values("3", "==", 3), "égalité numérique \"3\" == 3")
+	_check(StoryParser.compare_values("abc", "!=", "def"), "inégalité textuelle")
+	_check(not StoryParser.compare_values("abc", "<", 3), "ordre non numérique = faux")
+	_check(StoryParser.apply_set(1, "+=", 2) == 3, "apply_set 1 += 2")
+	_check(StoryParser.apply_set(null, "+=", 2) == 2, "apply_set sur variable absente part de 0")
+	_check(str(StoryParser.apply_set(1, "-=", 0.5)) == "0.5", "apply_set reste décimal si besoin")
+
+	# Le parse : valeurs typées, opérateurs conservés.
+	var story := StoryParser.parse("""
+@var rep = 0
+:: start
+Départ.
+@set rep += 2
+@set rep -= 1
+{ rep >= 1 } Tu es apprécié.
+{ rep >= 2 -> haut }
+-> bas
+
+:: haut
+Haut.
+-> END
+
+:: bas
+Bas.
+@set rep += 2
+{ rep == 3 -> egal }
+-> END
+
+:: egal
+Égal, rép à trois.
+-> END
+""")
+	_check(story.variables["rep"] == 0, "@var numérique typé")
+	var first_set: Dictionary = story.get_node_by_id("start").instructions[1]
+	_check(first_set["op"] == "+=" and first_set["value"] == 2, "@set += parsé")
+	var cond_jump: Dictionary = story.get_node_by_id("start").instructions[4]
+	_check(cond_jump["type"] == "cond" and cond_jump["op"] == ">=" and cond_jump["value"] == 2,
+			"saut conditionnel numérique parsé")
+
+	# L'exécution de bout en bout.
+	var runner: Node = Runner.new()
+	var texts: Array = []
+	var ended := [false]
+	runner.display_text.connect(func(t: String, _id: String, _tags: Array) -> void:
+		texts.append(t))
+	runner.story_ended.connect(func() -> void: ended[0] = true)
+	runner.start(story)
+	var shown := "\n".join(PackedStringArray(texts))
+	_check(shown.contains("Tu es apprécié."), "garde numérique vraie (rep=1 >= 1)")
+	_check(not shown.contains("Haut."), "saut numérique faux non pris (rep=1 < 2)")
+	_check(shown.contains("Égal, rép à trois."), "égalité numérique après += (rep=3)")
+	_check(runner.variables["rep"] == 3, "arithmétique cumulée juste")
+	_check(ended[0], "histoire terminée")
+	runner.free()
+
+	# Les gardes textuelles historiques ne bougent pas.
+	var story2 := StoryParser.parse(
+			"@var character = \"Nadîtum\"\n:: start\n{ character == \"Nadîtum\" } Salut toi.\n-> END\n")
+	var runner2: Node = Runner.new()
+	var texts2: Array = []
+	runner2.display_text.connect(func(t: String, _id: String, _tags: Array) -> void:
+		texts2.append(t))
+	runner2.start(story2)
+	_check("\n".join(PackedStringArray(texts2)).contains("Salut toi."),
+			"garde textuelle == inchangée")
+	runner2.free()
 
 
 func _test_story_graph() -> void:
