@@ -50,7 +50,9 @@ static func load_story(story_dir: String) -> void:
 
 	var defs_path := story_dir + "illustrations_defs.json"
 	if not FileAccess.file_exists(defs_path):
-		push_error("IllustrationLibrary: fichier introuvable " + defs_path)
+		# Cas légitime : histoire sans illustrations (ex. demo_format). Les seules
+		# vraies erreurs sont un @illustration("...") pointant dans le vide — elles
+		# sont signalées par l'outil narratif et validate_story, pas ici.
 		return
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(defs_path))
 	if not (parsed is Dictionary):

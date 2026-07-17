@@ -18,7 +18,7 @@ func setup(ctx: Dictionary) -> void:
 	_ctx = ctx
 	heading("Zones interactives")
 
-	var names := _node_illustrations(ctx["node"])
+	var names: Array = ctx["node"].command_values("illustration")
 	if names.is_empty():
 		var none := Label.new()
 		none.text = "Aucune illustration sur ce nœud (rien à zoner)."
@@ -28,17 +28,6 @@ func setup(ctx: Dictionary) -> void:
 
 	for name in names:
 		_build_block(name)
-
-
-## Noms passés aux commandes @illustration(...) du nœud, dans l'ordre (même
-## logique que section_illustration).
-func _node_illustrations(node: StoryNode) -> Array:
-	var names: Array = []
-	for ins in node.instructions:
-		if ins["type"] == "command" and ins["name"] == "illustration" \
-				and not ins["args"].is_empty():
-			names.append(str(ins["args"][0]))
-	return names
 
 
 ## Un bloc éditable par illustration. L'état mutable (calque courant, zones de

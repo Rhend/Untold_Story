@@ -44,4 +44,7 @@ func _show_placeholder() -> void:
 
 func _clear() -> void:
 	for child in _box.get_children():
+		# Retiré immédiatement : queue_free seul laisserait l'ancien contenu
+		# cohabiter une frame avec le nouveau (sections dupliquées à l'écran).
+		_box.remove_child(child)
 		child.queue_free()

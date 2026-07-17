@@ -55,10 +55,14 @@ func _apply(ctx: Dictionary, index: int, edit: LineEdit, old_target: String) -> 
 	var target := edit.text.strip_edges()
 	if target.is_empty() or target == old_target or edit.get_meta("applied", false):
 		return
+	# Marqué AVANT l'écriture : focus_exited re-déclenche _apply juste après
+	# text_submitted (le reload vole le focus), il ne doit pas réécrire.
 	edit.set_meta("applied", true)
 	var known: bool = target == "END" or ctx["story"].has_node(target)
 	if not ctx["source"].set_link_target(ctx["node_id"], index, target) \
 			or not ctx["source"].save():
+		# Échec : on dé-marque pour qu'une correction du champ reste possible.
+		edit.set_meta("applied", false)
 		ctx["editor"].set_status("Impossible de réécrire ce lien dans le fichier.")
 		return
 	if known:

@@ -15,7 +15,7 @@ func setup(ctx: Dictionary) -> void:
 	_ctx = ctx
 	heading("Illustration")
 
-	var names := _node_illustrations(ctx["node"])
+	var names: Array = ctx["node"].command_values("illustration")
 	if names.is_empty():
 		var none := Label.new()
 		none.text = "(aucune)"
@@ -33,16 +33,6 @@ func setup(ctx: Dictionary) -> void:
 	drop_zone.custom_minimum_size = Vector2(0, 56)
 	drop_zone.add_child(hint)
 	add_child(drop_zone)
-
-
-## Noms passés aux commandes @illustration(...) du nœud, dans l'ordre.
-func _node_illustrations(node: StoryNode) -> Array:
-	var names: Array = []
-	for ins in node.instructions:
-		if ins["type"] == "command" and ins["name"] == "illustration" \
-				and not ins["args"].is_empty():
-			names.append(str(ins["args"][0]))
-	return names
 
 
 func _add_preview(illustration_name: String, occurrence: int) -> void:

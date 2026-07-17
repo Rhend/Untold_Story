@@ -21,3 +21,14 @@ extends Resource
 
 func _init(p_id: String = "") -> void:
 	id = p_id
+
+
+## Premier argument de chaque commande « @command(...) » du nœud, dans l'ordre.
+## Ex : command_values("illustration") -> les noms d'illustration du nœud.
+func command_values(command: String) -> Array:
+	var values: Array = []
+	for ins in instructions:
+		if ins["type"] == "command" and ins["name"] == command \
+				and not ins["args"].is_empty():
+			values.append(str(ins["args"][0]))
+	return values

@@ -4,22 +4,27 @@ extends RefCounted
 ## Parse le format texte maison ".untold" en une ressource Story.
 ## Voir FORMAT.md pour la spécification complète du langage.
 
+## Motifs de reconnaissance des lignes, PARTAGÉS avec l'outil d'édition
+## (UntoldSource repère les mêmes lignes pour les réécrire) : une divergence
+## entre le parse et l'édition ferait modifier la mauvaise ligne.
+const CHOICE_PATTERN := "^\\*\\s*\\[(.*?)\\]\\s*->\\s*(\\S+)$"
+const COND_PATTERN := "^\\{\\s*([A-Za-z_]\\w*)\\s*==\\s*\"([^\"]*)\"\\s*->\\s*(\\S+)\\s*\\}$"
+const COMMAND_PATTERN := "^@([A-Za-z_]\\w*)\\((.*)\\)$"
+const ASSIGN_PATTERN := "^@(?:var|set)\\s+([A-Za-z_]\\w*)\\s*=\\s*(.+)$"
+## Garde : "{ cond [and cond...] } instruction" — la condition s'applique à
+## l'instruction qui suit sur la même ligne (texte, choix, saut, commande...).
+const GUARD_PATTERN := "^\\{\\s*([^{}]+?)\\s*\\}\\s*(\\S.*)$"
+
+
 static func parse(text: String) -> Story:
 	var story := Story.new()
 	var current: StoryNode = null
 
-	var re_choice := RegEx.new()
-	re_choice.compile("^\\*\\s*\\[(.*?)\\]\\s*->\\s*(\\S+)$")
-	var re_cond := RegEx.new()
-	re_cond.compile("^\\{\\s*([A-Za-z_]\\w*)\\s*==\\s*\"([^\"]*)\"\\s*->\\s*(\\S+)\\s*\\}$")
-	var re_cmd := RegEx.new()
-	re_cmd.compile("^@([A-Za-z_]\\w*)\\((.*)\\)$")
-	var re_assign := RegEx.new()
-	re_assign.compile("^@(?:var|set)\\s+([A-Za-z_]\\w*)\\s*=\\s*(.+)$")
-	# Garde : "{ cond [and cond...] } instruction" — la condition s'applique à
-	# l'instruction qui suit sur la même ligne (texte, choix, saut, commande...).
-	var re_guard := RegEx.new()
-	re_guard.compile("^\\{\\s*([^{}]+?)\\s*\\}\\s*(\\S.*)$")
+	var re_choice := RegEx.create_from_string(CHOICE_PATTERN)
+	var re_cond := RegEx.create_from_string(COND_PATTERN)
+	var re_cmd := RegEx.create_from_string(COMMAND_PATTERN)
+	var re_assign := RegEx.create_from_string(ASSIGN_PATTERN)
+	var re_guard := RegEx.create_from_string(GUARD_PATTERN)
 
 	for raw_line in text.split("\n"):
 		var line := raw_line.strip_edges()

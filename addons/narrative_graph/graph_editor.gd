@@ -39,7 +39,7 @@ var _source: RefCounted   # UntoldSource
 var _story: Story
 var _graph: StoryGraph
 var _meta: StoryMeta
-var _node_ids: Dictionary = {}  # nom du GraphNode -> id du nœud d'histoire
+var _node_names: Dictionary = {}  # id du nœud d'histoire -> nom UNIQUE du GraphNode
 var _collapse_buttons: Dictionary = {}  # id du nœud -> Button de repli (titre)
 var _characters: Array = []   # CharacterData chargés (accent d'identité)
 var _reach: Dictionary = {}   # id -> Array[String] personnages atteignant le nœud
@@ -213,7 +213,11 @@ func _load_selected() -> void:
 	_meta.data["total_nodes"] = _story.nodes.size()
 	_meta.save()
 	_rebuild_graph_view()
-	set_status("%d nœuds — %s" % [_story.nodes.size(), path.get_file()])
+	if not _source.duplicate_ids.is_empty():
+		set_status("⚠ id(s) déclaré(s) plusieurs fois dans le fichier : %s — à corriger (le jeu ne garde que le dernier bloc)."
+				% ", ".join(PackedStringArray(_source.duplicate_ids)))
+	else:
+		set_status("%d nœuds — %s" % [_story.nodes.size(), path.get_file()])
 
 
 func _rebuild_graph_view() -> void:
@@ -221,7 +225,7 @@ func _rebuild_graph_view() -> void:
 	for child in _graph_edit.get_children():
 		if child is GraphNode:
 			child.free()  # libération immédiate : les noms doivent être réutilisables
-	_node_ids.clear()
+	_node_names.clear()
 	_collapse_buttons.clear()
 
 	# Accessibilité par identité (accent de couleur personnage) : calculée une
@@ -247,10 +251,13 @@ func _rebuild_graph_view() -> void:
 func _make_graph_node(id: String, pos: Vector2) -> GraphNode:
 	var node: StoryNode = _story.get_node_by_id(id)
 	var gnode := GraphNode.new()
-	gnode.name = _gnode_name(id)
+	gnode.name = _unique_gnode_name(id)
+	# L'id d'histoire vit en métadonnée : le nom du GraphNode (sanitisé, unifié)
+	# n'est PAS une clé fiable pour le retrouver.
+	gnode.set_meta("story_id", id)
 	gnode.title = id
 	gnode.position_offset = pos
-	_node_ids[String(gnode.name)] = id
+	_node_names[id] = gnode.name
 
 	# Coins arrondis + accent de couleur d'identité (fond/bordure, pas les ports).
 	_apply_node_style(gnode, _node_accent(id))
@@ -267,7 +274,7 @@ func _make_graph_node(id: String, pos: Vector2) -> GraphNode:
 
 	# Badge « illustration » dans la barre de titre : repérable sans avoir à
 	# cliquer sur chaque nœud (le nom est dans l'infobulle).
-	var illustrations := _illustration_names(node)
+	var illustrations := node.command_values("illustration")
 	if not illustrations.is_empty():
 		var badge := TextureRect.new()
 		badge.texture = get_theme_icon("ImageTexture", "EditorIcons")
@@ -312,8 +319,23 @@ func _make_graph_node(id: String, pos: Vector2) -> GraphNode:
 	return gnode
 
 
-func _gnode_name(id: String) -> StringName:
-	return StringName(("n_" + id).validate_node_name())
+## Nom de GraphNode unique pour cet id : deux ids d'histoire distincts peuvent
+## se « sanitiser » vers le même nom Godot (ex: « scene.1 » et « scene:1 ») —
+## Godot renommerait alors le second à l'insertion et le mapping id <-> nœud
+## casserait. On suffixe donc AVANT l'insertion.
+func _unique_gnode_name(id: String) -> StringName:
+	var base := ("n_" + id).validate_node_name()
+	var candidate := base
+	var n := 2
+	while _node_names.values().has(StringName(candidate)):
+		candidate = "%s_%d" % [base, n]
+		n += 1
+	return StringName(candidate)
+
+
+## Id d'histoire porté par un GraphNode ("" si absent).
+func _story_id_of(child: Node) -> String:
+	return str(child.get_meta("story_id", ""))
 
 
 ## Accent d'identité d'un nœud : couleur du seul personnage qui peut l'atteindre
@@ -387,16 +409,6 @@ func _body_box(bg: Color, border: Color, selected: bool) -> StyleBoxFlat:
 	return s
 
 
-## Noms passés aux commandes @illustration(...) du nœud, dans l'ordre.
-func _illustration_names(node: StoryNode) -> Array:
-	var names: Array = []
-	for ins in node.instructions:
-		if ins["type"] == "command" and ins["name"] == "illustration" \
-				and not ins["args"].is_empty():
-			names.append(str(ins["args"][0]))
-	return names
-
-
 func _excerpt(node: StoryNode) -> String:
 	for ins in node.instructions:
 		if ins["type"] == "text":
@@ -466,7 +478,7 @@ func _update_visibility() -> void:
 	var hidden := 0
 	for child in _graph_edit.get_children():
 		if child is GraphNode:
-			child.visible = shown.has(_node_ids[String(child.name)])
+			child.visible = shown.has(_story_id_of(child))
 			if not child.visible:
 				child.selected = false
 				hidden += 1
@@ -476,13 +488,13 @@ func _update_visibility() -> void:
 
 	_graph_edit.clear_connections()
 	for id in _story.nodes:
-		if not shown.has(id):
+		if not shown.has(id) or not _node_names.has(id):
 			continue
 		var links := _graph.outgoing(id)
 		for i in links.size():
 			var target: String = links[i]["target"]
-			if _story.has_node(target) and shown.has(target):
-				_graph_edit.connect_node(_gnode_name(id), i, _gnode_name(target), 0)
+			if shown.has(target) and _node_names.has(target):
+				_graph_edit.connect_node(_node_names[id], i, _node_names[target], 0)
 
 	if hidden > 0:
 		set_status("%d nœud(s) masqué(s) par repli." % hidden)
@@ -513,7 +525,7 @@ func _set_all_collapsed(collapsed: bool) -> void:
 func _save_positions() -> void:
 	for child in _graph_edit.get_children():
 		if child is GraphNode:
-			_meta.set_node_position(_node_ids[String(child.name)], child.position_offset)
+			_meta.set_node_position(_story_id_of(child), child.position_offset)
 	_meta.save()
 	set_status("Disposition enregistrée (partagée avec la carte en jeu).")
 
@@ -528,7 +540,7 @@ func _apply_auto_layout() -> void:
 	var layout := _graph.auto_layout()
 	for child in _graph_edit.get_children():
 		if child is GraphNode:
-			var id: String = _node_ids[String(child.name)]
+			var id := _story_id_of(child)
 			if layout.has(id):
 				child.position_offset = layout[id]
 	_save_positions()
@@ -543,7 +555,7 @@ func _apply_order() -> void:
 	var positions: Dictionary = {}
 	for child in _graph_edit.get_children():
 		if child is GraphNode:
-			positions[_node_ids[String(child.name)]] = child.position_offset
+			positions[_story_id_of(child)] = child.position_offset
 	var ids: Array = positions.keys()
 	ids.sort_custom(func(a: String, b: String) -> bool:
 		var pa: Vector2 = positions[a]
@@ -559,8 +571,8 @@ func _apply_order() -> void:
 
 
 func _on_node_selected(node: Node) -> void:
-	if node is GraphNode and _node_ids.has(String(node.name)):
-		_inspector.show_node(_make_context(_node_ids[String(node.name)]))
+	if node is GraphNode and not _story_id_of(node).is_empty():
+		_inspector.show_node(_make_context(_story_id_of(node)))
 
 
 func _make_context(id: String) -> Dictionary:
@@ -579,7 +591,9 @@ func _make_context(id: String) -> Dictionary:
 ## même nœud, disposition conservée.
 func reload_and_select(id: String) -> void:
 	_load_selected()
-	var gnode := _graph_edit.get_node_or_null(NodePath(_gnode_name(id)))
+	if not _node_names.has(id):
+		return
+	var gnode := _graph_edit.get_node_or_null(NodePath(_node_names[id]))
 	if gnode is GraphNode:
 		gnode.selected = true
 		_inspector.show_node(_make_context(id))

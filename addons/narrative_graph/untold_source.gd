@@ -115,13 +115,12 @@ func set_link_target(id: String, link_index: int, new_target: String) -> bool:
 
 
 ## Indice de la ligne du index-ième lien sortant du bloc. Reproduit le
-## classement de StoryParser : choix, saut conditionnel et saut direct,
-## gardes « { ... } instruction » comprises.
+## classement de StoryParser (mêmes motifs, partagés) : choix, saut
+## conditionnel et saut direct, gardes « { ... } instruction » comprises.
 func _link_line(id: String, link_index: int) -> int:
-	var re_guard := RegEx.create_from_string("^\\{\\s*[^{}]+?\\s*\\}\\s*(\\S.*)$")
-	var re_choice := RegEx.create_from_string("^\\*\\s*\\[.*?\\]\\s*->\\s*\\S+$")
-	var re_cond := RegEx.create_from_string(
-			"^\\{\\s*[A-Za-z_]\\w*\\s*==\\s*\"[^\"]*\"\\s*->\\s*\\S+\\s*\\}$")
+	var re_guard := RegEx.create_from_string(StoryParser.GUARD_PATTERN)
+	var re_choice := RegEx.create_from_string(StoryParser.CHOICE_PATTERN)
+	var re_cond := RegEx.create_from_string(StoryParser.COND_PATTERN)
 	var count := 0
 	for i in blocks[id].size():
 		var line: String = str(blocks[id][i]).strip_edges()
@@ -130,7 +129,8 @@ func _link_line(id: String, link_index: int) -> int:
 			continue
 		var mg := re_guard.search(line)
 		if mg:
-			line = mg.get_string(1).strip_edges()
+			# Groupe 2 du motif partagé = l'instruction après la garde.
+			line = mg.get_string(2).strip_edges()
 		if re_choice.search(line) or re_cond.search(line) or line.begins_with("->"):
 			if count == link_index:
 				return i
