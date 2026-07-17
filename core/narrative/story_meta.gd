@@ -49,6 +49,22 @@ func total_nodes() -> int:
 	return int(data.get("total_nodes", 0))
 
 
+## Fait suivre TOUTES les métadonnées d'un nœud renommé (position, commentaire,
+## repli, titre) vers son nouvel id.
+func rename_node(old_id: String, new_id: String) -> void:
+	for key in ["positions", "comments", "collapsed", "titles"]:
+		var sect := section(key)
+		if sect.has(old_id):
+			sect[new_id] = sect[old_id]
+			sect.erase(old_id)
+
+
+## Oublie toutes les métadonnées d'un nœud supprimé.
+func forget_node(node_id: String) -> void:
+	for key in ["positions", "comments", "collapsed", "titles"]:
+		section(key).erase(node_id)
+
+
 # ------------------------------------------------------------------ Positions
 
 ## Toutes les positions connues : { node_id: Vector2 }.

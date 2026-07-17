@@ -1,7 +1,8 @@
 @tool
 extends "res://addons/narrative_graph/inspector_section.gd"
-## Volet « identité » : nom du nœud, tags, extrait du texte, et bascule du tag
-## #hors_carte (exclusion de la carte de progression en jeu).
+## Volet « identité » : nom du nœud (renommable — les liens et visited() du
+## fichier suivent), tags, extrait du texte, bascule du tag #hors_carte
+## (exclusion de la carte de progression en jeu), et suppression du nœud.
 
 var _ctx: Dictionary
 
@@ -10,10 +11,7 @@ func setup(ctx: Dictionary) -> void:
 	_ctx = ctx
 	heading("Nœud")
 
-	var id_label := Label.new()
-	id_label.text = ctx["node_id"]
-	id_label.add_theme_font_size_override("font_size", 19)
-	add_child(id_label)
+	_add_rename_row(ctx["node_id"])
 
 	var node: StoryNode = ctx["node"]
 	if not node.tags.is_empty():
@@ -33,6 +31,83 @@ func setup(ctx: Dictionary) -> void:
 			break
 
 	_add_hors_carte_toggle(node)
+	_add_delete_button(ctx["node_id"])
+
+
+## Nom du nœud dans un champ éditable : valider renomme le nœud dans le
+## .untold (sa ligne « :: id », toutes les cibles « -> id » et les gardes
+## « visited(id) ») et fait suivre les métadonnées (position, commentaire...).
+func _add_rename_row(id: String) -> void:
+	var row := HBoxContainer.new()
+	add_child(row)
+
+	var edit := LineEdit.new()
+	edit.text = id
+	edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	edit.add_theme_font_size_override("font_size", 19)
+	edit.tooltip_text = "Nom du nœud. Entrée (ou « Renommer ») pour renommer partout dans le fichier."
+	row.add_child(edit)
+
+	var btn := Button.new()
+	btn.text = "Renommer"
+	row.add_child(btn)
+
+	var apply := func() -> void:
+		var new_id := edit.text.strip_edges()
+		if new_id == id or new_id.is_empty():
+			return
+		if not _ctx["source"].is_valid_id(new_id):
+			_ctx["editor"].set_status("Id invalide « %s » — lettres, chiffres et _ seulement (et pas END)." % new_id)
+			return
+		if _ctx["story"].has_node(new_id):
+			_ctx["editor"].set_status("Un nœud « %s » existe déjà." % new_id)
+			return
+		if _ctx["source"].rename_node(id, new_id) and _ctx["source"].save():
+			_ctx["meta"].rename_node(id, new_id)
+			_ctx["meta"].save()
+			_ctx["editor"].set_status("« %s » renommé en « %s » (liens et visited() mis à jour)." % [id, new_id])
+			_ctx["editor"].reload_and_select(new_id)
+		else:
+			_ctx["editor"].set_status("Impossible de renommer ce nœud.")
+	btn.pressed.connect(apply)
+	edit.text_submitted.connect(func(_t: String) -> void: apply.call())
+
+
+## Suppression du nœud, avec confirmation qui liste les liens entrants (ils
+## resteraient en l'état, cibles inconnues à corriger ensuite).
+func _add_delete_button(id: String) -> void:
+	add_child(HSeparator.new())
+	var btn := Button.new()
+	btn.text = "Supprimer ce nœud"
+	btn.modulate = Color(1.0, 0.75, 0.7)
+	btn.tooltip_text = "Retire le bloc du .untold (confirmation demandée)."
+	add_child(btn)
+
+	var incoming: Array = []
+	for other_id in _ctx["story"].nodes:
+		if other_id == id:
+			continue
+		for link in _ctx["graph"].outgoing(other_id):
+			if link["target"] == id and not incoming.has(other_id):
+				incoming.append(other_id)
+
+	var confirm := ConfirmationDialog.new()
+	confirm.title = "Supprimer « %s » ?" % id
+	confirm.ok_button_text = "Supprimer"
+	confirm.dialog_text = "Le bloc sera retiré du fichier .untold." if incoming.is_empty() \
+			else "%d nœud(s) pointent vers lui (%s) :\nleurs liens resteront en l'état, avec une cible inconnue à corriger." \
+			% [incoming.size(), ", ".join(PackedStringArray(incoming))]
+	add_child(confirm)
+	btn.pressed.connect(confirm.popup_centered)
+	confirm.confirmed.connect(func() -> void:
+		if _ctx["source"].remove_node(id) and _ctx["source"].save():
+			_ctx["meta"].forget_node(id)
+			_ctx["meta"].save()
+			_ctx["editor"].set_status("Nœud « %s » supprimé%s." % [id,
+					"" if incoming.is_empty() else " — corrige les liens de : " + ", ".join(PackedStringArray(incoming))])
+			_ctx["editor"].reload()
+		else:
+			_ctx["editor"].set_status("Impossible de supprimer ce nœud."))
 
 
 ## Bascule le tag #hors_carte via la source .untold. Le libellé et l'état

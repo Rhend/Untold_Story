@@ -16,6 +16,7 @@ var _failures := 0
 func _initialize() -> void:
 	_test_untold_source()
 	_test_duplicate_ids()
+	_test_node_operations()
 	_test_runner_cycle_guard()
 	_test_story_graph()
 	_test_story_meta()
@@ -99,6 +100,69 @@ func _test_duplicate_ids() -> void:
 	_check(source.duplicate_ids == ["start"], "doublon signalé (%s)" % str(source.duplicate_ids))
 	_check(source.order.size() == 2, "deux blocs conservés")
 	_check(source.text() == text, "réécriture sans perte (les deux blocs verbatim)")
+	DirAccess.remove_absolute(work_path)
+
+
+## Opérations de nœud de l'outil : édition du corps, création, renommage
+## (références « -> id » et « visited(id) » suivies), suppression.
+func _test_node_operations() -> void:
+	print("[UntoldSource — opérations de nœud]")
+	var work_path := "user://_test_ops.untold"
+	var text := ":: start\nDébut.\n{ visited(milieu) } Tu reviens.\n* [Aller] -> milieu\n\n:: milieu\nMilieu.\n{ etat == \"ok\" -> start }\n-> fin\n\n:: fin\nFin.\n-> END\n"
+	var file := FileAccess.open(work_path, FileAccess.WRITE)
+	file.store_string(text)
+	file = null
+
+	var source := UntoldSource.new()
+	source.load_file(work_path)
+
+	# --- corps ---
+	_check(source.body_lines("fin") == ["Fin.", "-> END"], "body_lines lit le corps verbatim")
+	_check(source.set_body("fin", ["La toute fin.", "-> END"]), "set_body remplace le corps")
+	var story := StoryParser.parse(source.text())
+	_check(story.get_node_by_id("fin").instructions[0]["value"] == "La toute fin.",
+			"corps réécrit retrouvé au parse")
+
+	# --- création ---
+	_check(not source.add_node("milieu"), "add_node refuse un id existant")
+	_check(not source.add_node("END"), "add_node refuse END")
+	_check(not source.add_node("id impossible"), "add_node refuse les espaces")
+	_check(source.add_node("epilogue", ["Nouveau nœud.", "-> END"]), "add_node accepte un id neuf")
+	story = StoryParser.parse(source.text())
+	_check(story.has_node("epilogue"), "nœud créé retrouvé au parse")
+
+	# --- renommage : cibles et visited() suivent ---
+	_check(not source.rename_node("milieu", "fin"), "rename refuse un id déjà pris")
+	_check(source.rename_node("milieu", "scene_centrale"), "rename accepte")
+	var t := source.text()
+	_check(not t.contains("-> milieu") and t.contains("-> scene_centrale"),
+			"cible de choix renommée")
+	_check(t.contains("visited(scene_centrale)"), "visited() renommé")
+	_check(t.contains("{ etat == \"ok\" -> start }"), "le saut conditionnel intact (autre cible)")
+	story = StoryParser.parse(t)
+	_check(story.has_node("scene_centrale") and not story.has_node("milieu"),
+			"re-parse cohérent après rename")
+
+	# --- recâblage (utilisé par le drag de connexion du graphe) ---
+	_check(source.set_link_target("start", 0, "fin"), "set_link_target accepte")
+	_check(source.text().contains("* [Aller] -> fin"),
+			"cible du choix redirigée, texte du choix intact")
+
+	# --- suppression ---
+	_check(source.remove_node("epilogue"), "remove_node supprime")
+	_check(not source.text().contains("epilogue"), "bloc absent du fichier réécrit")
+
+	# --- métadonnées qui suivent ---
+	var meta := StoryMeta.load_for(work_path)
+	meta.set_node_position("scene_centrale", Vector2(5, 6))
+	meta.set_comment("scene_centrale", "note")
+	meta.rename_node("scene_centrale", "coeur")
+	_check(meta.positions().get("coeur") == Vector2(5, 6) \
+			and meta.get_comment("coeur") == "note", "meta.rename_node fait tout suivre")
+	meta.forget_node("coeur")
+	_check(meta.positions().is_empty() and meta.get_comment("coeur") == "",
+			"meta.forget_node efface tout")
+
 	DirAccess.remove_absolute(work_path)
 
 

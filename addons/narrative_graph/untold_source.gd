@@ -138,6 +138,90 @@ func _link_line(id: String, link_index: int) -> int:
 	return -1
 
 
+# ------------------------------------------------------- Opérations de nœud
+
+## Id de nœud acceptable pour une création/un renommage depuis l'outil :
+## lettres/chiffres/underscore, commence par une lettre ou « _ », et pas le
+## nœud réservé END. (Le format tolère plus large, mais l'outil recommande
+## des ids simples — lisibles dans les liens et valides comme noms Godot.)
+static func is_valid_id(id: String) -> bool:
+	if id == "END":
+		return false
+	return RegEx.create_from_string("^[A-Za-z_]\\w*$").search(id) != null
+
+
+## Corps du bloc (lignes après « :: id »), verbatim — blancs de fin normalisés
+## (comme text() à la réécriture).
+func body_lines(id: String) -> Array:
+	if not blocks.has(id):
+		return []
+	return _without_trailing_blanks(blocks[id]).slice(1)
+
+
+## Remplace le corps du bloc — la ligne « :: id » d'origine est conservée.
+func set_body(id: String, lines: Array) -> bool:
+	if not blocks.has(id):
+		return false
+	var head: String = blocks[id][0]
+	blocks[id] = [head]
+	blocks[id].append_array(lines)
+	return true
+
+
+## Ajoute un nœud à la fin du fichier. false si l'id existe déjà ou est invalide.
+func add_node(id: String, body: Array = []) -> bool:
+	if blocks.has(id) or not is_valid_id(id):
+		return false
+	order.append(id)
+	blocks[id] = [":: " + id]
+	blocks[id].append_array(body)
+	return true
+
+
+## Supprime le bloc du nœud (les liens qui pointaient vers lui deviennent des
+## cibles inconnues — à l'appelant de prévenir l'auteur). false si absent.
+func remove_node(id: String) -> bool:
+	if not blocks.has(id):
+		return false
+	blocks.erase(id)
+	order.erase(id)
+	return true
+
+
+## Renomme un nœud : sa ligne « :: id », puis toutes les références dans le
+## fichier — cibles « -> id » (choix, sauts, sauts conditionnels) et gardes
+## « visited(id) ». false si l'ancien id est absent, le nouveau déjà pris ou
+## invalide.
+func rename_node(old_id: String, new_id: String) -> bool:
+	if not blocks.has(old_id) or blocks.has(new_id) or not is_valid_id(new_id):
+		return false
+	var escaped := _regex_escape(old_id)
+	var re_target := RegEx.create_from_string("(->\\s*)" + escaped + "(?=[\\s}]|$)")
+	var re_visited := RegEx.create_from_string("(visited\\(\\s*)" + escaped + "(?=\\s*\\))")
+
+	blocks[new_id] = blocks[old_id]
+	blocks.erase(old_id)
+	blocks[new_id][0] = ":: " + new_id  # en-tête normalisé (espaces d'origine non significatifs)
+	order[order.find(old_id)] = new_id
+
+	for id in blocks:
+		for i in blocks[id].size():
+			var line: String = blocks[id][i]
+			if line.strip_edges().begins_with("//"):
+				continue
+			line = re_target.sub(line, "${1}" + new_id, true)
+			line = re_visited.sub(line, "${1}" + new_id, true)
+			blocks[id][i] = line
+	return true
+
+
+static func _regex_escape(s: String) -> String:
+	var out := ""
+	for c in s:
+		out += ("\\" + c) if "\\^$.|?*+()[]{}".contains(c) else c
+	return out
+
+
 ## Remplace la première commande « @nom(...) » du bloc par de nouveaux
 ## arguments (préfixe de la ligne — garde, indentation — conservé), ou
 ## l'ajoute en fin de bloc si le nœud n'en a pas.

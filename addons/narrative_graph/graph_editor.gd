@@ -34,6 +34,14 @@ var _stories: OptionButton
 var _status: Label
 var _graph_edit: GraphEdit
 var _inspector: Control
+var _new_node_dialog: ConfirmationDialog
+var _new_node_edit: LineEdit
+var _check_dialog: AcceptDialog
+var _check_report: Label
+var _search: LineEdit
+var _search_matches: Array = []   # ids correspondant à la dernière recherche
+var _search_index := -1
+var _search_query := ""
 
 var _source: RefCounted   # UntoldSource
 var _story: Story
@@ -77,6 +85,8 @@ func _ready() -> void:
 # --------------------------------------------------------------------- UI
 
 func _build_ui() -> void:
+	# Rangée 1 — l'histoire : choix du fichier, création de nœud, vérification,
+	# recherche, statut.
 	var toolbar := HBoxContainer.new()
 	toolbar.add_theme_constant_override("separation", 8)
 	add_child(toolbar)
@@ -89,41 +99,78 @@ func _build_ui() -> void:
 	_stories.item_selected.connect(func(_index: int) -> void: _load_selected())
 	toolbar.add_child(_stories)
 
-	var reload := Button.new()
-	reload.text = "Recharger"
-	reload.tooltip_text = "Relit le fichier depuis le disque."
-	reload.pressed.connect(_load_selected)
-	toolbar.add_child(reload)
+	var reload_btn := Button.new()
+	reload_btn.text = "Recharger"
+	reload_btn.tooltip_text = "Relit le fichier depuis le disque."
+	reload_btn.pressed.connect(_load_selected)
+	toolbar.add_child(reload_btn)
 
-	var apply := Button.new()
-	apply.text = "Appliquer l'ordre au .untold"
-	apply.tooltip_text = "Réécrit le fichier source avec les nœuds réordonnés selon la disposition du graphe."
-	apply.pressed.connect(_apply_order)
-	toolbar.add_child(apply)
+	var new_node := Button.new()
+	new_node.text = "+ Nouveau nœud"
+	new_node.tooltip_text = "Ajoute un nœud à l'histoire (bloc « :: id » en fin de fichier), placé au centre de la vue."
+	new_node.pressed.connect(_prompt_new_node)
+	toolbar.add_child(new_node)
 
-	var auto_layout := Button.new()
-	auto_layout.text = "Disposition auto"
-	auto_layout.tooltip_text = "Range les nœuds en colonnes par profondeur depuis le début (gauche → droite), et sauve cette disposition."
-	auto_layout.pressed.connect(_apply_auto_layout)
-	toolbar.add_child(auto_layout)
+	var check := Button.new()
+	check.text = "Vérifier"
+	check.tooltip_text = "Contrôle l'histoire : liens cassés, nœuds injoignables, ids en double, illustrations inconnues."
+	check.pressed.connect(_run_checks)
+	toolbar.add_child(check)
 
-	var fold_all := Button.new()
-	fold_all.text = "Replier tout"
-	fold_all.tooltip_text = "Replie tous les nœuds : seul le début (et les orphelins) reste visible."
-	fold_all.pressed.connect(_set_all_collapsed.bind(true))
-	toolbar.add_child(fold_all)
-
-	var unfold_all := Button.new()
-	unfold_all.text = "Déplier tout"
-	unfold_all.tooltip_text = "Déplie tous les nœuds de l'histoire."
-	unfold_all.pressed.connect(_set_all_collapsed.bind(false))
-	toolbar.add_child(unfold_all)
+	_search = LineEdit.new()
+	_search.placeholder_text = "Rechercher (id ou texte)…"
+	_search.custom_minimum_size = Vector2(190, 0)
+	_search.tooltip_text = "Entrée : va au nœud suivant dont l'id ou le texte contient la recherche."
+	_search.text_submitted.connect(_on_search_submitted)
+	toolbar.add_child(_search)
 
 	_status = Label.new()
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_status.modulate = Color(0.7, 0.7, 0.8)
+	_status.clip_text = true
 	toolbar.add_child(_status)
+
+	# Rangée 2 — la disposition : rangement, ordre du fichier, repli.
+	var layout_bar := HBoxContainer.new()
+	layout_bar.add_theme_constant_override("separation", 8)
+	add_child(layout_bar)
+
+	var layout_caption := Label.new()
+	layout_caption.text = "Disposition :"
+	layout_caption.modulate = Color(0.65, 0.65, 0.75)
+	layout_bar.add_child(layout_caption)
+
+	var auto_layout := Button.new()
+	auto_layout.text = "Auto"
+	auto_layout.tooltip_text = "Range les nœuds en colonnes par profondeur depuis le début (gauche → droite), et sauve cette disposition."
+	auto_layout.pressed.connect(_apply_auto_layout)
+	layout_bar.add_child(auto_layout)
+
+	var apply := Button.new()
+	apply.text = "Appliquer l'ordre au .untold"
+	apply.tooltip_text = "Réécrit le fichier source avec les nœuds réordonnés selon la disposition du graphe."
+	apply.pressed.connect(_apply_order)
+	layout_bar.add_child(apply)
+
+	var fold_all := Button.new()
+	fold_all.text = "Replier tout"
+	fold_all.tooltip_text = "Replie tous les nœuds : seul le début (et les orphelins) reste visible."
+	fold_all.pressed.connect(_set_all_collapsed.bind(true))
+	layout_bar.add_child(fold_all)
+
+	var unfold_all := Button.new()
+	unfold_all.text = "Déplier tout"
+	unfold_all.tooltip_text = "Déplie tous les nœuds de l'histoire."
+	unfold_all.pressed.connect(_set_all_collapsed.bind(false))
+	layout_bar.add_child(unfold_all)
+
+	var wire_hint := Label.new()
+	wire_hint.text = "Tirer un port de sortie vers un nœud = rediriger le lien."
+	wire_hint.modulate = Color(0.5, 0.5, 0.6)
+	wire_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wire_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	layout_bar.add_child(wire_hint)
 
 	var split := HSplitContainer.new()
 	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -140,10 +187,44 @@ func _build_ui() -> void:
 	_graph_edit.show_arrange_button = false
 	_graph_edit.node_selected.connect(_on_node_selected)
 	_graph_edit.end_node_move.connect(_save_positions)
+	# Tirer un port de sortie vers l'entrée d'un autre nœud REDIRIGE le lien
+	# correspondant dans le .untold (la cible seule change, la ligne est intacte).
+	_graph_edit.connection_request.connect(_on_connection_request)
 	split.add_child(_graph_edit)
 
 	_inspector = NodeInspector.new()
 	split.add_child(_inspector)
+
+	_build_dialogs()
+
+
+## Dialogues réutilisés : création de nœud et rapport de vérification.
+func _build_dialogs() -> void:
+	_new_node_dialog = ConfirmationDialog.new()
+	_new_node_dialog.title = "Nouveau nœud"
+	_new_node_dialog.ok_button_text = "Créer"
+	var box := VBoxContainer.new()
+	var lbl := Label.new()
+	lbl.text = "Id du nœud (lettres, chiffres, _) :"
+	box.add_child(lbl)
+	_new_node_edit = LineEdit.new()
+	_new_node_edit.placeholder_text = "ex : temple_entree"
+	box.add_child(_new_node_edit)
+	_new_node_dialog.add_child(box)
+	_new_node_dialog.register_text_enter(_new_node_edit)
+	_new_node_dialog.confirmed.connect(_create_node)
+	add_child(_new_node_dialog)
+
+	_check_dialog = AcceptDialog.new()
+	_check_dialog.title = "Vérification de l'histoire"
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(520, 300)
+	_check_report = Label.new()
+	_check_report.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_check_report.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_check_report)
+	_check_dialog.add_child(scroll)
+	add_child(_check_dialog)
 
 
 func set_status(message: String) -> void:
@@ -227,6 +308,10 @@ func _rebuild_graph_view() -> void:
 			child.free()  # libération immédiate : les noms doivent être réutilisables
 	_node_names.clear()
 	_collapse_buttons.clear()
+	# Le contenu a pu changer : la recherche repart de zéro.
+	_search_query = ""
+	_search_matches = []
+	_search_index = -1
 
 	# Accessibilité par identité (accent de couleur personnage) : calculée une
 	# fois par reconstruction, structurelle (indépendante de la progression).
@@ -518,6 +603,155 @@ func _set_all_collapsed(collapsed: bool) -> void:
 		set_status("Tous les nœuds sont dépliés.")
 
 
+# ------------------------------------------------------ Création / recâblage
+
+func _prompt_new_node() -> void:
+	if _source == null:
+		return
+	_new_node_edit.text = ""
+	_new_node_dialog.popup_centered()
+	_new_node_edit.grab_focus()
+
+
+## Crée le nœud saisi : bloc en fin de fichier, placé au centre de la vue
+## courante du graphe, puis sélectionné (prêt à écrire dans le volet Contenu).
+func _create_node() -> void:
+	var id := _new_node_edit.text.strip_edges()
+	if not UntoldSource.is_valid_id(id):
+		set_status("Id invalide « %s » — lettres, chiffres et _ seulement (et pas END)." % id)
+		return
+	if _story.has_node(id):
+		set_status("Un nœud « %s » existe déjà." % id)
+		return
+	if not _source.add_node(id, ["Texte à écrire…"]) or not _source.save():
+		set_status("Impossible de créer le nœud.")
+		return
+	var center := (_graph_edit.scroll_offset + _graph_edit.size * 0.5) / _graph_edit.zoom
+	_meta.set_node_position(id, center)
+	_meta.save()
+	set_status("Nœud « %s » créé — écris son contenu dans le volet de droite." % id)
+	reload_and_select(id)
+
+
+## Tirer un port de sortie vers l'entrée d'un autre nœud : le lien n°port du
+## nœud source est REDIRIGÉ vers le nœud visé (seule la cible change dans le
+## fichier). L'ancienne connexion disparaît au rechargement.
+func _on_connection_request(from_name: StringName, from_port: int,
+		to_name: StringName, _to_port: int) -> void:
+	var from_node := _graph_edit.get_node_or_null(NodePath(from_name))
+	var to_node := _graph_edit.get_node_or_null(NodePath(to_name))
+	if from_node == null or to_node == null:
+		return
+	var from_id := _story_id_of(from_node)
+	var to_id := _story_id_of(to_node)
+	if from_id.is_empty() or to_id.is_empty() or from_id == to_id:
+		return
+	if _source.set_link_target(from_id, from_port, to_id) and _source.save():
+		set_status("Lien de %s redirigé vers %s." % [from_id, to_id])
+		reload_and_select(from_id)
+	else:
+		set_status("Impossible de rediriger ce lien.")
+
+
+# --------------------------------------------------------------- Recherche
+
+## Entrée dans le champ de recherche : va au nœud suivant dont l'id ou le
+## texte contient la requête (insensible à la casse, boucle sur les résultats).
+func _on_search_submitted(query: String) -> void:
+	query = query.strip_edges()
+	if query.is_empty() or _story == null:
+		return
+	if query.nocasecmp_to(_search_query) != 0:
+		_search_query = query
+		_search_index = -1
+		_search_matches = _find_matches(query)
+	if _search_matches.is_empty():
+		set_status("Aucun nœud ne contient « %s »." % query)
+		return
+	_search_index = (_search_index + 1) % _search_matches.size()
+	var id: String = _search_matches[_search_index]
+	set_status("%s (%d/%d pour « %s »)" % [id, _search_index + 1, _search_matches.size(), query])
+	_focus_node(id)
+
+
+## Ids dont l'id ou une ligne de texte contient la requête, dans l'ordre du fichier.
+func _find_matches(query: String) -> Array:
+	var found: Array = []
+	for id in _source.order:
+		if not _story.has_node(id):
+			continue
+		if id.containsn(query):
+			found.append(id)
+			continue
+		for ins in _story.get_node_by_id(id).instructions:
+			if ins["type"] == "text" and str(ins["value"]).containsn(query):
+				found.append(id)
+				break
+	return found
+
+
+## Sélectionne un nœud et centre la vue dessus (déplie tout si le nœud est
+## masqué par un repli).
+func _focus_node(id: String) -> void:
+	if not _node_names.has(id):
+		return
+	var gnode: GraphNode = _graph_edit.get_node_or_null(NodePath(_node_names[id]))
+	if gnode == null:
+		return
+	if not gnode.visible:
+		_set_all_collapsed(false)
+	_graph_edit.set_selected(gnode)
+	_graph_edit.scroll_offset = gnode.position_offset * _graph_edit.zoom \
+			- (_graph_edit.size - gnode.size * _graph_edit.zoom) * 0.5
+	_inspector.show_node(_make_context(id))
+
+
+# ------------------------------------------------------------- Vérification
+
+## Contrôles statiques de l'histoire ouverte, présentés dans un dialogue :
+## ids en double, cibles cassées, nœud d'entrée absent, nœuds injoignables,
+## illustrations inconnues de la bibliothèque.
+func _run_checks() -> void:
+	if _story == null:
+		return
+	var problems: Array = []
+
+	for id in _source.duplicate_ids:
+		problems.append("• id déclaré plusieurs fois : « %s » (le jeu ne garde que le dernier bloc)." % id)
+
+	if not _story.has_node(_story.start_node):
+		problems.append("• nœud d'entrée « %s » introuvable : l'histoire ne peut pas démarrer." % _story.start_node)
+
+	for id in _source.order:
+		if not _story.has_node(id):
+			continue
+		for link in _graph.outgoing(id):
+			var target: String = link["target"]
+			if target != "END" and not _story.has_node(target):
+				problems.append("• %s → cible inconnue « %s »." % [id, target])
+		for illu in _story.get_node_by_id(id).command_values("illustration"):
+			if not IllustrationLibrary.defs().has(illu):
+				problems.append("• %s : illustration inconnue « %s » (absente de illustrations_defs.json)." % [id, illu])
+
+	var reachable: Dictionary = {}
+	if _story.has_node(_story.start_node):
+		reachable[_story.start_node] = true
+		var queue: Array = [_story.start_node]
+		while not queue.is_empty():
+			for link in _graph.outgoing(queue.pop_front()):
+				var target: String = link["target"]
+				if _story.has_node(target) and not reachable.has(target):
+					reachable[target] = true
+					queue.append(target)
+	for id in _source.order:
+		if _story.has_node(id) and not reachable.has(id):
+			problems.append("• nœud injoignable depuis le début : « %s »." % id)
+
+	_check_report.text = "Aucun problème détecté — l'histoire est saine. ✔" if problems.is_empty() \
+			else "\n".join(PackedStringArray(problems))
+	_check_dialog.popup_centered()
+
+
 # ----------------------------------------------------------------- Actions
 
 ## Fin d'un drag : toute la disposition est sauvée dans le sidecar .meta.json
@@ -587,8 +821,13 @@ func _make_context(id: String) -> Dictionary:
 	}
 
 
-## Recharge le fichier (après une modification par l'inspecteur) et rouvre le
-## même nœud, disposition conservée.
+## Recharge le fichier depuis le disque (après une modification par
+## l'inspecteur), disposition conservée.
+func reload() -> void:
+	_load_selected()
+
+
+## Recharge le fichier et rouvre le même nœud, disposition conservée.
 func reload_and_select(id: String) -> void:
 	_load_selected()
 	if not _node_names.has(id):

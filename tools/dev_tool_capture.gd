@@ -1,0 +1,55 @@
+extends Node
+## Harnais TEMPORAIRE d'itération visuelle sur l'OUTIL NARRATIF (le panneau
+## graphe de l'addon, instanciable hors éditeur) :
+##   C:\Godot\godot.exe --path . res://tools/dev_tool_capture.tscn
+## Sorties : $TOOL_SHOT (vue d'ensemble) et $TOOL_SHOT_NODE (nœud sélectionné,
+## inspecteur ouvert). $TOOL_STORY (défaut demo_format.untold) choisit le
+## fichier, $TOOL_NODE le nœud à sélectionner pour la seconde vue.
+
+const GraphEditorPanel := preload("res://addons/narrative_graph/graph_editor.gd")
+
+
+func _ready() -> void:
+	get_window().size = Vector2i(1720, 960)
+
+	var panel: Control = GraphEditorPanel.new()
+	var root := Control.new()
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(root)
+	root.add_child(panel)
+	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	# Sélectionne l'histoire demandée dans le menu déroulant de l'outil.
+	var wanted := OS.get_environment("TOOL_STORY")
+	if wanted.is_empty():
+		wanted = "demo_format.untold"
+	var stories: OptionButton = panel._stories
+	for i in stories.item_count:
+		if str(stories.get_item_metadata(i)).ends_with(wanted):
+			stories.select(i)
+			panel._load_selected()
+			break
+	await get_tree().process_frame
+	print("TOOL OK — nœuds affichés : %d" % panel._node_names.size())
+
+	if DisplayServer.get_name() != "headless":
+		await _snap(OS.get_environment("TOOL_SHOT"))
+		var node_id := OS.get_environment("TOOL_NODE")
+		if node_id.is_empty():
+			node_id = "prologue2"
+		panel.reload_and_select(node_id)
+		await get_tree().process_frame
+		await _snap(OS.get_environment("TOOL_SHOT_NODE"))
+
+	get_tree().quit(0)
+
+
+func _snap(out: String) -> void:
+	if out.is_empty():
+		return
+	await RenderingServer.frame_post_draw
+	var shot := get_viewport().get_texture().get_image()
+	shot.save_png(out)
