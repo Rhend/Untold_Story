@@ -15,15 +15,11 @@ const Parser := preload("res://core/narrative/story_parser.gd")
 const Runner := preload("res://core/narrative/story_runner.gd")
 const Library := preload("res://core/illustration/illustration_library.gd")
 
-# Paires personnage/attribut valides (mêmes appariements que l'ancien projet ;
-# seuls les 3 premiers existent dans le jeu actuel).
+# Personnage jouable unique depuis juillet 2026 : Nadîtum (attribut Social).
+# Les branches d'autres personnages/attributs encore présentes dans l'histoire
+# sont du contenu mort — visible dans « Jamais atteints », pas une erreur.
 const COMBOS := [
 	["Nadîtum", "Social"],
-	["Soldat", "Physique"],
-	["Prêtresse", "Mystique"],
-	["Marchand", "Social"],
-	["Danseuse", "Physique"],
-	["Exorciste", "Mystique"],
 ]
 
 

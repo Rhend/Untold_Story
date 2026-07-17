@@ -5,7 +5,7 @@ extends Resource
 ## les sauts conditionnels du format .untold.
 
 @export var display_name: String = ""
-## Type de personnage : "Nadîtum" / "Soldat" / "Prêtresse".
+## Type de personnage (héros unique depuis juillet 2026 : "Nadîtum").
 @export var character_type: String = ""
 ## Attribut : "Physique" / "Social" / "Mystique".
 @export var attribute: String = ""

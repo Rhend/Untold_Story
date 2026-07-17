@@ -237,8 +237,21 @@ func _build_cast_page() -> Control:
 	col.add_theme_constant_override("separation", 18)
 	inner.add_child(col)
 
+	# Les personnages de l'histoire — un seul depuis le passage au héros
+	# unique, mais l'écran reste générique (une histoire pourrait en avoir
+	# plusieurs) : la consigne s'adapte, et un casting d'une seule personne
+	# est sélectionné d'office (fiche et actions visibles sans clic).
+	var casting: Array = []
+	for path in GameState.character_paths():
+		var data: CharacterData = load(path)
+		if data == null:
+			push_error("Sélection : personnage introuvable : " + path)
+			continue
+		casting.append(data)
+
 	var title := BookTheme.make_label(
-			"Choisissez avec quel personnage vous voulez partir à l'aventure.",
+			"Votre personnage vous attend pour partir à l'aventure." if casting.size() == 1
+			else "Choisissez avec quel personnage vous voulez partir à l'aventure.",
 			22, BookTheme.INK, false, true)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -251,11 +264,7 @@ func _build_cast_page() -> Control:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 20)
 	col.add_child(row)
-	for path in GameState.character_paths():
-		var data: CharacterData = load(path)
-		if data == null:
-			push_error("Sélection : personnage introuvable : " + path)
-			continue
+	for data in casting:
 		row.add_child(_make_portrait(data))
 
 	# Moitié basse : la fiche du personnage sélectionné.
@@ -264,7 +273,10 @@ func _build_cast_page() -> Control:
 	_details.alignment = BoxContainer.ALIGNMENT_CENTER
 	_details.add_theme_constant_override("separation", 10)
 	col.add_child(_details)
-	_show_placeholder()
+	if casting.size() == 1:
+		_select(casting[0])
+	else:
+		_show_placeholder()
 	return page
 
 

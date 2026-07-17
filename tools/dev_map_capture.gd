@@ -20,15 +20,16 @@ func _ready() -> void:
 
 	var story := StoryParser.parse(FileAccess.get_file_as_string(STORY_PATH))
 
-	# Trois personnages jouent chacun une partie, avec des choix divergents.
-	# $MAP_STEPS module la longueur de la première (défaut 60) — mettre 2 pour
-	# tester une carte de tout début de partie.
+	# Le héros unique (Nadîtum) joue plusieurs parties aux choix divergents,
+	# pour peupler la carte de branches différentes. $MAP_STEPS module la
+	# longueur de la première (défaut 60) — mettre 2 pour tester une carte de
+	# tout début de partie.
 	var steps := maxi(int(OS.get_environment("MAP_STEPS").to_int()), 2) \
 			if not OS.get_environment("MAP_STEPS").is_empty() else 60
-	_play(story, "Nadîtum", "Mystique", 0, steps)
+	_play(story, "Nadîtum", "Social", 0, steps)
 	if steps > 10:
-		_play(story, "Soldat", "Physique", 1, 25)
-		_play(story, "Prêtresse", "Social", 2, 10)
+		_play(story, "Nadîtum", "Social", 1, 25)
+		_play(story, "Nadîtum", "Social", 2, 10)
 
 	# État « en jeu » : Nadîtum incarnée, arrêtée à son point de reprise.
 	GameState.story_id = "mesopotamia"
@@ -50,7 +51,7 @@ func _ready() -> void:
 	add_child(map)
 	map.setup(story, STORY_PATH, current)
 
-	# $MAP_FILTER_OUT="Soldat,Prêtresse" : masque les nœuds de ces personnages
+	# $MAP_FILTER_OUT="Nadîtum" : masque les nœuds de ces personnages
 	# (mêmes effets qu'un clic sur leurs boutons de filtre).
 	var filter := OS.get_environment("MAP_FILTER_OUT")
 	if not filter.is_empty():
