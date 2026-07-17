@@ -13,6 +13,11 @@ var prelude: Array = []
 var order: Array = []
 ## id -> Array de lignes du bloc (ligne « :: id » incluse), verbatim.
 var blocks: Dictionary = {}
+## Ids déclarés plusieurs fois dans le fichier (« :: id » en double). Les blocs
+## surnuméraires sont conservés sous une clé interne unique — leur ligne
+## « :: id » d'origine reste verbatim dans le bloc, donc la réécriture ne perd
+## RIEN — et l'outil peut avertir l'auteur (le jeu, lui, ne garde que le dernier).
+var duplicate_ids: Array = []
 
 
 func load_file(p_path: String) -> bool:
@@ -20,13 +25,21 @@ func load_file(p_path: String) -> bool:
 	prelude = []
 	order = []
 	blocks = {}
+	duplicate_ids = []
 	if not FileAccess.file_exists(path):
 		return false
 	var current := ""
 	for raw_line in FileAccess.get_file_as_string(path).split("\n"):
 		var line: String = raw_line.trim_suffix("\r")
 		if line.strip_edges().begins_with("::"):
-			current = line.strip_edges().substr(2).strip_edges()
+			var id := line.strip_edges().substr(2).strip_edges()
+			current = id
+			if blocks.has(current):
+				duplicate_ids.append(id)
+				var n := 2
+				while blocks.has("%s__%d" % [id, n]):
+					n += 1
+				current = "%s__%d" % [id, n]
 			order.append(current)
 			blocks[current] = [line]
 		elif current.is_empty():

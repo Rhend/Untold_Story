@@ -89,6 +89,8 @@ func _snap(out: String) -> void:
 func _play(story: Story, character: String, attribute: String, variant: int, max_steps: int) -> void:
 	Progress.begin_story("act1_sc1", character)
 	var runner := StoryRunner.new()
+	runner.zone_checker = Progress.is_zone_clicked
+	runner.item_checker = Progress.has_item
 	add_child(runner)
 	runner.node_visited.connect(func(id: String) -> void: Progress.record_visit(id))
 	runner.choice_selected.connect(func(id: String, c: Dictionary) -> void:

@@ -101,6 +101,10 @@ func _ready() -> void:
 	IllustrationLibrary.preload_all()
 
 	_runner = StoryRunner.new()
+	# État persistant (zones cliquées, inventaire) : le moteur est découplé de
+	# Progress, l'hôte lui injecte les vérificateurs.
+	_runner.zone_checker = Progress.is_zone_clicked
+	_runner.item_checker = Progress.has_item
 	add_child(_runner)
 	_runner.display_text.connect(_on_display_text)
 	_runner.present_choices.connect(_on_present_choices)

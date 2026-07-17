@@ -30,7 +30,10 @@ static func parse(text: String) -> Story:
 
 		# Déclaration d'un nœud : ":: id"
 		if line.begins_with("::"):
-			current = StoryNode.new(line.substr(2).strip_edges())
+			var node_id := line.substr(2).strip_edges()
+			if story.has_node(node_id):
+				push_warning("StoryParser: nœud « %s » déclaré plusieurs fois — seul le dernier bloc est conservé." % node_id)
+			current = StoryNode.new(node_id)
 			story.add_node(current)
 			continue
 
@@ -38,7 +41,11 @@ static func parse(text: String) -> Story:
 		if line.begins_with("@var"):
 			var mv := re_assign.search(line)
 			if mv:
+				if current != null:
+					push_warning("StoryParser: « @var » après un nœud (portée globale quand même) : " + line)
 				story.variables[mv.get_string(1)] = _unquote(mv.get_string(2))
+			else:
+				push_warning("StoryParser: « @var » illisible ignoré : " + line)
 			continue
 
 		# Tout le reste appartient au nœud courant.
@@ -102,6 +109,8 @@ static func parse(text: String) -> Story:
 					"name": ms.get_string(1),
 					"value": _unquote(ms.get_string(2)),
 				}, guard)
+			else:
+				push_warning("StoryParser: « @set » illisible ignoré : " + line)
 			continue
 
 		# Commande moteur : '@nom("arg1", "arg2")' (ex: illustration, minigame)
@@ -113,7 +122,15 @@ static func parse(text: String) -> Story:
 					"name": mcmd.get_string(1),
 					"args": _parse_args(mcmd.get_string(2)),
 				}, guard)
+			else:
+				push_warning("StoryParser: commande illisible ignorée : " + line)
 			continue
+
+		# Ligne qui ressemble à un choix mal formé (« * » sans « [texte] -> cible ») :
+		# traitée comme du texte, mais l'auteur est prévenu — l'oubli de la flèche
+		# ou du crochet est l'erreur de saisie la plus fréquente.
+		if line.begins_with("*"):
+			push_warning("StoryParser: choix mal formé traité comme du texte (attendu « * [Texte] -> cible ») : " + line)
 
 		# Sinon : ligne de texte narratif.
 		_append(current, {"type": "text", "value": line}, guard)

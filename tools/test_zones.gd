@@ -74,6 +74,8 @@ func _test_runner_refresh() -> void:
 	print("Runner — refresh_choices après clic de zone :")
 	Progress.begin_story("ztest_runner", "Nadîtum")
 	var runner := StoryRunner.new()
+	runner.zone_checker = Progress.is_zone_clicked
+	runner.item_checker = Progress.has_item
 	add_child(runner)
 	# NB : une lambda GDScript capture par valeur → on MUTE le tableau (assign)
 	# au lieu de le réassigner, sinon la valeur ne remonterait pas ici.

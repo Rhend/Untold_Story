@@ -7,12 +7,16 @@ extends SceneTree
 
 const STORY_PATH := "res://data/stories/mesopotamia/act1_sc1.untold"
 const UntoldSource := preload("res://addons/narrative_graph/untold_source.gd")
+# En mode --script, les class_name globaux non-@tool ne sont pas chargés.
+const Runner := preload("res://core/narrative/story_runner.gd")
 
 var _failures := 0
 
 
 func _initialize() -> void:
 	_test_untold_source()
+	_test_duplicate_ids()
+	_test_runner_cycle_guard()
 	_test_story_graph()
 	_test_story_meta()
 	if _failures == 0:
@@ -78,6 +82,37 @@ func _test_untold_source() -> void:
 	_check(source.order[0] == original_order[3] and source.order[1] == original_order[1],
 			"reorder partiel : têtes de liste respectées")
 	DirAccess.remove_absolute(work_path)
+
+
+## Un fichier avec un id déclaré deux fois ne doit RIEN perdre à la réécriture
+## (les deux blocs restent verbatim), et signaler le doublon à l'outil.
+func _test_duplicate_ids() -> void:
+	print("[UntoldSource — ids dupliqués]")
+	var work_path := "user://_test_dup.untold"
+	var text := ":: start\nPremier bloc.\n\n:: start\nSecond bloc.\n"
+	var file := FileAccess.open(work_path, FileAccess.WRITE)
+	file.store_string(text)
+	file = null
+
+	var source := UntoldSource.new()
+	_check(source.load_file(work_path), "chargement du fichier à doublon")
+	_check(source.duplicate_ids == ["start"], "doublon signalé (%s)" % str(source.duplicate_ids))
+	_check(source.order.size() == 2, "deux blocs conservés")
+	_check(source.text() == text, "réécriture sans perte (les deux blocs verbatim)")
+	DirAccess.remove_absolute(work_path)
+
+
+## Un cycle de sauts (a -> b -> a) doit terminer l'histoire proprement au lieu
+## de geler le jeu dans la boucle d'accumulation.
+func _test_runner_cycle_guard() -> void:
+	print("[StoryRunner — cycle de sauts]")
+	var story := StoryParser.parse(":: start\nTexte.\n-> a\n\n:: a\n-> start\n")
+	var runner: Node = Runner.new()
+	var ended := [false]
+	runner.story_ended.connect(func() -> void: ended[0] = true)
+	runner.start(story)
+	_check(ended[0], "l'histoire se termine au lieu de boucler")
+	runner.free()
 
 
 func _test_story_graph() -> void:

@@ -24,12 +24,24 @@ signal choice_selected(node_id: String, choice: Dictionary)
 
 const END_NODE := "END"
 
+## Garde-fou : nombre maximal de nœuds enchaînés par sauts en une seule passe.
+## Au-delà, un cycle de sauts (a -> b -> a) est certain : on termine proprement
+## au lieu de geler le jeu dans la boucle d'accumulation.
+const MAX_CHAIN := 1000
+
 ## Marqueur "glue" : une ligne terminée (ou débutée) par <> se colle à la
 ## suivante sans saut de ligne — permet de composer une phrase à partir de
 ## fragments conditionnels.
 const GLUE := "<>"
 
 var variables: Dictionary = {}
+
+## Vérificateurs d'état persistant (zones cliquées, inventaire), injectés par
+## l'hôte — en jeu : l'autoload Progress (scenes/story.gd). Le moteur ne le
+## référence PAS lui-même (découplage strict, testable hors jeu) : par défaut,
+## rien n'est cliqué ni possédé.
+var zone_checker: Callable = func(_zone_id: String) -> bool: return false
+var item_checker: Callable = func(_item_id: String, _qty: int) -> bool: return false
 
 var _story: Story
 var _pending_choices: Array = []
@@ -112,9 +124,16 @@ func _run_from(start_id: String) -> void:
 	var choices: Array = []
 	var last_node := start_id
 	var last_tags: Array = []
+	var chained := 0
 
 	while true:
 		if id == END_NODE:
+			break
+
+		chained += 1
+		if chained > MAX_CHAIN:
+			push_error("StoryRunner: cycle de sauts détecté autour de « %s » — histoire interrompue." % id)
+			id = END_NODE
 			break
 
 		var node: StoryNode = _story.get_node_by_id(id)
@@ -210,11 +229,11 @@ func _check_group(conds: Array) -> bool:
 				if _visited.has(cond["id"]) == cond["neg"]:
 					return false
 			"zone":
-				# Zone d'illustration cliquée : état persistant (autoload Progress).
-				if Progress.is_zone_clicked(cond["id"]) == cond["neg"]:
+				# Zone d'illustration cliquée : état persistant, via l'hôte.
+				if bool(zone_checker.call(cond["id"])) == cond["neg"]:
 					return false
 			"item":
-				# Objet possédé (au moins qty) : inventaire persistant (Progress).
-				if Progress.has_item(cond["id"], cond["qty"]) == cond["neg"]:
+				# Objet possédé (au moins qty) : inventaire persistant, via l'hôte.
+				if bool(item_checker.call(cond["id"], cond["qty"])) == cond["neg"]:
 					return false
 	return true
