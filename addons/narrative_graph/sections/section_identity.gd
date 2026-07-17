@@ -12,6 +12,7 @@ func setup(ctx: Dictionary) -> void:
 	heading("Nœud")
 
 	_add_rename_row(ctx["node_id"])
+	_add_title_row(ctx["node_id"])
 
 	var node: StoryNode = ctx["node"]
 	if not node.tags.is_empty():
@@ -71,6 +72,26 @@ func _add_rename_row(id: String) -> void:
 			_ctx["editor"].set_status("Impossible de renommer ce nœud.")
 	btn.pressed.connect(apply)
 	edit.text_submitted.connect(func(_t: String) -> void: apply.call())
+
+
+## Titre lisible affiché au joueur (carte de progression, en-tête de page) à la
+## place de l'id technique. Vit dans le sidecar .meta.json — optionnel.
+func _add_title_row(id: String) -> void:
+	var edit := LineEdit.new()
+	edit.text = _ctx["meta"].get_title(id)
+	edit.placeholder_text = "Titre affiché au joueur (optionnel)"
+	edit.tooltip_text = "Montré en jeu (carte, en-tête) à la place de l'id technique. Vide = l'id est affiché."
+	add_child(edit)
+
+	var apply := func() -> void:
+		if edit.text.strip_edges() == _ctx["meta"].get_title(id):
+			return
+		_ctx["meta"].set_title(id, edit.text)
+		_ctx["meta"].save()
+		_ctx["editor"].set_status("Titre de %s : %s" % [id,
+				"« %s »" % edit.text.strip_edges() if not edit.text.strip_edges().is_empty() else "(effacé)"])
+	edit.text_submitted.connect(func(_t: String) -> void: apply.call())
+	edit.focus_exited.connect(apply)
 
 
 ## Suppression du nœud, avec confirmation qui liste les liens entrants (ils
