@@ -1,10 +1,52 @@
 {
 	"collapsed": {
-		"fin": true,
-		"route_myst": true
+		"route_phys": true,
+		"route_soc": true
+	},
+	"comments": {
+
 	},
 	"positions": {
-
+		"fin": [
+			1420.0,
+			480.0
+		],
+		"prologue2": [
+			560.0,
+			0.0
+		],
+		"prologue3": [
+			960.0,
+			20.0
+		],
+		"prologue_n": [
+			280.0,
+			0.0
+		],
+		"prologue_p": [
+			280.0,
+			240.0
+		],
+		"prologue_s": [
+			280.0,
+			120.0
+		],
+		"route_myst": [
+			1420.0,
+			320.0
+		],
+		"route_phys": [
+			1440.0,
+			20.0
+		],
+		"route_soc": [
+			1420.0,
+			160.0
+		],
+		"start": [
+			0.0,
+			0.0
+		]
 	},
 	"total_nodes": 10
 }
