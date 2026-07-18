@@ -19,6 +19,7 @@ func _initialize() -> void:
 	_test_node_operations()
 	_test_runner_cycle_guard()
 	_test_numeric_variables()
+	_test_roll()
 	_test_story_graph()
 	_test_story_meta()
 	if _failures == 0:
@@ -254,6 +255,55 @@ Bas.
 	_check("\n".join(PackedStringArray(texts2)).contains("Salut toi."),
 			"garde textuelle == inchangée")
 	runner2.free()
+
+
+## Jet de compétence @roll : 1d6 + compétence contre difficulté, branche
+## réussite/échec, signal pour l'UI, liens dans le graphe, recâblage.
+func _test_roll() -> void:
+	print("[Moteur — @roll]")
+	var text := ":: start\n@set courage = 2\nTu tentes l'escalade.\n@roll(\"courage\", 5, sommet, chute)\n\n:: sommet\nEn haut.\n-> END\n\n:: chute\nEn bas.\n-> END\n"
+	var story := StoryParser.parse(text)
+
+	# Le graphe montre l'embranchement (2 liens « roll », réussite puis échec).
+	var graph := StoryGraph.build(story)
+	var roll_links: Array = graph.outgoing("start")
+	_check(roll_links.size() == 2 and roll_links[0]["kind"] == "roll",
+			"@roll = deux liens dans le graphe")
+	_check(roll_links[0]["target"] == "sommet" and roll_links[1]["target"] == "chute",
+			"réussite puis échec, dans l'ordre")
+
+	# Exécution : dé forcé haut → réussite ; dé forcé bas → échec.
+	for combo in [[3, "En haut.", true], [2, "En bas.", false]]:
+		var runner: Node = Runner.new()
+		runner.die_roller = func() -> int: return combo[0]
+		var texts: Array = []
+		var payload: Array = []
+		runner.display_text.connect(func(t: String, _id: String, _tags: Array) -> void:
+			texts.append(t))
+		runner.dice_rolled.connect(func(skill: String, die: int, bonus: int,
+				total: int, difficulty: int, success: bool) -> void:
+			payload.assign([skill, die, bonus, total, difficulty, success]))
+		runner.start(story)
+		_check("\n".join(PackedStringArray(texts)).contains(combo[1]),
+				"dé %d → passage « %s »" % [combo[0], combo[1]])
+		_check(payload == ["courage", combo[0], 2, combo[0] + 2, 5, combo[2]],
+				"signal dice_rolled complet (%s)" % str(payload))
+		runner.free()
+
+	# Recâblage : les cibles réussite/échec se réécrivent comme tout lien.
+	var work_path := "user://_test_roll.untold"
+	var file := FileAccess.open(work_path, FileAccess.WRITE)
+	file.store_string(text)
+	file = null
+	var source := UntoldSource.new()
+	source.load_file(work_path)
+	_check(source.set_link_target("start", 1, "riviere"), "set_link_target sur la branche échec")
+	_check(source.text().contains("@roll(\"courage\", 5, sommet, riviere)"),
+			"argument échec réécrit, le reste intact")
+	_check(source.set_link_target("start", 0, "ciel"), "set_link_target sur la branche réussite")
+	_check(source.text().contains("@roll(\"courage\", 5, ciel, riviere)"),
+			"argument réussite réécrit")
+	DirAccess.remove_absolute(work_path)
 
 
 func _test_story_graph() -> void:

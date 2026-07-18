@@ -21,6 +21,10 @@ signal node_visited(node_id: String)
 ## Le joueur a validé une réponse : nœud d'où venait le choix, et le choix
 ## lui-même {"text", "target", "node"}.
 signal choice_selected(node_id: String, choice: Dictionary)
+## Un jet de compétence vient d'être résolu (commande @roll) : l'UI peut jouer
+## l'animation du dé. Émis AVANT le saut vers la branche réussite/échec.
+signal dice_rolled(skill: String, die: int, bonus: int, total: int,
+		difficulty: int, success: bool)
 
 const END_NODE := "END"
 
@@ -42,6 +46,10 @@ var variables: Dictionary = {}
 ## rien n'est cliqué ni possédé.
 var zone_checker: Callable = func(_zone_id: String) -> bool: return false
 var item_checker: Callable = func(_item_id: String, _qty: int) -> bool: return false
+
+## Tirage du dé des jets de compétence (1d6). Injectable : les tests forcent
+## une valeur, le jeu garde le hasard.
+var die_roller: Callable = func() -> int: return randi_range(1, 6)
 
 var _story: Story
 var _pending_choices: Array = []
@@ -158,7 +166,19 @@ func _run_from(start_id: String) -> void:
 					variables[ins["name"]] = StoryParser.apply_set(
 							variables.get(ins["name"]), ins.get("op", "="), ins["value"])
 				"command":
-					command.emit(ins["name"], ins["args"])
+					# @roll("compétence", difficulté, cible_réussite, cible_échec) :
+					# jet de compétence — 1d6 + valeur de la compétence contre la
+					# difficulté. C'est un embranchement : il suit la sémantique des
+					# sauts (ignoré si un point de choix est déjà ouvert).
+					if ins["name"] == "roll":
+						if choices.is_empty():
+							var target := _resolve_roll(ins["args"])
+							if not target.is_empty():
+								id = target
+								jumped = true
+								break
+					else:
+						command.emit(ins["name"], ins["args"])
 				"choice":
 					choices.append({"text": ins["text"], "target": ins["target"], "node": id})
 				"cond":
@@ -195,6 +215,23 @@ func _run_from(start_id: String) -> void:
 	else:
 		_awaiting_choice = false
 		story_ended.emit()
+
+
+## Résout un jet @roll : tire le dé, ajoute la compétence, compare à la
+## difficulté, émet dice_rolled, et retourne la cible de la branche prise
+## ("" si les arguments sont invalides — la commande est alors ignorée).
+func _resolve_roll(args: Array) -> String:
+	if args.size() < 4:
+		push_warning("StoryRunner: @roll attend (compétence, difficulté, réussite, échec) — reçu %s." % str(args))
+		return ""
+	var skill := str(args[0])
+	var difficulty := int(str(args[1]).to_float())
+	var die := int(die_roller.call())
+	var bonus := int(str(variables.get(skill, 0)).to_float())
+	var total := die + bonus
+	var success := total >= difficulty
+	dice_rolled.emit(skill, die, bonus, total, difficulty, success)
+	return str(args[2]) if success else str(args[3])
 
 
 func _append_line(buffer: String, line: String) -> String:

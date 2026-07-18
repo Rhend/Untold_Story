@@ -48,6 +48,16 @@ func _init() -> void:
 				if not Library.defs().has(illu):
 					print("ERREUR: illustration inconnue « %s » dans %s" % [illu, id])
 					errors += 1
+			if ins["type"] == "command" and ins["name"] == "roll":
+				if ins["args"].size() < 4:
+					print("ERREUR: @roll incomplet dans %s (attendu : compétence, difficulté, réussite, échec)" % id)
+					errors += 1
+				else:
+					for branch in [2, 3]:
+						var roll_target := str(ins["args"][branch])
+						if roll_target != "END" and not story.has_node(roll_target):
+							print("ERREUR: cible de @roll inconnue « %s » dans %s" % [roll_target, id])
+							errors += 1
 
 	# --- 2. Parcours aléatoires ----------------------------------------
 	var endings := {}          # noeud final -> occurrences

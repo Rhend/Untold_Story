@@ -20,6 +20,7 @@ const KIND_COLORS := {
 	"choice": Color(0.85, 0.72, 0.4),
 	"divert": Color(0.55, 0.6, 0.75),
 	"cond": Color(0.7, 0.5, 0.8),
+	"roll": Color(0.5, 0.78, 0.6),
 }
 
 ## Aspect « pilule sobre » des GraphNode (arrondi plus discret qu'en jeu).
@@ -539,6 +540,8 @@ func _link_caption(link: Dictionary) -> String:
 			return guard_prefix + "▸ " + text
 		"cond":
 			return guard_prefix + "→ saut conditionnel → " + link["target"]
+		"roll":
+			return guard_prefix + "🎲 " + link["text"] + " → " + link["target"]
 		_:
 			return guard_prefix + "→ " + link["target"]
 

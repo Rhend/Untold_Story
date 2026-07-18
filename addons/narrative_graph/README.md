@@ -145,6 +145,7 @@ Et pour les systèmes de jeu (compétences, réputation…) :
 | `{ courage >= 3 } * [Forcer la porte] -> cave` | Le choix n'apparaît que si `courage` vaut au moins 3 |
 | `{ reputation >= 5 -> palais }` | Saute vers `palais` si la condition est vraie, sinon continue |
 | `{ visited(temple) } Tu reconnais les lieux.` | Cette ligne ne s'affiche que si le joueur a déjà traversé le nœud `temple` |
+| `@roll("courage", 5, sommet, chute)` | Jet de dé : 1d6 + `courage` contre 5 — réussite → `sommet`, échec → `chute` (animation de dé en jeu) |
 
 Les conditions se combinent avec `and` / `or`, et il existe aussi
 `zone_clicked("id")` (le joueur a cliqué une zone d'illustration) et

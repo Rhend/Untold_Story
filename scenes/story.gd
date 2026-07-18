@@ -112,6 +112,7 @@ func _ready() -> void:
 	_runner.story_ended.connect(_on_story_ended)
 	_runner.node_visited.connect(_on_node_visited)
 	_runner.choice_selected.connect(_on_choice_selected)
+	_runner.dice_rolled.connect(_on_dice_rolled)
 
 	_start_story()
 
@@ -810,6 +811,16 @@ func _build_header(node_id: String, tags: Array) -> String:
 	if not others.is_empty():
 		header += "   · lu par " + ", ".join(PackedStringArray(others))
 	return header
+
+
+## Jet de compétence résolu par le moteur : l'animation du dé se joue
+## au-dessus du livre (autonome, se détruit toute seule) pendant que le
+## passage de la branche prise s'affiche.
+func _on_dice_rolled(skill: String, die: int, bonus: int, total: int,
+		difficulty: int, success: bool) -> void:
+	var overlay := DiceRollOverlay.new()
+	add_child(overlay)
+	overlay.play(skill, die, bonus, total, difficulty, success)
 
 
 func _on_present_choices(choices: Array) -> void:

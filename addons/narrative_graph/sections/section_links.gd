@@ -47,6 +47,8 @@ func _caption(link: Dictionary) -> String:
 			return guard_prefix + "▸ " + link["text"]
 		"cond":
 			return guard_prefix + "→ saut conditionnel"
+		"roll":
+			return guard_prefix + "🎲 jet — " + link["text"]
 		_:
 			return guard_prefix + "→ saut direct"
 

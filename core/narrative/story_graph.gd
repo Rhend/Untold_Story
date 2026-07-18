@@ -8,7 +8,7 @@ extends RefCounted
 ## Un lien est un Dictionary :
 ##   "from"     : id du nœud source
 ##   "target"   : id du nœud cible (peut être "END")
-##   "kind"     : "choice" | "divert" | "cond"
+##   "kind"     : "choice" | "divert" | "cond" | "roll"
 ##   "text"     : libellé du choix ("" pour un saut)
 ##   "guarded"  : true si l'instruction est sous condition (garde { ... } ou
 ##                saut conditionnel) — le joueur peut ne jamais l'avoir vue.
@@ -48,6 +48,16 @@ static func build(p_story: Story) -> StoryGraph:
 					out.append({"from": id, "target": ins["target"], "kind": "cond",
 							"text": "", "guarded": true,
 							"identity": IDENTITY_VARS.has(ins["var"]) and _guard_identity_only(ins)})
+				"command":
+					# @roll(compétence, difficulté, réussite, échec) : un
+					# embranchement à part entière — DEUX liens, dans l'ordre
+					# des arguments (réussite puis échec).
+					if ins["name"] == "roll" and ins["args"].size() >= 4:
+						for branch in [[2, "réussite"], [3, "échec"]]:
+							out.append({"from": id, "target": str(ins["args"][branch[0]]),
+									"kind": "roll", "text": "%s (%s vs %s)" % [
+										branch[1], str(ins["args"][0]), str(ins["args"][1])],
+									"guarded": true, "identity": false})
 		graph.links[id] = out
 	return graph
 

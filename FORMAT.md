@@ -24,6 +24,7 @@ de l'ancien projet Ink, sans en hériter la complexité inutile.
 | Garde | `{ cond } instruction` | `{ character == "Soldat" } Tu dégaines.` |
 | Affectation | `@set nom = valeur` | `@set visible = "true"`, `@set courage = 2` |
 | Arithmétique | `@set nom += n` / `@set nom -= n` | `@set reputation += 1` |
+| Jet de compétence | `@roll("comp", diff, réussite, échec)` | `@roll("courage", 5, sommet, chute)` |
 | Commande moteur | `@nom("arg", ...)` | `@illustration("Statue de Sîn")` |
 | Glue | `<>` en début/fin de ligne | `Tu as dormi <>` |
 
@@ -50,6 +51,19 @@ absente ou non numérique part de 0). Combiné aux comparaisons numériques :
 { reputation >= 3 } * [User de ton influence] -> palais
 { courage >= 2 -> reussite }
 -> echec
+```
+
+## Jets de compétence (aléatoire)
+`@roll("compétence", difficulté, cible_réussite, cible_échec)` tire **1d6**,
+lui ajoute la valeur de la variable `compétence` (0 si absente), et compare à
+la difficulté : `dé + compétence >= difficulté` → saut vers la cible réussite,
+sinon vers la cible échec. C'est un embranchement à part entière : il suit la
+sémantique des sauts (ignoré si un point de choix est déjà ouvert), et le jeu
+joue une animation de dé au moment du tirage. L'alternative sans hasard reste
+le seuil fixe (`{ courage >= 2 -> reussite }`).
+```
+Tu t'élances vers la paroi.
+@roll("courage", 5, sommet, chute)
 ```
 
 ## Glue

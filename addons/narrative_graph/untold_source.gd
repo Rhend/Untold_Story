@@ -96,14 +96,18 @@ func reorder(new_order: Array) -> void:
 
 
 ## Remplace la cible du index-ième lien sortant du nœud (même ordre que
-## StoryGraph.outgoing) : seule la cible après la flèche « -> » est réécrite,
+## StoryGraph.outgoing) : seule la cible est réécrite — après la flèche
+## « -> » pour un choix/saut, ou l'argument réussite/échec pour un @roll —
 ## tout le reste de la ligne (texte du choix, garde, espaces) est intact.
 func set_link_target(id: String, link_index: int, new_target: String) -> bool:
 	if not blocks.has(id):
 		return false
-	var line_i := _link_line(id, link_index)
-	if line_i < 0:
+	var ref := _link_ref(id, link_index)
+	if ref.is_empty():
 		return false
+	var line_i: int = ref["line"]
+	if ref["roll_slot"] >= 0:
+		return _set_roll_target(id, line_i, ref["roll_slot"], new_target)
 	var raw: String = blocks[id][line_i]
 	var arrow := raw.rfind("->")
 	if arrow < 0:
@@ -123,13 +127,42 @@ func set_link_target(id: String, link_index: int, new_target: String) -> bool:
 	return true
 
 
-## Indice de la ligne du index-ième lien sortant du bloc. Reproduit le
-## classement de StoryParser (mêmes motifs, partagés) : choix, saut
-## conditionnel et saut direct, gardes « { ... } instruction » comprises.
-func _link_line(id: String, link_index: int) -> int:
+## Réécrit l'argument réussite (slot 0) ou échec (slot 1) d'une ligne @roll.
+## Les autres arguments sont conservés tels quels.
+func _set_roll_target(id: String, line_i: int, slot: int, new_target: String) -> bool:
+	var raw: String = blocks[id][line_i]
+	var found := RegEx.create_from_string("@roll\\((.*)\\)").search(raw)
+	if found == null:
+		return false
+	var parts := found.get_string(1).split(",")
+	if parts.size() < 4:
+		return false
+	parts[2 + slot] = " " + new_target
+	blocks[id][line_i] = raw.substr(0, found.get_start()) \
+			+ "@roll(%s)" % ", ".join(_strip_parts(parts)) \
+			+ raw.substr(found.get_end())
+	return true
+
+
+static func _strip_parts(parts: PackedStringArray) -> PackedStringArray:
+	var out := PackedStringArray()
+	for p in parts:
+		out.append(p.strip_edges())
+	return out
+
+
+## Référence du index-ième lien sortant du bloc : sa ligne, et pour un @roll,
+## quel argument (0 = réussite, 1 = échec ; -1 = lien fléché ordinaire).
+## Reproduit le classement de StoryGraph.build : choix, saut conditionnel,
+## saut direct, gardes « { ... } instruction » comprises — et chaque ligne
+## @roll(...) vaut DEUX indices consécutifs (réussite puis échec).
+func _link_ref(id: String, link_index: int) -> Dictionary:
 	var re_guard := RegEx.create_from_string(StoryParser.GUARD_PATTERN)
 	var re_choice := RegEx.create_from_string(StoryParser.CHOICE_PATTERN)
 	var re_cond := RegEx.create_from_string(StoryParser.COND_PATTERN)
+	# Même règle que StoryGraph.build : un @roll ne vaut des liens que
+	# complet (4 arguments — compétence, difficulté, réussite, échec).
+	var re_roll := RegEx.create_from_string("^@roll\\((?:[^,]*,){3,}[^,]*\\)$")
 	var count := 0
 	for i in blocks[id].size():
 		var line: String = str(blocks[id][i]).strip_edges()
@@ -142,9 +175,13 @@ func _link_line(id: String, link_index: int) -> int:
 			line = mg.get_string(2).strip_edges()
 		if re_choice.search(line) or re_cond.search(line) or line.begins_with("->"):
 			if count == link_index:
-				return i
+				return {"line": i, "roll_slot": -1}
 			count += 1
-	return -1
+		elif re_roll.search(line):
+			if link_index == count or link_index == count + 1:
+				return {"line": i, "roll_slot": link_index - count}
+			count += 2
+	return {}
 
 
 # ------------------------------------------------------- Opérations de nœud
