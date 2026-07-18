@@ -37,7 +37,9 @@ var _illustration_data: IllustrationData
 ## Texte complet du passage à restaurer au premier affichage après une reprise
 ## ("" sinon) — consommé par _on_display_text (cf. _start_story).
 var _resume_text := ""
-var _plate_holder: AspectRatioContainer  # cadre la planche au ratio de l'image
+var _plate_holder: Control  # espace de la planche (cadrage manuel, cf. _layout_plate)
+var _book_box: Control      # espace du livre (cadrage manuel, cf. _layout_book)
+var _book: PanelContainer
 var _plate: PanelContainer               # la planche (bordure + illustration)
 ## Ratio (largeur/hauteur) de la texture de l'illustration courante — la
 ## planche l'épouse exactement (cf. _update_plate_ratio). 0 = pas d'image.
@@ -219,13 +221,21 @@ func _build_ui() -> void:
 		frame.add_theme_constant_override(side, 10)
 	add_child(frame)
 
-	var ratio_box := AspectRatioContainer.new()
-	ratio_box.ratio = BOOK_RATIO
-	frame.add_child(ratio_box)
+	# Cadrage MANUEL du livre au ratio BOOK_RATIO (cf. _layout_book) : un
+	# AspectRatioContainer ici couplait la largeur du livre à la hauteur
+	# minimale de son contenu — largeur qui re-coupe le texte, qui change de
+	# hauteur, qui change la largeur… Le moteur oscillait entre deux mises en
+	# page SANS JAMAIS s'arrêter (gel du jeu, constaté au clic d'une zone).
+	# Un enfant posé à la main ne renvoie aucune contrainte : boucle impossible.
+	_book_box = Control.new()
+	_book_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.add_child(_book_box)
+	_book_box.resized.connect(_layout_book)
 
 	var book := PanelContainer.new()
 	book.add_theme_stylebox_override("panel", BookTheme.leather_style(12, 18.0))
-	ratio_box.add_child(book)
+	_book = book
+	_book_box.add_child(book)
 
 	# Épaisseur du livre : le bloc des pages (tranches de papier empilées)
 	# dépasse du cuir tout autour, et les pages ouvertes reposent dessus.
@@ -385,9 +395,9 @@ func _build_left_page() -> Control:
 
 	# La planche, cadrée au ratio du gabarit courant (cf. _show_illustration),
 	# CENTRÉE verticalement dans la page.
-	_plate_holder = AspectRatioContainer.new()
+	_plate_holder = Control.new()
 	_plate_holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_plate_holder.alignment_vertical = AspectRatioContainer.ALIGNMENT_CENTER
+	_plate_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_plate_holder.visible = false
 	canvas.add_child(_plate_holder)
 
@@ -400,9 +410,11 @@ func _build_left_page() -> Control:
 	plate_style.set_content_margin_all(7)  # passe-partout autour de l'image
 	_plate.add_theme_stylebox_override("panel", plate_style)
 	_plate_holder.add_child(_plate)
-	# À chaque nouvelle taille de planche, recale le ratio pour que la zone
-	# INTÉRIEURE du cadre garde exactement le ratio de l'image.
-	_plate.resized.connect(_update_plate_ratio)
+	# Cadrage MANUEL de la planche à chaque nouvelle taille de l'espace : un
+	# enfant posé à la main ne renvoie aucune contrainte au layout, donc pas de
+	# rétroaction possible (cf. _layout_plate — l'AspectRatioContainer utilisé
+	# avant GELAIT le jeu, en oscillation avec la répartition des deux pages).
+	_plate_holder.resized.connect(_layout_plate)
 
 	# Bouton plein écran, au coin haut-droit de la planche (au-dessus de
 	# l'illustration ; le reste de la surcouche laisse passer la souris —
@@ -585,7 +597,11 @@ func _make_medallion(character: CharacterData) -> Control:
 
 
 func _clear_choices() -> void:
+	# Retrait IMMÉDIAT de l'arbre (pas seulement queue_free) : au clic d'une
+	# zone, les choix sont effacés et reconstruits dans la même trame, et un
+	# conteneur mêlant enfants mourants et nouveaux gèle la disposition.
 	for child in _choices_box.get_children():
+		_choices_box.remove_child(child)
 		child.queue_free()
 
 
@@ -987,11 +1003,10 @@ func _show_illustration(illustration_name: String) -> void:
 	_illustration.setup(data)
 	_illustration.parallax_gain = Settings.parallax_gain_default * PAGE_PARALLAX
 	# Le cadre épouse l'image : ratio réel de sa texture, puis affiné pour
-	# compenser l'épaisseur du cadre (cf. _update_plate_ratio).
+	# compenser l'épaisseur du cadre (cf. _layout_plate).
 	_image_ratio = _illustration_ratio(data)
-	_plate_holder.ratio = _image_ratio
 	_plate_holder.visible = true
-	_update_plate_ratio()
+	_layout_plate()
 
 
 ## Ratio (largeur/hauteur) RÉEL de l'illustration : celui de la texture de son
@@ -1017,18 +1032,38 @@ func _template_ratio(template: int) -> float:
 			return 1.65
 
 
-## Cale le ratio de la planche pour que sa zone INTÉRIEURE (sous le bord et le
-## passe-partout, FRAME_PAD de chaque côté) ait exactement le ratio de l'image :
-## le cadre étant d'épaisseur fixe, le ratio extérieur doit le compenser, sinon
-## de fines bandes vides subsistent. Rappelé à chaque redimensionnement de la
-## planche (converge en une passe, la garde évite les re-déclenchements).
-func _update_plate_ratio() -> void:
-	var pad := FRAME_PAD * 2.0
-	if _image_ratio <= 0.0 or _plate.size.y <= pad:
+## Cadre la planche dans son espace : aspect-fit au ratio de l'image, CENTRÉ,
+## en compensant l'épaisseur fixe du cadre (FRAME_PAD de chaque côté) pour que
+## la zone INTÉRIEURE ait exactement le ratio de l'image. Le cadrage est
+## MANUEL (position et taille posées directement) : la planche ne pèse pas
+## dans le calcul de layout, donc ne peut pas rétroagir sur la taille des
+## pages — l'AspectRatioContainer utilisé avant avait un minimum dépendant du
+## ratio, et gelait le jeu en oscillant avec la répartition des deux pages
+## (boucle infinie de tri, constatée au clic d'une zone d'illustration).
+## Cadre le livre dans son espace : aspect-fit au ratio BOOK_RATIO, centré.
+## Cadrage manuel pour les mêmes raisons que _layout_plate (aucune rétroaction
+## du contenu sur la mise en page englobante).
+func _layout_book() -> void:
+	var box := _book_box.size
+	if box.x <= 0.0 or box.y <= 0.0:
 		return
-	var target := (_image_ratio * (_plate.size.y - pad) + pad) / _plate.size.y
-	if absf(target - _plate_holder.ratio) > 0.001:
-		_plate_holder.ratio = target
+	var book_size := Vector2(box.y * BOOK_RATIO, box.y)
+	if book_size.x > box.x:
+		book_size = Vector2(box.x, box.x / BOOK_RATIO)
+	_book.position = (box - book_size) * 0.5
+	_book.size = book_size
+
+
+func _layout_plate() -> void:
+	var pad := FRAME_PAD * 2.0
+	var box := _plate_holder.size
+	if _image_ratio <= 0.0 or box.x <= pad or box.y <= pad:
+		return
+	var plate_size := Vector2(pad + _image_ratio * (box.y - pad), box.y)
+	if plate_size.x > box.x:  # trop large pour l'espace : la largeur gouverne
+		plate_size = Vector2(box.x, pad + (box.x - pad) / _image_ratio)
+	_plate.position = (box - plate_size) * 0.5
+	_plate.size = plate_size
 
 
 # ------------------------------------------------- Illustration plein écran
