@@ -36,9 +36,16 @@ func _ready() -> void:
 	print("TOOL OK — nœuds affichés : %d" % panel._node_names.size())
 
 	# Vérification fonctionnelle de l'annuler/rétablir : une modification du
-	# .untold doit s'annuler à l'octet près, et se rétablir.
+	# .untold doit s'annuler à l'octet près, et se rétablir. Seulement sur une
+	# histoire qui a le nœud-cobaye « fin » (la démo) — pas de faux FAIL quand
+	# le harnais est pointé sur une vraie histoire via $TOOL_STORY.
 	var path: String = panel._current_path()
 	var before := FileAccess.get_file_as_string(path)
+	if not panel._source.blocks.has("fin"):
+		print("UNDO/REDO non testés (pas de nœud « fin » dans cette histoire).")
+		await _shots(panel)
+		get_tree().quit(0)
+		return
 	panel._source.set_body("fin", ["Texte modifié pour le test de l'undo.", "-> END"])
 	panel._source.save()
 	panel._undo()
@@ -48,18 +55,21 @@ func _ready() -> void:
 			else "REDO FAIL")
 	panel._undo()  # laisse le fichier de démo dans son état d'origine
 	print("UNDO2 OK" if FileAccess.get_file_as_string(path) == before else "UNDO2 FAIL")
-	await get_tree().process_frame
-
-	if DisplayServer.get_name() != "headless":
-		await _snap(OS.get_environment("TOOL_SHOT"))
-		var node_id := OS.get_environment("TOOL_NODE")
-		if node_id.is_empty():
-			node_id = "prologue2"
-		panel.reload_and_select(node_id)
-		await get_tree().process_frame
-		await _snap(OS.get_environment("TOOL_SHOT_NODE"))
-
+	await _shots(panel)
 	get_tree().quit(0)
+
+
+func _shots(panel: Control) -> void:
+	await get_tree().process_frame
+	if DisplayServer.get_name() == "headless":
+		return
+	await _snap(OS.get_environment("TOOL_SHOT"))
+	var node_id := OS.get_environment("TOOL_NODE")
+	if node_id.is_empty():
+		node_id = "prologue2"
+	panel.reload_and_select(node_id)
+	await get_tree().process_frame
+	await _snap(OS.get_environment("TOOL_SHOT_NODE"))
 
 
 func _snap(out: String) -> void:

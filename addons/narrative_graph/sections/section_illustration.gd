@@ -80,7 +80,7 @@ func _preview_texture(illustration_name: String) -> Texture2D:
 				return load(dir_path + file)
 	if def["layers"].is_empty():
 		return null
-	return load(dir_path + def["layers"][0][0])
+	return load(dir_path + IllustrationLibrary.layer_file(def["layers"][0]))
 
 
 func _remove_illustration(occurrence: int, illustration_name: String) -> void:

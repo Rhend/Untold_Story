@@ -49,6 +49,7 @@ Quatre hommes en pagne portent une lourde statue. [Soupir:1.5] Elle est massive,
 [shock]Courbés sous le poids de la statue[/shock], les quatre hommes la déposent doucement sur une belle barque ouvragée, blanchie, polie, [silence]dont les pointes recourbées évoquent un croissant de lune[/silence].
 Le dieu lunaire Sîn quitte sa demeure en la cité d’Ur, l’Egišnugal, le Temple de la Grande Lumière. Il s’en va rendre visite à son père, Enlil, dans sa cité de Nippur. [danger]Rîm-Sîn, le roi de Larsa[/danger], qui porte en son nom l’amour du dieu de la lune, a voulu renouer avec les anciennes traditions. [Soupir:2] Aujourd’hui, afin de célébrer l’équinoxe d’automne, Sîn entame son voyage sur l’Euphrate, dans une formidable procession menée par la belle Enanedu, grande prêtresse du dieu de la lune, et sœur du roi Rîm-Sîn.
 * [Démarrer la procession] -> Prologue3
+{ zone_clicked("TeteSin") } * [Examiner la statue] -> examen_statue
 
 :: Prologue3
 Les flots matinaux emportent la divine embarcation. Le soleil est encore bas sur l’horizon, les oiseaux s’envolent doucement depuis les roseaux et les joncs qui enlacent le fleuve. Sur les barques qui accompagnent celles du dieu, manœuvrées par des esclaves ou des bateleurs, voyagent les dignitaires et les personnes de haut rang. Sur la berge, les serviteurs, protecteurs, danseurs et musiciens complètent la procession. On transporte des moutons et des porcs, des chariots de denrées sont tractés par des ânes.
@@ -1339,3 +1340,7 @@ Petit à petit, la foule te repousse aux abords de ce qui semble être une auber
 // Mini-jeu « EpreuveExorcisme » — mécanique à venir : on suit la branche succès.
 @minigame("EpreuveExorcisme", "A01S01N153", "A01S01N153")
 -> A01S01N153
+
+:: examen_statue
+Vous avez l'impression que vous pourriez prendre la gemme de la tete de Sin...
+* [Le début du voyage] -> A01S01N001

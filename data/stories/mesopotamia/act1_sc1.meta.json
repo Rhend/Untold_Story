@@ -674,6 +674,10 @@
 			1120.0,
 			0.0
 		],
+		"examen_statue": [
+			1140.0,
+			200.0
+		],
 		"mg_EpreuveAthlétisme_A01S01N088_A01S01N089": [
 			3360.0,
 			960.0
@@ -730,5 +734,5 @@
 	"titles": {
 
 	},
-	"total_nodes": 180
+	"total_nodes": 181
 }

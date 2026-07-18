@@ -1,85 +1,246 @@
 {
-	"Le village": {
-		"template": "LANDSCAPE",
-		"dir": "illustrations/landscape/Village/",
-		"layers": [
-			{ "file": "Illu_Village_Plan04.png", "index": 4, "interactions": [] },
-			{ "file": "Illu_Village_Plan05.png", "index": 5, "interactions": [] },
-			{ "file": "Illu_Village_Plan06.png", "index": 6, "interactions": [] },
-			{ "file": "Illu_Village_Plan07.png", "index": 7, "interactions": [] }
-		]
-	},
-	"La palmeraie": {
-		"template": "LANDSCAPE",
-		"dir": "illustrations/landscape/PalmGrove/",
-		"layers": [
-			{ "file": "Illu_PalmGrove_Plan01.png", "index": 1, "interactions": [] },
-			{ "file": "Illu_PalmGrove_Plan02.png", "index": 2, "interactions": [] },
-			{ "file": "Illu_PalmGrove_Plan03.png", "index": 3, "interactions": [] },
-			{ "file": "Illu_PalmGrove_Plan04.png", "index": 4, "interactions": [] },
-			{ "file": "Illu_PalmGrove_Plan05.png", "index": 5, "interactions": [] },
-			{ "file": "Illu_PalmGrove_Plan06.png", "index": 6, "interactions": [] },
-			{ "file": "Illu_PalmGrove_Plan07.png", "index": 7, "interactions": [] },
-			{ "file": "Illu_PalmGrove_Plan08.png", "index": 8, "interactions": [] }
-		]
-	},
-	"La rue": {
-		"template": "LANDSCAPE",
-		"dir": "illustrations/landscape/Street/",
-		"layers": [
-			{ "file": "Illu_Street_Plan04.png", "index": 4, "interactions": [] },
-			{ "file": "Illu_Street_Plan05.png", "index": 5, "interactions": [] },
-			{ "file": "Illu_Street_Plan06.png", "index": 6, "interactions": [] },
-			{ "file": "Illu_Street_Plan07.png", "index": 7, "interactions": [] }
-		]
-	},
-	"La cérémonie": {
-		"template": "LANDSCAPE",
-		"dir": "illustrations/landscape/Ceremony/",
-		"layers": [
-			{ "file": "Illu_Ceremony_Plan2.png", "index": 2, "interactions": [] },
-			{ "file": "Illu_Ceremony_Plan3.png", "index": 3, "interactions": [] },
-			{ "file": "Illu_Ceremony_Plan5.png", "index": 5, "interactions": [] },
-			{ "file": "Illu_Ceremony_Plan6.png", "index": 6, "interactions": [] },
-			{ "file": "Illu_Ceremony_Plan7.png", "index": 7, "interactions": [] },
-			{ "file": "Illu_Ceremony_Plan8.png", "index": 8, "interactions": [] },
-			{ "file": "Illu_Ceremony_Plan9.png", "index": 9, "interactions": [] }
-		]
-	},
 	"Démon": {
-		"template": "PORTRAIT",
-		"parallax_enabled": false,
 		"dir": "illustrations/portrait/Demon/",
 		"layers": [
-			{ "file": "Illu_Demon_Plan06.png", "index": 6, "interactions": [] },
-			{ "file": "Illu_Demon_Plan07.png", "index": 7, "interactions": [] }
-		]
-	},
-	"Orante": {
-		"template": "PORTRAIT",
+			{
+				"file": "Illu_Demon_Plan06.png",
+				"index": 6.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_Demon_Plan07.png",
+				"index": 7.0,
+				"interactions": []
+			}
+		],
 		"parallax_enabled": false,
-		"dir": "illustrations/portrait/Orante/",
-		"layers": [
-			{ "file": "Illu_Orante_Plan06.png", "index": 6, "interactions": [] },
-			{ "file": "Illu_Orante_Plan07.png", "index": 7, "interactions": [] }
-		]
-	},
-	"Statue de Sîn": {
-		"template": "PORTRAIT",
-		"parallax_enabled": false,
-		"dir": "illustrations/portrait/Sin/",
-		"layers": [
-			{ "file": "Illu_Prologue_Sin_Unique_Plan05.png", "index": 5, "interactions": [] },
-			{ "file": "Illu_Prologue_Sin_Unique_Plan06.png", "index": 6, "interactions": [] }
-		]
+		"template": "PORTRAIT"
 	},
 	"Halî-Ammi": {
-		"template": "PORTRAIT",
-		"parallax_enabled": false,
 		"dir": "illustrations/portrait/HaliAmmi/",
 		"layers": [
-			{ "file": "Illu_HaliAmmi_Plan06.png", "index": 6, "interactions": [] },
-			{ "file": "Illu_HaliAmmi_Plan07.png", "index": 7, "interactions": [] }
-		]
+			{
+				"file": "Illu_HaliAmmi_Plan06.png",
+				"index": 6.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_HaliAmmi_Plan07.png",
+				"index": 7.0,
+				"interactions": []
+			}
+		],
+		"parallax_enabled": false,
+		"template": "PORTRAIT"
+	},
+	"La cérémonie": {
+		"dir": "illustrations/landscape/Ceremony/",
+		"layers": [
+			{
+				"file": "Illu_Ceremony_Plan2.png",
+				"index": 2.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_Ceremony_Plan3.png",
+				"index": 3.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_Ceremony_Plan5.png",
+				"index": 5.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_Ceremony_Plan6.png",
+				"index": 6.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_Ceremony_Plan7.png",
+				"index": 7.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_Ceremony_Plan8.png",
+				"index": 8.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_Ceremony_Plan9.png",
+				"index": 9.0,
+				"interactions": []
+			}
+		],
+		"template": "LANDSCAPE"
+	},
+	"La palmeraie": {
+		"dir": "illustrations/landscape/PalmGrove/",
+		"layers": [
+			{
+				"file": "Illu_PalmGrove_Plan01.png",
+				"index": 1.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_PalmGrove_Plan02.png",
+				"index": 2.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_PalmGrove_Plan03.png",
+				"index": 3.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_PalmGrove_Plan04.png",
+				"index": 4.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_PalmGrove_Plan05.png",
+				"index": 5.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_PalmGrove_Plan06.png",
+				"index": 6.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_PalmGrove_Plan07.png",
+				"index": 7.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_PalmGrove_Plan08.png",
+				"index": 8.0,
+				"interactions": []
+			}
+		],
+		"template": "LANDSCAPE"
+	},
+	"La rue": {
+		"dir": "illustrations/landscape/Street/",
+		"layers": [
+			{
+				"file": "Illu_Street_Plan04.png",
+				"index": 4.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_Street_Plan05.png",
+				"index": 5.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_Street_Plan06.png",
+				"index": 6.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_Street_Plan07.png",
+				"index": 7.0,
+				"interactions": []
+			}
+		],
+		"template": "LANDSCAPE"
+	},
+	"Le village": {
+		"dir": "illustrations/landscape/Village/",
+		"layers": [
+			{
+				"file": "Illu_Village_Plan04.png",
+				"index": 4.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_Village_Plan05.png",
+				"index": 5.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_Village_Plan06.png",
+				"index": 6.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_Village_Plan07.png",
+				"index": 7.0,
+				"interactions": []
+			}
+		],
+		"template": "LANDSCAPE"
+	},
+	"Orante": {
+		"dir": "illustrations/portrait/Orante/",
+		"layers": [
+			{
+				"file": "Illu_Orante_Plan06.png",
+				"index": 6.0,
+				"interactions": []
+			},
+			{
+				"file": "Illu_Orante_Plan07.png",
+				"index": 7.0,
+				"interactions": []
+			}
+		],
+		"parallax_enabled": false,
+		"template": "PORTRAIT"
+	},
+	"Statue de Sîn": {
+		"dir": "illustrations/portrait/Sin/",
+		"layers": [
+			{
+				"file": "Illu_Prologue_Sin_Unique_Plan05.png",
+				"index": 5.0,
+				"interactions": [
+					{
+						"dialogue_lines": [],
+						"id": "TeteSin",
+						"item_id": "",
+						"item_qty": 1,
+						"polygon": [
+							[
+								0.50555557012558,
+								0.0625
+							],
+							[
+								0.444444447755814,
+								0.0812499970197678
+							],
+							[
+								0.422222226858139,
+								0.178124994039536
+							],
+							[
+								0.50555557012558,
+								0.215625002980232
+							],
+							[
+								0.594444453716278,
+								0.159374997019768
+							],
+							[
+								0.555555582046509,
+								0.0812499970197678
+							],
+							[
+								0.527777791023254,
+								0.0593749992549419
+							]
+						]
+					}
+				]
+			},
+			{
+				"file": "Illu_Prologue_Sin_Unique_Plan06.png",
+				"index": 6.0,
+				"interactions": []
+			}
+		],
+		"parallax_enabled": false,
+		"template": "PORTRAIT"
 	}
 }
