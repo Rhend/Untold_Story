@@ -27,6 +27,9 @@ var _details: VBoxContainer
 ## pour marquer le portrait sélectionné et redessiner les autres.
 var _portraits: Dictionary = {}
 var _selected: CharacterData
+## true si le casting n'a qu'un personnage : sa carte d'identité occupe alors
+## toute la page (grand portrait, textes centrés), sans rangée de portraits.
+var _solo := false
 
 
 func _ready() -> void:
@@ -249,8 +252,10 @@ func _build_cast_page() -> Control:
 			continue
 		casting.append(data)
 
+	_solo = casting.size() == 1
+
 	var title := BookTheme.make_label(
-			"Votre personnage vous attend pour partir à l'aventure." if casting.size() == 1
+			"Votre personnage vous attend pour partir à l'aventure." if _solo
 			else "Choisissez avec quel personnage vous voulez partir à l'aventure.",
 			22, BookTheme.INK, false, true)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -260,20 +265,23 @@ func _build_cast_page() -> Control:
 	col.add_child(BookTheme.make_fleuron())
 
 	# Les portraits seuls — le reste de la fiche apparaît à la sélection.
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 20)
-	col.add_child(row)
-	for data in casting:
-		row.add_child(_make_portrait(data))
+	# En solo, la rangée est inutile (le portrait vit en grand dans la carte).
+	if not _solo:
+		var row := HBoxContainer.new()
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_theme_constant_override("separation", 20)
+		col.add_child(row)
+		for data in casting:
+			row.add_child(_make_portrait(data))
 
-	# Moitié basse : la fiche du personnage sélectionné.
+	# Le reste de la page : la fiche du personnage sélectionné (toute la page
+	# en solo, moitié basse sinon).
 	_details = VBoxContainer.new()
 	_details.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_details.alignment = BoxContainer.ALIGNMENT_CENTER
 	_details.add_theme_constant_override("separation", 10)
 	col.add_child(_details)
-	if casting.size() == 1:
+	if _solo:
 		_select(casting[0])
 	else:
 		_show_placeholder()
@@ -343,33 +351,42 @@ func _clear_details() -> void:
 		child.queue_free()
 
 
-## Fiche du personnage sélectionné, en CARTE D'IDENTITÉ : le portrait en
-## grand à gauche, et à droite les textes empilés — nom, rôle, archétype,
-## description, % de complétion — puis les actions (lancer / recommencer).
+## Fiche du personnage sélectionné, en CARTE D'IDENTITÉ.
+## Casting multiple : carte compacte flottant au centre — portrait à gauche,
+## textes empilés à droite. Casting SOLO : la carte occupe TOUTE la page,
+## en colonne centrée — grand portrait, puis nom, rôle, archétype,
+## description, % de complétion et actions (lancer / recommencer).
 func _show_details(data: CharacterData) -> void:
 	_clear_details()
 
-	# CENTRÉE dans la page, avec de l'air : la carte ne prend que sa largeur
-	# minimale (portrait + colonne de textes bornée) et flotte au centre.
 	var card := PanelContainer.new()
-	card.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	if _solo:
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		card.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	else:
+		# Centrée dans la page, avec de l'air : la carte ne prend que sa
+		# largeur minimale (portrait + colonne de textes bornée).
+		card.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	var card_style := StyleBoxFlat.new()
 	card_style.bg_color = Color(0, 0, 0, 0.04)
 	card_style.set_border_width_all(1)
 	card_style.border_color = Color(BookTheme.PAGE_EDGE, 0.7)
 	card_style.set_corner_radius_all(3)
-	card_style.set_content_margin_all(22)
+	card_style.set_content_margin_all(30 if _solo else 22)
 	card.add_theme_stylebox_override("panel", card_style)
 	_details.add_child(card)
 
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 24)
-	card.add_child(row)
+	# Solo : tout en colonne centrée ; sinon portrait et textes côte à côte.
+	var layout: BoxContainer = VBoxContainer.new() if _solo else HBoxContainer.new()
+	layout.alignment = BoxContainer.ALIGNMENT_CENTER
+	layout.add_theme_constant_override("separation", 18 if _solo else 24)
+	card.add_child(layout)
 
-	# Le portrait, repris en plus grand.
+	# Le portrait, repris en plus grand — en très grand sur la carte pleine page.
 	var bust_frame := PanelContainer.new()
-	bust_frame.custom_minimum_size = Vector2(170, 204)
+	bust_frame.custom_minimum_size = Vector2(253, 300) if _solo else Vector2(170, 204)
 	bust_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bust_frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	bust_frame.clip_contents = true
 	bust_frame.add_theme_stylebox_override("panel", _portrait_style(data, false))
 	var bust := TextureRect.new()
@@ -377,15 +394,15 @@ func _show_details(data: CharacterData) -> void:
 	bust.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bust.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	bust_frame.add_child(bust)
-	row.add_child(bust_frame)
+	layout.add_child(bust_frame)
 
 	# Les textes, les uns sous les autres — tout à 19, comme le récit.
 	var info := VBoxContainer.new()
 	info.alignment = BoxContainer.ALIGNMENT_CENTER
 	info.add_theme_constant_override("separation", 10)
-	row.add_child(info)
+	layout.add_child(info)
 
-	info.add_child(BookTheme.make_label(data.display_name, 24,
+	info.add_child(BookTheme.make_label(data.display_name, 30 if _solo else 24,
 			data.color.lerp(BookTheme.INK, 0.35), false, true))
 	info.add_child(BookTheme.make_label("Rôle : " + data.character_type,
 			19, BookTheme.INK_MUTED, true))
@@ -395,7 +412,10 @@ func _show_details(data: CharacterData) -> void:
 	if not data.description.is_empty():
 		var desc := BookTheme.make_label(data.description, 19, BookTheme.INK)
 		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		desc.custom_minimum_size = Vector2(290, 0)
+		desc.custom_minimum_size = Vector2(430 if _solo else 290, 0)
+		if _solo:
+			desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			desc.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		info.add_child(desc)
 
 	# Complétion : nœuds découverts par CE personnage (cumulatif inter-parties)
@@ -406,6 +426,12 @@ func _show_details(data: CharacterData) -> void:
 		info.add_child(BookTheme.make_label("Histoire complétée à %d %%"
 				% roundi(100.0 * seen / _total_nodes), 19, BookTheme.INK_FADED, true))
 
+	# Sur la carte pleine page, tous les textes sont centrés.
+	if _solo:
+		for child in info.get_children():
+			if child is Label:
+				(child as Label).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
 	# Actions empilées : lancer l'histoire (reprise ou début), et recommencer
 	# à zéro quand une partie est en cours.
 	var has_run := not progress_id.is_empty() \
@@ -413,13 +439,14 @@ func _show_details(data: CharacterData) -> void:
 	var actions := VBoxContainer.new()
 	actions.add_theme_constant_override("separation", 2)
 	info.add_child(actions)
+	var action_flags := Control.SIZE_SHRINK_CENTER if _solo else Control.SIZE_SHRINK_BEGIN
 
 	var launch := Button.new()
 	launch.text = "•  Continuer l'histoire" if has_run else "•  Commencer l'histoire"
 	if has_run:
 		launch.tooltip_text = "Reprend au dernier point de choix"
 	BookTheme.style_choice(launch, false, 19)
-	launch.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	launch.size_flags_horizontal = action_flags
 	launch.pressed.connect(_on_choose.bind(data))
 	actions.add_child(launch)
 
@@ -428,7 +455,7 @@ func _show_details(data: CharacterData) -> void:
 		restart.text = "↻  Recommencer depuis le début"
 		restart.tooltip_text = "Efface la partie en cours de ce personnage"
 		BookTheme.style_choice(restart, true, 19)
-		restart.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		restart.size_flags_horizontal = action_flags
 		restart.pressed.connect(func() -> void:
 			Progress.restart_playthrough(progress_id, data.character_type)
 			_on_choose(data))
