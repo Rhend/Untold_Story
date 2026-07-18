@@ -26,33 +26,34 @@ func setup(ctx: Dictionary) -> void:
 		add_child(none)
 		return
 
-	for name in names:
-		_build_block(name)
+	for illustration_name in names:
+		_build_block(illustration_name)
 
 
 ## Un bloc éditable par illustration. L'état mutable (calque courant, zones de
 ## travail, sous-conteneurs) vit dans un Dictionary capturé par les callbacks —
 ## permet plusieurs illustrations sur un même nœud sans collision d'état.
-func _build_block(name: String) -> void:
+## (« illustration_name » et pas « name » : le paramètre masquerait Node.name.)
+func _build_block(illustration_name: String) -> void:
 	add_child(HSeparator.new())
 	var defs := IllustrationLibrary.defs()
-	if not defs.has(name):
+	if not defs.has(illustration_name):
 		var missing := Label.new()
-		missing.text = "« %s » inconnue de illustrations_defs.json." % name
+		missing.text = "« %s » inconnue de illustrations_defs.json." % illustration_name
 		missing.modulate = Color(0.9, 0.5, 0.4)
 		add_child(missing)
 		return
 
-	var idef: Dictionary = defs[name]
+	var idef: Dictionary = defs[illustration_name]
 	var layers: Array = idef["layers"]
 
 	var title := Label.new()
-	title.text = name
+	title.text = illustration_name
 	title.add_theme_font_size_override("font_size", 15)
 	add_child(title)
 
 	var state := {
-		"name": name,
+		"name": illustration_name,
 		"dir": str(idef["dir"]),
 		"layers": layers,
 		"entry": null,       # calque sélectionné (Dictionary)

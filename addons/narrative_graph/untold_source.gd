@@ -24,6 +24,16 @@ var duplicate_ids: Array = []
 ## l'annuler/rétablir de l'outil graphe sans que cette classe le connaisse.
 var history_sink: Callable = Callable()
 
+## Motifs compilés UNE fois (repérage des liens, validation d'id) — les mêmes
+## motifs de ligne que StoryParser, partagés pour ne jamais diverger du parse.
+static var _re_guard := RegEx.create_from_string(StoryParser.GUARD_PATTERN)
+static var _re_choice := RegEx.create_from_string(StoryParser.CHOICE_PATTERN)
+static var _re_cond := RegEx.create_from_string(StoryParser.COND_PATTERN)
+## Même règle que StoryGraph.build : un @roll ne vaut des liens que complet
+## (4 arguments — compétence, difficulté, réussite, échec).
+static var _re_roll := RegEx.create_from_string("^@roll\\((?:[^,]*,){3,}[^,]*\\)$")
+static var _re_valid_id := RegEx.create_from_string("^[A-Za-z_]\\w*$")
+
 
 func load_file(p_path: String) -> bool:
 	path = p_path
@@ -157,27 +167,21 @@ static func _strip_parts(parts: PackedStringArray) -> PackedStringArray:
 ## saut direct, gardes « { ... } instruction » comprises — et chaque ligne
 ## @roll(...) vaut DEUX indices consécutifs (réussite puis échec).
 func _link_ref(id: String, link_index: int) -> Dictionary:
-	var re_guard := RegEx.create_from_string(StoryParser.GUARD_PATTERN)
-	var re_choice := RegEx.create_from_string(StoryParser.CHOICE_PATTERN)
-	var re_cond := RegEx.create_from_string(StoryParser.COND_PATTERN)
-	# Même règle que StoryGraph.build : un @roll ne vaut des liens que
-	# complet (4 arguments — compétence, difficulté, réussite, échec).
-	var re_roll := RegEx.create_from_string("^@roll\\((?:[^,]*,){3,}[^,]*\\)$")
 	var count := 0
 	for i in blocks[id].size():
 		var line: String = str(blocks[id][i]).strip_edges()
 		if line.is_empty() or line.begins_with("//") or line.begins_with("::") \
 				or line.begins_with("#"):
 			continue
-		var mg := re_guard.search(line)
-		if mg:
+		var guard_match := _re_guard.search(line)
+		if guard_match:
 			# Groupe 2 du motif partagé = l'instruction après la garde.
-			line = mg.get_string(2).strip_edges()
-		if re_choice.search(line) or re_cond.search(line) or line.begins_with("->"):
+			line = guard_match.get_string(2).strip_edges()
+		if _re_choice.search(line) or _re_cond.search(line) or line.begins_with("->"):
 			if count == link_index:
 				return {"line": i, "roll_slot": -1}
 			count += 1
-		elif re_roll.search(line):
+		elif _re_roll.search(line):
 			if link_index == count or link_index == count + 1:
 				return {"line": i, "roll_slot": link_index - count}
 			count += 2
@@ -193,7 +197,7 @@ func _link_ref(id: String, link_index: int) -> Dictionary:
 static func is_valid_id(id: String) -> bool:
 	if id == "END":
 		return false
-	return RegEx.create_from_string("^[A-Za-z_]\\w*$").search(id) != null
+	return _re_valid_id.search(id) != null
 
 
 ## Corps du bloc (lignes après « :: id »), verbatim — blancs de fin normalisés
@@ -278,7 +282,7 @@ func set_command(id: String, command: String, args: Array) -> bool:
 	for arg in args:
 		quoted.append('"%s"' % arg)
 	var call := "@%s(%s)" % [command, ", ".join(quoted)]
-	var re := RegEx.create_from_string("@" + command + "\\(.*\\)")
+	var re := RegEx.create_from_string("@" + _regex_escape(command) + "\\(.*\\)")
 	for i in blocks[id].size():
 		var raw: String = blocks[id][i]
 		if str(raw).strip_edges().begins_with("//"):
@@ -296,7 +300,7 @@ func set_command(id: String, command: String, args: Array) -> bool:
 func remove_command(id: String, command: String, occurrence := 0) -> bool:
 	if not blocks.has(id):
 		return false
-	var re := RegEx.create_from_string("@" + command + "\\(.*\\)")
+	var re := RegEx.create_from_string("@" + _regex_escape(command) + "\\(.*\\)")
 	var count := 0
 	for i in blocks[id].size():
 		var raw: String = blocks[id][i]
