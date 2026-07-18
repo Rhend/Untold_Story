@@ -39,13 +39,9 @@ func _ready() -> void:
 		# page fermée) avant de figer le texte et de capturer.
 		await get_tree().create_timer(0.8).timeout
 
-	# Texte affiché d'un coup (même chemin qu'un clic du joueur : la frappe est
-	# tuée puis l'UI différée — les choix — est révélée).
-	if scene._typewriter != null and scene._typewriter.is_running():
-		scene._typewriter.kill()
-		scene._typewriter = null
-	scene._text_label.visible_ratio = 1.0
-	scene._on_typewriter_done()
+	# Texte affiché d'un coup (même chemin qu'un clic du joueur : le saut de
+	# frappe révèle aussi l'UI différée — les choix).
+	scene._typewriter.skip()
 	await get_tree().process_frame
 
 	if DisplayServer.get_name() != "headless":

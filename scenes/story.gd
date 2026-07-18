@@ -25,7 +25,9 @@ var _map: StoryMap
 var _inventory_overlay: InventoryOverlay
 var _text_label: RichTextLabel
 var _choices_box: VBoxContainer
-var _typewriter: Tween
+## Machine à écrire du passage (frappe progressive + pauses [Soupir]) — son
+## signal finished déclenche l'UI différée (_on_typewriter_done).
+var _typewriter: Typewriter
 ## Effet « shock » gardé en référence pour relancer son à-coup à chaque passage.
 var _fx_shock: RichTextEffect
 ## Texte brut (avec balises de pause) actuellement affiché, accumulé par les
@@ -435,6 +437,11 @@ func _build_right_page() -> Control:
 	_text_label.install_effect(preload("res://core/text_effects/silence.gd").new())
 	col.add_child(_text_label)
 
+	# La machine à écrire anime ce label ; sa fin de frappe (naturelle ou
+	# sautée) révèle l'UI différée (choix, boutons de fin).
+	_typewriter = Typewriter.new(_text_label)
+	_typewriter.finished.connect(_on_typewriter_done)
+
 	_choices_box = VBoxContainer.new()
 	_choices_box.add_theme_constant_override("separation", 6)
 	col.add_child(_choices_box)
@@ -597,55 +604,15 @@ func _apply_display_text(text: String, node_id: String, tags: Array) -> void:
 	# Extrait les pauses dramatiques [Soupir:X] : le texte affiché n'en contient
 	# plus, et chaque pause connaît son rang en caractères VISIBLES.
 	_display_raw = text
-	var prepared := _prepare_dramatic_text(_display_raw)
+	var prepared := Typewriter.prepare(_display_raw)
 	_text_label.text = BookTheme.with_drop_cap(prepared["text"])
 	# La secousse « shock » repart depuis l'apparition de ce texte.
 	if _fx_shock != null and _fx_shock.has_method("restart"):
 		_fx_shock.restart()
 
-	# Compte des caractères VISIBLES réels (hors balises BBCode), APRÈS
-	# assignation du texte — sinon les balises gonfleraient la durée perçue.
-	var total := _text_label.get_total_character_count()
-
-	if _typewriter and _typewriter.is_running():
-		_typewriter.kill()
-	_typewriter = null
-	if total <= 0:
-		_text_label.visible_ratio = 1.0
-		_on_typewriter_done()  # pas de frappe : révèle l'UI différée éventuelle
-		return
-	_typewriter = _build_typewriter(total, prepared["pauses"], 0)
-
-
-## Construit la séquence « machine à écrire » : révèle le texte de start_visible
-## caractères jusqu'à la fin, à vitesse Settings.text_speed, en marquant une
-## pause de X s à chaque balise [Soupir:X] au-delà du point de départ. Un départ
-## > 0 sert à ne dévoiler QUE des lignes ajoutées (cf. _append_dialogue).
-func _build_typewriter(total: int, pauses: Array, start_visible: int) -> Tween:
-	var remaining := total - start_visible
-	if remaining <= 0:
-		_text_label.visible_ratio = 1.0
-		return null
-	_text_label.visible_ratio = float(start_visible) / float(total)
-	var full := clampf(remaining * Settings.text_speed, 0.3, 6.0)  # temps de frappe (hors pauses)
-	var tween := create_tween()
-	var cursor := start_visible
-	for p in pauses:
-		var v: int = p["visible"]
-		if v <= start_visible:
-			continue  # pause déjà dépassée avant le point de départ
-		if v > cursor:
-			tween.tween_property(_text_label, "visible_ratio",
-				float(v) / float(total), full * float(v - cursor) / float(remaining))
-			cursor = v
-		if p["duration"] > 0.0:
-			tween.tween_interval(p["duration"])
-	if cursor < total:
-		tween.tween_property(_text_label, "visible_ratio",
-			1.0, full * float(total - cursor) / float(remaining))
-	# Fin de frappe naturelle : révèle l'UI en attente (choix, boutons de fin).
-	tween.finished.connect(_on_typewriter_done)
-	return tween
+	# La frappe reprend depuis le début du passage ; un texte vide révèle
+	# directement l'UI différée (le signal finished part immédiatement).
+	_typewriter.play(prepared["pauses"])
 
 
 ## Le texte est entièrement révélé (fin de frappe ou clic pour tout afficher) :
@@ -662,48 +629,13 @@ func _on_typewriter_done() -> void:
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 
-## Retire les balises de pause [Soupir:X] du texte et renvoie :
-##   "text"   : le texte à afficher (balises de pause ôtées, BBCode conservé) ;
-##   "pauses" : Array de { "visible": int, "duration": float } — nombre de
-##              caractères visibles précédant la pause, et sa durée en secondes.
-## La position est convertie en caractères VISIBLES (hors BBCode) via un
-## RichTextLabel de mesure, cohérent avec get_total_character_count().
-static func _prepare_dramatic_text(raw: String) -> Dictionary:
-	var re := RegEx.create_from_string("\\[Soupir:\\s*([0-9]*\\.?[0-9]+)[^\\]]*\\]")
-	var clean := ""
-	var marks: Array = []  # { "pos": index dans clean, "duration": float }
-	var last := 0
-	for m in re.search_all(raw):
-		clean += raw.substr(last, m.get_start() - last)
-		marks.append({"pos": clean.length(), "duration": float(m.get_string(1))})
-		last = m.get_end()
-	clean += raw.substr(last)
-
-	var pauses: Array = []
-	if not marks.is_empty():
-		var scratch := RichTextLabel.new()
-		scratch.bbcode_enabled = true
-		for mark in marks:
-			scratch.text = clean.substr(0, mark["pos"])
-			pauses.append({
-				"visible": scratch.get_total_character_count(),
-				"duration": mark["duration"],
-			})
-		scratch.free()
-	return {"text": clean, "pauses": pauses}
-
-
-## Clic sur la page de droite (texte compris) : si la frappe est en cours, tout
-## afficher d'un coup
-## (on tue la séquence et on révèle le texte entier). Sinon, ne rien faire ici.
+## Clic sur la page de droite (texte compris) : si la frappe est en cours,
+## tout afficher d'un coup (skip → le signal finished révèle aussi les choix).
+## Sinon, ne rien faire ici.
 func _on_text_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT:
-		if _typewriter != null and _typewriter.is_running():
-			_typewriter.kill()
-			_typewriter = null
-			_text_label.visible_ratio = 1.0
-			_on_typewriter_done()
+		_typewriter.skip()
 
 
 # ------------------------------------------------- Zones interactives (clic)
@@ -732,22 +664,17 @@ func _on_illustration_interaction(interaction: IllustrationInteraction) -> void:
 ## seules les lignes ajoutées défilent.
 func _append_dialogue(lines: Array) -> void:
 	# Fige le texte déjà présent, en entier, avant d'ajouter la suite.
-	if _typewriter and _typewriter.is_running():
-		_typewriter.kill()
-	_typewriter = null
+	_typewriter.stop()
 	_text_label.visible_ratio = 1.0
 	var shown := _text_label.get_total_character_count()
 
 	_display_raw += "\n" + "\n".join(PackedStringArray(lines))
 	# Le dialogue ajouté fait partie du passage : la reprise doit le retrouver.
 	Progress.record_passage_text(_display_raw)
-	var prepared := _prepare_dramatic_text(_display_raw)
+	var prepared := Typewriter.prepare(_display_raw)
 	_text_label.text = BookTheme.with_drop_cap(prepared["text"])
-	var total := _text_label.get_total_character_count()
-	if total <= shown:
-		_text_label.visible_ratio = 1.0
-		return
-	_typewriter = _build_typewriter(total, prepared["pauses"], shown)
+	# Seules les lignes ajoutées défilent (départ = caractères déjà affichés).
+	_typewriter.play(prepared["pauses"], shown)
 
 
 ## En-tête du passage courant, selon l'environnement :
@@ -796,7 +723,7 @@ func _on_present_choices(choices: Array) -> void:
 	# commencé : la révélation attendra sa fin (déclenchée après l'application).
 	if _flip_apply.is_valid():
 		return
-	if _typewriter == null or not _typewriter.is_running():
+	if not _typewriter.is_typing():
 		_on_typewriter_done()
 
 
@@ -1052,7 +979,7 @@ func _on_story_ended() -> void:
 	_pending_reveal = _build_end_buttons
 	if _flip_apply.is_valid():
 		return
-	if _typewriter == null or not _typewriter.is_running():
+	if not _typewriter.is_typing():
 		_on_typewriter_done()
 
 
