@@ -65,42 +65,13 @@ func _count_story_nodes() -> int:
 func _build_ui() -> void:
 	add_child(BookTheme.make_desk())
 
-	# Le livre ouvert, même construction que la scène d'histoire.
-	var frame := MarginContainer.new()
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
-		frame.add_theme_constant_override(side, 24)
-	add_child(frame)
-
-	var ratio_box := AspectRatioContainer.new()
-	ratio_box.ratio = BOOK_RATIO
-	frame.add_child(ratio_box)
-
-	var book := PanelContainer.new()
-	book.add_theme_stylebox_override("panel", BookTheme.leather_style(12, 18.0))
-	ratio_box.add_child(book)
-
-	book.add_child(BookTheme.make_page_block(PAGE_BLOCK))
-	var pages_margin := MarginContainer.new()
-	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
-		pages_margin.add_theme_constant_override(side, int(PAGE_BLOCK))
-	book.add_child(pages_margin)
-
-	var pages := HBoxContainer.new()
-	pages.add_theme_constant_override("separation", 0)
-	pages_margin.add_child(pages)
+	# Le livre ouvert — construction partagée avec la scène d'histoire
+	# (BookTheme.make_open_book : cuir, tranches, deux pages, reliure).
+	var open_book := BookTheme.make_open_book(24, 0.0, BOOK_RATIO, PAGE_BLOCK)
+	add_child(open_book["root"])
+	var pages: HBoxContainer = open_book["pages"]
 	pages.add_child(_build_pitch_page())
 	pages.add_child(_build_cast_page())
-
-	# Reliure centrale (creux ombré + renflement des pages), cf. story.gd.
-	var spine := TextureRect.new()
-	spine.texture = BookTheme.gradient_tex(
-			[Color(BookTheme.SPINE, 0.0), Color(BookTheme.PARCHMENT_BRIGHT, 0.16),
-			Color(BookTheme.SPINE, 0.60), Color(BookTheme.SPINE, 0.60),
-			Color(BookTheme.PARCHMENT_BRIGHT, 0.16), Color(BookTheme.SPINE, 0.0)],
-			[0.44, 0.474, 0.494, 0.506, 0.526, 0.56])
-	spine.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	book.add_child(spine)
 
 	# Retour au hub : le joueur n'est pas enfermé dans une histoire une fois
 	# entré (il peut en changer avant de choisir un personnage). Sur la table,
@@ -182,7 +153,7 @@ func _build_pitch_page() -> Control:
 	pitch.add_theme_color_override("default_color", BookTheme.INK)
 	pitch.add_theme_constant_override("line_separation", 12)
 	pitch.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pitch.text = "[center]" + _with_drop_cap(pitch_text) + "[/center]"
+	pitch.text = "[center]" + BookTheme.with_drop_cap(pitch_text) + "[/center]"
 	box.add_child(pitch)
 	return page
 
@@ -204,22 +175,6 @@ func _make_red_liseret() -> Control:
 				corner + Vector2(0, 3.0), corner + Vector2(-3.0, 0)]),
 				Color(BookTheme.RIBBON, 0.8)))
 	return liseret
-
-
-## Lettrine : première lettre grossie à l'encre du ruban, comme en tête des
-## passages du récit (copie de story.gd — même rendu, même règle).
-func _with_drop_cap(text: String) -> String:
-	var i := 0
-	while i < text.length() and text[i] in [" ", "\t", "\n"]:
-		i += 1
-	if i >= text.length():
-		return text
-	var first := text[i]
-	if first == "[" or first.to_upper() == first.to_lower():
-		return text
-	return text.substr(0, i) \
-			+ "[font_size=44][color=#7a3126]%s[/color][/font_size]" % first \
-			+ text.substr(i + 1)
 
 
 # ------------------------------------------------------------- Page de droite
@@ -301,7 +256,8 @@ func _make_portrait(data: CharacterData) -> Control:
 		if event is InputEventMouseButton and event.pressed \
 				and event.button_index == MOUSE_BUTTON_LEFT:
 			_select(data))
-	_add_hover_highlight(bust_frame)
+	# Surbrillance de survol : léger grossissement, même langage que le hub.
+	BookTheme.connect_hover_scale(bust_frame, 1.04)
 	_portraits[data.character_type] = {"frame": bust_frame, "data": data}
 
 	var bust := TextureRect.new()
@@ -480,25 +436,6 @@ func _make_page(left_side: bool, wear_seed: int) -> PanelContainer:
 func _story_progress_id() -> String:
 	var entry := str(_manifest.get("entry_file", ""))
 	return entry.get_file().get_basename() if not entry.is_empty() else ""
-
-
-## Surbrillance de survol d'un portrait : léger grossissement depuis le
-## centre, même langage que les couvertures du hub.
-func _add_hover_highlight(card: Control) -> void:
-	card.mouse_entered.connect(func() -> void: _tween_highlight(card, 1.04))
-	card.mouse_exited.connect(func() -> void: _tween_highlight(card, 1.0))
-
-
-func _tween_highlight(card: Control, target_scale: float) -> void:
-	var previous: Variant = card.get_meta("hover_tween") \
-			if card.has_meta("hover_tween") else null
-	if previous is Tween and (previous as Tween).is_valid():
-		(previous as Tween).kill()
-	card.pivot_offset = card.size / 2.0
-	var tween := card.create_tween()
-	tween.tween_property(card, "scale", Vector2.ONE * target_scale, 0.14) \
-			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	card.set_meta("hover_tween", tween)
 
 
 func _on_choose(data: CharacterData) -> void:

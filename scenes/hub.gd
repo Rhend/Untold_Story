@@ -313,30 +313,18 @@ func _close_placeholder_popup() -> void:
 
 
 ## Surbrillance de survol d'une couverture cliquable : léger grossissement
-## depuis le centre et cuir éclairci, en fondu doux (aller-retour).
+## depuis le centre et cuir éclairci, en fondu doux (aller-retour) — la brique
+## commune BookTheme.hover_scale, avec sa variante teintée.
 func _add_hover_highlight(cover: Control) -> void:
 	var base: Color = cover.modulate
 	# Inerte pendant le plongeon : le mouse_exited provoqué par le bouclier de
 	# transition écraserait l'animation d'ouverture de la couverture.
 	cover.mouse_entered.connect(func() -> void:
 		if not _transitioning:
-			_tween_highlight(cover, base * Color(1.14, 1.13, 1.10), 1.03))
+			BookTheme.hover_scale(cover, 1.03, base * Color(1.14, 1.13, 1.10)))
 	cover.mouse_exited.connect(func() -> void:
 		if not _transitioning:
-			_tween_highlight(cover, base, 1.0))
-
-
-func _tween_highlight(cover: Control, color: Color, target_scale: float) -> void:
-	var previous: Variant = cover.get_meta("hover_tween") \
-			if cover.has_meta("hover_tween") else null
-	if previous is Tween and (previous as Tween).is_valid():
-		(previous as Tween).kill()
-	cover.pivot_offset = cover.size / 2.0
-	var tween := cover.create_tween().set_parallel()
-	tween.tween_property(cover, "scale", Vector2.ONE * target_scale, 0.16) \
-			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	tween.tween_property(cover, "modulate", color, 0.16)
-	cover.set_meta("hover_tween", tween)
+			BookTheme.hover_scale(cover, 1.0, base))
 
 
 func _on_card_input(event: InputEvent, story: Dictionary, cover: Control) -> void:
@@ -389,9 +377,7 @@ func _play_dive_transition(cover: Control) -> void:
 
 	# Le plat avant = la couverture d'origine, passée AU-DESSUS de la page
 	# (z_index), charnière sur sa tranche gauche (la reliure).
-	var hover: Variant = cover.get_meta("hover_tween") if cover.has_meta("hover_tween") else null
-	if hover is Tween and (hover as Tween).is_valid():
-		(hover as Tween).kill()
+	BookTheme.kill_hover_tween(cover)
 	cover.scale = Vector2.ONE
 	cover.z_index = 10
 	cover.pivot_offset = Vector2(0.0, cover.size.y / 2.0)

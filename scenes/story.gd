@@ -38,11 +38,9 @@ var _illustration_data: IllustrationData
 ## ("" sinon) — consommé par _on_display_text (cf. _start_story).
 var _resume_text := ""
 var _plate_holder: Control  # espace de la planche (cadrage manuel, cf. _layout_plate)
-var _book_box: Control      # espace du livre (cadrage manuel, cf. _layout_book)
-var _book: PanelContainer
 var _plate: PanelContainer               # la planche (bordure + illustration)
 ## Ratio (largeur/hauteur) de la texture de l'illustration courante — la
-## planche l'épouse exactement (cf. _update_plate_ratio). 0 = pas d'image.
+## planche l'épouse exactement (cf. _layout_plate). 0 = pas d'image.
 var _image_ratio := 0.0
 var _fullscreen: Control                 # surimpression plein écran (ou null)
 ## Titre de l'histoire en cours dans le bandeau (lu dans le manifest).
@@ -214,54 +212,13 @@ func _build_ui() -> void:
 
 	# Le livre ouvert : centré sous le bandeau, proportions constantes quelle
 	# que soit la fenêtre — marges resserrées pour qu'il occupe l'écran.
-	var frame := MarginContainer.new()
-	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	frame.offset_top = TOP_BAR_HEIGHT
-	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
-		frame.add_theme_constant_override(side, 10)
-	add_child(frame)
-
-	# Cadrage MANUEL du livre au ratio BOOK_RATIO (cf. _layout_book) : un
-	# AspectRatioContainer ici couplait la largeur du livre à la hauteur
-	# minimale de son contenu — largeur qui re-coupe le texte, qui change de
-	# hauteur, qui change la largeur… Le moteur oscillait entre deux mises en
-	# page SANS JAMAIS s'arrêter (gel du jeu, constaté au clic d'une zone).
-	# Un enfant posé à la main ne renvoie aucune contrainte : boucle impossible.
-	_book_box = Control.new()
-	_book_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame.add_child(_book_box)
-	_book_box.resized.connect(_layout_book)
-
-	var book := PanelContainer.new()
-	book.add_theme_stylebox_override("panel", BookTheme.leather_style(12, 18.0))
-	_book = book
-	_book_box.add_child(book)
-
-	# Épaisseur du livre : le bloc des pages (tranches de papier empilées)
-	# dépasse du cuir tout autour, et les pages ouvertes reposent dessus.
-	book.add_child(BookTheme.make_page_block(PAGE_BLOCK))
-	var pages_margin := MarginContainer.new()
-	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
-		pages_margin.add_theme_constant_override(side, int(PAGE_BLOCK))
-	book.add_child(pages_margin)
-
-	var pages := HBoxContainer.new()
-	pages.add_theme_constant_override("separation", 0)
-	pages_margin.add_child(pages)
+	# Construction partagée avec la sélection de personnage (BookTheme).
+	var open_book := BookTheme.make_open_book(10, TOP_BAR_HEIGHT, BOOK_RATIO, PAGE_BLOCK)
+	add_child(open_book["root"])
+	var pages: HBoxContainer = open_book["pages"]
 	pages.add_child(_build_left_page())
 	_right_page = _build_right_page()
 	pages.add_child(_right_page)
-
-	# Reliure centrale : creux ombré ET renflement clair des pages de part et
-	# d'autre du pli — le relief que le simple dégradé n'avait pas.
-	var spine := TextureRect.new()
-	spine.texture = BookTheme.gradient_tex(
-			[Color(BookTheme.SPINE, 0.0), Color(BookTheme.PARCHMENT_BRIGHT, 0.16),
-			Color(BookTheme.SPINE, 0.60), Color(BookTheme.SPINE, 0.60),
-			Color(BookTheme.PARCHMENT_BRIGHT, 0.16), Color(BookTheme.SPINE, 0.0)],
-			[0.44, 0.474, 0.494, 0.506, 0.526, 0.56])
-	spine.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	book.add_child(spine)
 
 
 ## Bandeau d'informations en haut de l'écran, dans la DA de la couverture
@@ -641,7 +598,7 @@ func _apply_display_text(text: String, node_id: String, tags: Array) -> void:
 	# plus, et chaque pause connaît son rang en caractères VISIBLES.
 	_display_raw = text
 	var prepared := _prepare_dramatic_text(_display_raw)
-	_text_label.text = _with_drop_cap(prepared["text"])
+	_text_label.text = BookTheme.with_drop_cap(prepared["text"])
 	# La secousse « shock » repart depuis l'apparition de ce texte.
 	if _fx_shock != null and _fx_shock.has_method("restart"):
 		_fx_shock.restart()
@@ -736,25 +693,6 @@ static func _prepare_dramatic_text(raw: String) -> Dictionary:
 	return {"text": clean, "pauses": pauses}
 
 
-## Lettrine : la première lettre du passage est grossie à l'encre du ruban,
-## comme en tête de chapitre. Pas de lettrine si le passage s'ouvre sur une
-## balise BBCode ou un signe (« — », guillemet…) : on laisse tel quel.
-## Les balises ajoutées ne comptent pas comme caractères visibles — la machine
-## à écrire et les pauses [Soupir] restent calées.
-func _with_drop_cap(text: String) -> String:
-	var i := 0
-	while i < text.length() and text[i] in [" ", "\t", "\n"]:
-		i += 1
-	if i >= text.length():
-		return text
-	var first := text[i]
-	if first == "[" or first.to_upper() == first.to_lower():
-		return text
-	return text.substr(0, i) \
-			+ "[font_size=44][color=#7a3126]%s[/color][/font_size]" % first \
-			+ text.substr(i + 1)
-
-
 ## Clic sur la page de droite (texte compris) : si la frappe est en cours, tout
 ## afficher d'un coup
 ## (on tue la séquence et on révèle le texte entier). Sinon, ne rien faire ici.
@@ -804,7 +742,7 @@ func _append_dialogue(lines: Array) -> void:
 	# Le dialogue ajouté fait partie du passage : la reprise doit le retrouver.
 	Progress.record_passage_text(_display_raw)
 	var prepared := _prepare_dramatic_text(_display_raw)
-	_text_label.text = _with_drop_cap(prepared["text"])
+	_text_label.text = BookTheme.with_drop_cap(prepared["text"])
 	var total := _text_label.get_total_character_count()
 	if total <= shown:
 		_text_label.visible_ratio = 1.0
@@ -863,7 +801,7 @@ func _on_present_choices(choices: Array) -> void:
 
 
 ## Trait de séparation entre le texte et les choix : centré, à l'encre de la
-## lettrine (rouge rubriqué, cf. _with_drop_cap). Ajouté en tête de la boîte
+## lettrine (rouge rubriqué, cf. BookTheme.with_drop_cap). Ajouté en tête de la boîte
 ## des choix, il apparaît et disparaît avec eux.
 func _make_choice_separator() -> Control:
 	var separator := Control.new()
@@ -1040,20 +978,6 @@ func _template_ratio(template: int) -> float:
 ## pages — l'AspectRatioContainer utilisé avant avait un minimum dépendant du
 ## ratio, et gelait le jeu en oscillant avec la répartition des deux pages
 ## (boucle infinie de tri, constatée au clic d'une zone d'illustration).
-## Cadre le livre dans son espace : aspect-fit au ratio BOOK_RATIO, centré.
-## Cadrage manuel pour les mêmes raisons que _layout_plate (aucune rétroaction
-## du contenu sur la mise en page englobante).
-func _layout_book() -> void:
-	var box := _book_box.size
-	if box.x <= 0.0 or box.y <= 0.0:
-		return
-	var book_size := Vector2(box.y * BOOK_RATIO, box.y)
-	if book_size.x > box.x:
-		book_size = Vector2(box.x, box.x / BOOK_RATIO)
-	_book.position = (box - book_size) * 0.5
-	_book.size = book_size
-
-
 func _layout_plate() -> void:
 	var pad := FRAME_PAD * 2.0
 	var box := _plate_holder.size

@@ -170,6 +170,78 @@ static func leather_style(radius := 12, margin := 14.0) -> StyleBoxFlat:
 	return style
 
 
+# ------------------------------------------------------------- Livre ouvert
+
+## Construit le livre ouvert complet — cuir, tranches de papier, deux pages
+## côte à côte et reliure centrale — identique dans toutes les scènes qui le
+## montrent (histoire, sélection). Renvoie :
+##   "root"  : le Control plein écran à ajouter à la scène (marges incluses) ;
+##   "pages" : le HBoxContainer où poser la page de gauche puis celle de droite.
+##
+## Le livre est cadré MANUELLEMENT au ratio demandé (aspect-fit centré dans
+## l'espace disponible) : un AspectRatioContainer couplerait la largeur du
+## livre à la hauteur minimale de son contenu — couplage qui a déjà fait
+## osciller la mise en page sans fin (jeu figé, cf. correctif dans story.gd).
+## Un enfant posé à la main ne renvoie aucune contrainte : boucle impossible.
+static func make_open_book(margin: int, top_offset := 0.0,
+		ratio := 420.0 / 297.0, page_block := 9.0) -> Dictionary:
+	var root := MarginContainer.new()
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.offset_top = top_offset
+	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		root.add_theme_constant_override(side, margin)
+
+	# L'espace du livre : un Control simple dont l'enfant est cadré à la main.
+	var box := Control.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(box)
+
+	var book := PanelContainer.new()
+	book.add_theme_stylebox_override("panel", leather_style(12, 18.0))
+	box.add_child(book)
+	var layout_book := func() -> void:
+		var space := box.size
+		if space.x <= 0.0 or space.y <= 0.0:
+			return
+		var book_size := Vector2(space.y * ratio, space.y)
+		if book_size.x > space.x:  # trop large pour l'espace : la largeur gouverne
+			book_size = Vector2(space.x, space.x / ratio)
+		book.position = (space - book_size) * 0.5
+		book.size = book_size
+	box.resized.connect(layout_book)
+	# Re-cadre AUSSI quand le minimum du livre se détend : au tout premier
+	# calcul, un texte adaptatif encore sans largeur peut gonfler le minimum
+	# (retour à la ligne à chaque mot) — set_size est alors clampé vers le
+	# haut, et sans ce rappel le livre resterait démesuré. Connexion DIFFÉRÉE :
+	# jamais de re-cadrage au milieu d'une passe de mise en page.
+	book.minimum_size_changed.connect(layout_book, CONNECT_DEFERRED)
+
+	# Épaisseur du livre : le bloc des pages (tranches empilées) dépasse du
+	# cuir tout autour, et les pages ouvertes reposent dessus.
+	book.add_child(make_page_block(page_block))
+	var pages_margin := MarginContainer.new()
+	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		pages_margin.add_theme_constant_override(side, int(page_block))
+	book.add_child(pages_margin)
+
+	var pages := HBoxContainer.new()
+	pages.add_theme_constant_override("separation", 0)
+	pages_margin.add_child(pages)
+
+	# Reliure centrale : creux ombré ET renflement clair des pages de part et
+	# d'autre du pli — le relief que le simple dégradé n'avait pas.
+	var spine := TextureRect.new()
+	spine.texture = gradient_tex(
+			[Color(SPINE, 0.0), Color(PARCHMENT_BRIGHT, 0.16),
+			Color(SPINE, 0.60), Color(SPINE, 0.60),
+			Color(PARCHMENT_BRIGHT, 0.16), Color(SPINE, 0.0)],
+			[0.44, 0.474, 0.494, 0.506, 0.526, 0.56])
+	spine.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	book.add_child(spine)
+
+	return {"root": root, "pages": pages}
+
+
 # ------------------------------------------------------------------ Ornements
 
 ## Usure d'une page : coins légèrement assombris et quelques taches claires,
@@ -274,6 +346,40 @@ static func make_fleuron() -> Control:
 
 # ------------------------------------------------------------------ Widgets
 
+## Lettrine : première lettre du texte grossie à l'encre du ruban — la même
+## écriture en tête des passages du récit et des pages de garde. Sans effet si
+## le texte commence par une balise BBCode ou un caractère non alphabétique.
+static func with_drop_cap(text: String) -> String:
+	var i := 0
+	while i < text.length() and text[i] in [" ", "\t", "\n"]:
+		i += 1
+	if i >= text.length():
+		return text
+	var first := text[i]
+	if first == "[" or first.to_upper() == first.to_lower():
+		return text
+	return text.substr(0, i) \
+			+ "[font_size=44][color=#7a3126]%s[/color][/font_size]" % first \
+			+ text.substr(i + 1)
+
+
+## Grossissement au survol : à connecter sur n'importe quel Control cliquable
+## (portraits, couvertures du hub…). `grow` = échelle atteinte au survol.
+static func connect_hover_scale(control: Control, grow := 1.06) -> void:
+	control.mouse_entered.connect(func() -> void: hover_scale(control, grow))
+	control.mouse_exited.connect(func() -> void: hover_scale(control, 1.0))
+
+
+## Tue le tween de survol en cours d'un contrôle (posé par hover_scale sous la
+## méta « hover_tween ») — pour les transitions qui reprennent la main sur la
+## géométrie du contrôle (ex. plongeon du hub) sans se faire écraser.
+static func kill_hover_tween(control: Control) -> void:
+	var previous: Variant = control.get_meta("hover_tween") \
+			if control.has_meta("hover_tween") else null
+	if previous is Tween and (previous as Tween).is_valid():
+		(previous as Tween).kill()
+
+
 ## Étiquette prête à l'emploi (police du thème).
 static func make_label(text: String, size: int, color: Color,
 		italic := false, bold := false) -> Label:
@@ -322,18 +428,21 @@ static func style_choice(button: Button, read := false, size := 18, on_dark := f
 	# plus du passage à la couleur d'accent (les boutons désactivés restent tels).
 	button.mouse_entered.connect(func() -> void:
 		if not button.disabled:
-			_animate_scale(button, 1.06))
-	button.mouse_exited.connect(func() -> void: _animate_scale(button, 1.0))
+			hover_scale(button, 1.06))
+	button.mouse_exited.connect(func() -> void: hover_scale(button, 1.0))
 
 
-## Grossit/repose un bouton au survol (pivot recentré à chaque fois : la
-## taille n'est connue qu'après la mise en page).
-static func _animate_scale(button: Button, target: float) -> void:
-	var previous: Variant = button.get_meta("hover_tween") if button.has_meta("hover_tween") else null
-	if previous is Tween and (previous as Tween).is_valid():
-		(previous as Tween).kill()
-	button.pivot_offset = button.size / 2.0
-	var tween := button.create_tween()
-	tween.tween_property(button, "scale", Vector2.ONE * target, 0.14) \
+## Grossit/repose un contrôle au survol (pivot recentré à chaque fois : la
+## taille n'est connue qu'après la mise en page). Le tween en cours est tué
+## avant d'en relancer un (survols rapides). `tint` optionnel : le modulate
+## glisse en parallèle vers cette couleur (éclaircissement des couvertures).
+static func hover_scale(control: Control, target: float, tint: Variant = null) -> void:
+	kill_hover_tween(control)
+	control.pivot_offset = control.size / 2.0
+	var tween := control.create_tween()
+	tween.tween_property(control, "scale", Vector2.ONE * target, 0.14) \
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	button.set_meta("hover_tween", tween)
+	if tint is Color:
+		tween.set_parallel()
+		tween.tween_property(control, "modulate", tint, 0.14)
+	control.set_meta("hover_tween", tween)
