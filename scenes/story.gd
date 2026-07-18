@@ -422,6 +422,9 @@ func _build_right_page() -> Control:
 	page.add_child(BookTheme.paper(false))
 	page.add_child(BookTheme.page_wear(23))
 	page.add_child(BookTheme.make_page_frame())
+	# Clic n'importe où sur la feuille = affichage instantané du texte (les
+	# couches décoratives ignorent la souris, les boutons de choix la stoppent).
+	page.gui_input.connect(_on_text_input)
 
 	var inner := MarginContainer.new()
 	inner.add_theme_constant_override("margin_left", 32)  # côté reliure
@@ -736,7 +739,8 @@ func _with_drop_cap(text: String) -> String:
 			+ text.substr(i + 1)
 
 
-## Clic sur la zone de texte : si la frappe est en cours, tout afficher d'un coup
+## Clic sur la page de droite (texte compris) : si la frappe est en cours, tout
+## afficher d'un coup
 ## (on tue la séquence et on révèle le texte entier). Sinon, ne rien faire ici.
 func _on_text_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed \
