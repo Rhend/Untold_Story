@@ -163,11 +163,21 @@ func _make_card(story: Dictionary) -> Control:
 		lock_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		col.add_child(lock_hint)
 
-	# Marque d'éditeur au bas de la couverture. Le PanelContainer étire ses
-	# enfants directs : on passe par un canevas intermédiaire pour ancrer.
+	cover.add_child(_make_editor_mark())
+
+	# Ruban marque-page élimé (cf. icon.svg), sur les tomes disponibles.
+	if not locked:
+		cover.add_child(_make_ribbon())
+
+	return cover
+
+
+## Marque d'éditeur « · UNTOLD · » ancrée au bas de la couverture. Le
+## PanelContainer étire ses enfants directs : on passe par un canevas
+## intermédiaire pour pouvoir ancrer.
+func _make_editor_mark() -> Control:
 	var mark_holder := Control.new()
 	mark_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cover.add_child(mark_holder)
 	var mark := BookTheme.make_label("·  UNTOLD  ·", 12, Color(BookTheme.PAGE_EDGE, 0.75))
 	mark.anchor_top = 1.0
 	mark.anchor_bottom = 1.0
@@ -177,26 +187,27 @@ func _make_card(story: Dictionary) -> Control:
 	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mark_holder.add_child(mark)
+	return mark_holder
 
-	# Ruban marque-page élimé (cf. icon.svg), sur les tomes disponibles.
-	if not locked:
-		var ribbon := Control.new()
-		ribbon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		ribbon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		ribbon.draw.connect(func() -> void:
-			var left := ribbon.size.x - 26.0
-			var top := -12.0  # dépasse le bord du cuir (dessin non clippé)
-			var points := PackedVector2Array([
-				Vector2(left, top), Vector2(left + 20, top),
-				Vector2(left + 20, top + 58), Vector2(left + 10, top + 44),
-				Vector2(left, top + 58)])
-			ribbon.draw_colored_polygon(points, BookTheme.RIBBON)
-			var outline := points.duplicate()
-			outline.append(points[0])
-			ribbon.draw_polyline(outline, Color("54211a"), 1.5, true))
-		cover.add_child(ribbon)
 
-	return cover
+## Ruban marque-page élimé au coin haut-droit, qui dépasse du bord du cuir
+## (dessin non clippé) — le ruban de icon.svg.
+func _make_ribbon() -> Control:
+	var ribbon := Control.new()
+	ribbon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ribbon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ribbon.draw.connect(func() -> void:
+		var left := ribbon.size.x - 26.0
+		var top := -12.0
+		var points := PackedVector2Array([
+			Vector2(left, top), Vector2(left + 20, top),
+			Vector2(left + 20, top + 58), Vector2(left + 10, top + 44),
+			Vector2(left, top + 58)])
+		ribbon.draw_colored_polygon(points, BookTheme.RIBBON)
+		var outline := points.duplicate()
+		outline.append(points[0])
+		ribbon.draw_polyline(outline, Color("54211a"), 1.5, true))
+	return ribbon
 
 
 ## Tome fantôme « Nouvelle Histoire ? » : couverture au cuir éteint, sans

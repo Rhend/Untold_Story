@@ -278,14 +278,15 @@ func _center_of(rep: String) -> Vector2:
 	return _positions.get(rep, Vector2.ZERO) + _size_of(rep) / 2.0
 
 
-## Cibles sortantes d'une chaîne, ramenées à leur représentant (les liens
-## internes à la chaîne ont disparu par construction).
-func _contracted_targets(rep: String) -> Array:
-	var members: Array = _chains.get(rep, [rep])
-	var result: Array = []
-	for link in _real_outgoing(members.back()):
-		result.append(_rep_of.get(link["target"], link["target"]))
-	return result
+## Un lien sortant est-il montré en TRAIT PLEIN sur la carte ? Oui si sa cible
+## a été visitée, ou si c'est un choix non gardé dont la cible a déjà été
+## APERÇUE (bulle « ? »). Règle unique, partagée par la disposition auto
+## (_drawn_children) et le dessin des arêtes (_draw_edges).
+func _link_drawn(link: Dictionary) -> bool:
+	var target: String = link["target"]
+	if _revealed.get(target) == "visited":
+		return true
+	return link["kind"] == "choice" and not link["guarded"] and _revealed.has(target)
 
 
 ## Cibles DESSINÉES d'une chaîne : celles reliées par un trait plein sur la
@@ -297,13 +298,10 @@ func _drawn_children(rep: String) -> Array:
 	var members: Array = _chains.get(rep, [rep])
 	var result: Array = []
 	for link in _real_outgoing(members.back()):
-		var target: String = link["target"]
-		var target_rep: String = _rep_of.get(target, target)
+		var target_rep: String = _rep_of.get(link["target"], link["target"])
 		if target_rep == rep or result.has(target_rep):
 			continue
-		var target_visited: bool = _revealed.get(target) == "visited"
-		var seen_choice: bool = link["kind"] == "choice" and not link["guarded"]
-		if target_visited or (seen_choice and _revealed.has(target)):
+		if _link_drawn(link):
 			result.append(target_rep)
 	return result
 
@@ -924,13 +922,9 @@ func _panel_style(rep: String) -> StyleBoxFlat:
 	return style
 
 
-## Couleur d'un personnage : sa ressource si connue, sinon une teinte stable
-## dérivée de son nom.
+## Couleur d'un personnage — point unique de vérité : CharacterData.color_for.
 func _color_of(character_type: String) -> Color:
-	for data in _characters:
-		if data.character_type == character_type:
-			return data.color
-	return Color.from_hsv(fmod(abs(float(character_type.hash())) / 1000.0, 1.0), 0.55, 0.9)
+	return CharacterData.color_for(character_type, _characters)
 
 
 ## Pastille d'un personnage : son icône si connue, sinon un point à sa couleur.
@@ -1062,49 +1056,13 @@ func _select(rep: String) -> void:
 func _show_recap(rep: String) -> void:
 	var members: Array = _chains.get(rep, [rep])
 
-	_recap = PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.075, 0.065, 0.105, 0.99)
-	style.border_color = Color(SEPIA.r, SEPIA.g, SEPIA.b, 0.5)
-	style.shadow_color = Color(0, 0, 0, 0.45)
-	style.shadow_size = 18
-	style.set_content_margin_all(20)
-	if _horizontal:
-		_recap.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-		_recap.offset_top = -RECAP_HEIGHT
-		style.border_width_top = 1
-		style.shadow_offset = Vector2(0, -6)
-	else:
-		_recap.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
-		_recap.offset_left = -RECAP_WIDTH
-		_recap.offset_top = HEADER_H
-		style.border_width_left = 1
-		style.shadow_offset = Vector2(-6, 0)
-	_recap.add_theme_stylebox_override("panel", style)
+	_recap = _make_recap_panel()
 	add_child(_recap)
 
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 12)
 	_recap.add_child(col)
-
-	# En-tête : étendue de la chaîne + fermeture du volet.
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 8)
-	col.add_child(head)
-	var title := Label.new()
-	title.text = _display_name(rep) if members.size() == 1 \
-			else "%s  →  %s" % [_display_name(members.front()), _display_name(members.back())]
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.clip_text = true
-	title.add_theme_font_size_override("font_size", 17)
-	title.add_theme_color_override("font_color", SEPIA)
-	head.add_child(title)
-	var close := Button.new()
-	close.text = "✕"
-	close.flat = true
-	close.focus_mode = Control.FOCUS_NONE
-	close.pressed.connect(func() -> void: _select(_selected_id))
-	head.add_child(close)
+	col.add_child(_make_recap_header(rep, members))
 
 	# Version du texte rejouée : celle du personnage incarné s'il est passé
 	# par là, sinon celle du premier découvreur.
@@ -1153,6 +1111,53 @@ func _show_recap(rep: String) -> void:
 
 	if illustration != null:
 		illustration.setup(illustration_data)
+
+
+## Le panneau du volet de relecture : ancré en bas (paysage) ou à droite
+## (portrait), bord et ombre orientés vers la carte.
+func _make_recap_panel() -> PanelContainer:
+	var panel := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.075, 0.065, 0.105, 0.99)
+	style.border_color = Color(SEPIA.r, SEPIA.g, SEPIA.b, 0.5)
+	style.shadow_color = Color(0, 0, 0, 0.45)
+	style.shadow_size = 18
+	style.set_content_margin_all(20)
+	if _horizontal:
+		panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+		panel.offset_top = -RECAP_HEIGHT
+		style.border_width_top = 1
+		style.shadow_offset = Vector2(0, -6)
+	else:
+		panel.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
+		panel.offset_left = -RECAP_WIDTH
+		panel.offset_top = HEADER_H
+		style.border_width_left = 1
+		style.shadow_offset = Vector2(-6, 0)
+	panel.add_theme_stylebox_override("panel", style)
+	return panel
+
+
+## En-tête du volet : étendue de la chaîne (premier → dernier nœud) et bouton
+## de fermeture (retour à la simple sélection).
+func _make_recap_header(rep: String, members: Array) -> Control:
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
+	var title := Label.new()
+	title.text = _display_name(rep) if members.size() == 1 \
+			else "%s  →  %s" % [_display_name(members.front()), _display_name(members.back())]
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.clip_text = true
+	title.add_theme_font_size_override("font_size", 17)
+	title.add_theme_color_override("font_color", SEPIA)
+	head.add_child(title)
+	var close := Button.new()
+	close.text = "✕"
+	close.flat = true
+	close.focus_mode = Control.FOCUS_NONE
+	close.pressed.connect(func() -> void: _select(_selected_id))
+	head.add_child(close)
+	return head
 
 
 ## Textes des membres concaténés, relisibles mais sans aucune interaction.
@@ -1327,9 +1332,7 @@ func _draw_edges() -> void:
 			var target_rep: String = _rep_of.get(target, target)
 			if target_rep == rep:
 				continue
-			var target_visited: bool = _revealed.get(target) == "visited"
-			var seen_choice: bool = link["kind"] == "choice" and not link["guarded"]
-			if target_visited or (seen_choice and _revealed.has(target)):
+			if _link_drawn(link):
 				_draw_arrow_edge(from_center, target_rep)
 			elif not link.get("identity", false):
 				# Une variante de personnage non explorée (ex. Prologue1 selon

@@ -26,50 +26,39 @@ var _data: Dictionary = {}
 ## { story_id: { zone_id: { personnage: nombre de clics } } }
 var _zones: Dictionary = {}
 
-## Point de reprise (checkpoint) de la partie en cours : le dernier nœud où un
-## point de choix a été présenté au personnage. Sauté directement à la prochaine
-## sélection de ce personnage (reprise auto, cf. record_checkpoint/resume_node).
-## Effacé à la fin de l'histoire et par restart_playthrough().
-## { story_id: { personnage: node_id } }
-var _position: Dictionary = {}
+## LA PARTIE EN COURS, une section par donnée — toutes de même forme
+## { story_id: { personnage: valeur } }, toutes effacées ensemble à la fin de
+## l'histoire et par restart_playthrough (cf. _erase_current_run), toutes
+## sauvées sous "partie_en_cours" sur le disque. AJOUTER une donnée de run =
+## ajouter son nom ici : sauvegarde, chargement et effacement suivent seuls.
+##
+##   position        : point de reprise (checkpoint) — le dernier nœud où un
+##                     point de choix a été présenté ; sauté directement à la
+##                     prochaine sélection du personnage (reprise auto).
+##                     valeur : node_id (String).
+##   visited_session : nœuds traversés PENDANT la partie — restaure
+##                     StoryRunner._visited à la reprise pour que les gardes
+##                     visited() se comportent comme en lecture continue.
+##                     DISTINCT de "decouverte" (cumulatif inter-parties).
+##                     valeur : [node_id, ...].
+##   inventory       : inventaire du run (un nouveau run repart les mains
+##                     vides). valeur : { item_id: quantité }.
+##   illustration    : dernière illustration affichée — elle persiste sur la
+##                     page de gauche bien au-delà du nœud qui l'a invoquée ;
+##                     sans cette trace, la reprise repartirait page vierge.
+##                     valeur : nom d'illustration (String).
+##   passage_text    : texte COMPLET du passage au checkpoint — un passage
+##                     accumule plusieurs nœuds enchaînés + les dialogues de
+##                     zones, or le checkpoint ne rejoue que son propre nœud.
+##                     valeur : texte brut (String).
+##   variables       : variables du récit (@set : compétences, réputation…)
+##                     au checkpoint — sans elles, la reprise repartirait des
+##                     valeurs par défaut. valeur : { nom: valeur }.
+const RUN_SECTIONS := ["position", "visited_session", "inventory",
+		"illustration", "passage_text", "variables"]
 
-## Ensemble des nœuds traversés PENDANT la partie en cours, par personnage —
-## alimente la restauration de StoryRunner._visited à la reprise, pour que les
-## gardes visited()/!visited() se comportent comme dans une lecture continue.
-## DISTINCT de "decouverte" (_data), cumulatif inter-parties : celui-ci est une
-## trace de session, remise à zéro à la fin de l'histoire et par restart.
-## { story_id: { personnage: [node_id, ...] } }
-var _visited_session: Dictionary = {}
-
-## Inventaire de la partie en cours, par personnage. Lié au RUN, pas au
-## personnage : effacé à la fin de l'histoire ET par restart_playthrough (mêmes
-## règles que _position/_visited_session, cf. _erase_current_run), PAS par
-## "decouverte". Un nouveau run repart donc les mains vides.
-## { story_id: { personnage: { item_id: quantité } } }
-var _inventory: Dictionary = {}
-
-## Dernière illustration affichée pendant la partie en cours, par personnage.
-## Une illustration PERSISTE sur la page de gauche bien au-delà du nœud qui l'a
-## invoquée (peu de nœuds portent une commande @illustration) : sans cette trace,
-## la reprise par checkpoint repartirait page de gauche vide. Mêmes règles de vie
-## que _position (cf. _erase_current_run).
-## { story_id: { personnage: nom d'illustration } }
-var _illustration: Dictionary = {}
-
-## Texte complet du passage affiché au moment du checkpoint, par personnage.
-## Un passage accumule le texte de PLUSIEURS nœuds enchaînés par des sauts, plus
-## les dialogues débloqués au clic des zones — or le checkpoint ne rejoue que son
-## propre nœud : sans cette trace, la reprise tronquerait la page de droite au
-## dernier nœud de la chaîne. Mêmes règles de vie que _position.
-## { story_id: { personnage: texte brut du passage } }
-var _passage_text: Dictionary = {}
-
-## Variables du récit (@set : compétences, réputation...) au moment du
-## checkpoint, par personnage. Sans elles, une reprise repartirait des valeurs
-## par défaut de l'histoire — tout ce que la partie a accumulé serait perdu.
-## Mêmes règles de vie que _position (cf. _erase_current_run).
-## { story_id: { personnage: { nom: valeur } } }
-var _variables: Dictionary = {}
+## { section (cf. RUN_SECTIONS): { story_id: { personnage: valeur } } }
+var _run: Dictionary = {}
 
 
 func _ready() -> void:
@@ -91,7 +80,7 @@ func begin_story(story_id: String, character: String) -> void:
 func record_visit(node_id: String) -> void:
 	var visitors_of_node: Dictionary = _node_entry(node_id)["visited_by"]
 	visitors_of_node[_character] = int(visitors_of_node.get(_character, 0)) + 1
-	var session: Array = _session_entry()
+	var session: Array = _run_slot("visited_session", [])
 	if not session.has(node_id):
 		session.append(node_id)
 	_save()
@@ -101,8 +90,7 @@ func record_visit(node_id: String) -> void:
 ## personnage), pour restaurer StoryRunner._visited à la reprise. Copie défensive
 ## (l'appelant ne doit pas muter l'état interne). Vide si aucune partie en cours.
 func resume_visited_set(story_id := "", character := "") -> Array:
-	var chr := _character if character.is_empty() else character
-	return (_visited_session.get(_resolve(story_id), {}).get(chr, []) as Array).duplicate()
+	return (_run_get("visited_session", [], story_id, character) as Array).duplicate()
 
 
 ## Le personnage courant valide une réponse à un point de choix.
@@ -132,7 +120,7 @@ func record_zone_click(zone_id: String) -> void:
 
 ## Ajoute qty exemplaires d'un objet à l'inventaire du personnage courant.
 func add_item(id: String, qty: int = 1) -> void:
-	var items: Dictionary = _inventory_entry()
+	var items: Dictionary = _run_slot("inventory", {})
 	items[id] = int(items.get(id, 0)) + qty
 	_save()
 
@@ -140,14 +128,14 @@ func add_item(id: String, qty: int = 1) -> void:
 ## Retire qty exemplaires. Si le total tombe à 0 ou moins, l'entrée DISPARAÎT
 ## (un objet n'est jamais affiché « à 0 »). Sans effet si l'objet est absent.
 func remove_item(id: String, qty: int = 1) -> void:
-	var items: Dictionary = _inventory.get(_story_id, {}).get(_character, {})
+	var items: Dictionary = _run_get("inventory", {})
 	if not items.has(id):
 		return
 	var left := int(items[id]) - qty
 	if left <= 0:
 		items.erase(id)
 		if items.is_empty():
-			_erase_from(_inventory, _story_id, _character)
+			_erase_from(_run_store("inventory"), _story_id, _character)
 	else:
 		items[id] = left
 	_save()
@@ -156,15 +144,13 @@ func remove_item(id: String, qty: int = 1) -> void:
 ## Le personnage possède-t-il AU MOINS qty exemplaires de l'objet ?
 ## Interrogé par la garde has_item("id"[, qty]) du .untold. Comparaison >=.
 func has_item(id: String, qty: int = 1, story_id := "", character := "") -> bool:
-	var chr := _character if character.is_empty() else character
-	return int(_inventory.get(_resolve(story_id), {}).get(chr, {}).get(id, 0)) >= qty
+	return int((_run_get("inventory", {}, story_id, character) as Dictionary).get(id, 0)) >= qty
 
 
 ## Inventaire { item_id: quantité } d'un (story_id, personnage), pour l'UI.
 ## Copie défensive (l'appelant ne doit pas muter l'état interne).
 func inventory_items(story_id := "", character := "") -> Dictionary:
-	var chr := _character if character.is_empty() else character
-	return (_inventory.get(_resolve(story_id), {}).get(chr, {}) as Dictionary).duplicate()
+	return (_run_get("inventory", {}, story_id, character) as Dictionary).duplicate()
 
 
 ## Enregistre le point de reprise du personnage courant : le nœud où un point de
@@ -174,12 +160,8 @@ func inventory_items(story_id := "", character := "") -> Dictionary:
 ## `variables` : l'état des variables du récit à cet instant (runner.variables),
 ## rejoué à la reprise — les compteurs @set (compétences, réputation) survivent.
 func record_checkpoint(node_id: String, variables: Dictionary = {}) -> void:
-	if not _position.has(_story_id):
-		_position[_story_id] = {}
-	_position[_story_id][_character] = node_id
-	if not _variables.has(_story_id):
-		_variables[_story_id] = {}
-	_variables[_story_id][_character] = variables.duplicate(true)
+	_run_put("position", node_id)
+	_run_put("variables", variables.duplicate(true))
 	_save()
 
 
@@ -187,8 +169,7 @@ func record_checkpoint(node_id: String, variables: Dictionary = {}) -> void:
 ## Copie défensive. NB : le JSON rend les entiers en float — sans importance,
 ## les comparaisons et l'arithmétique du moteur sont numériques.
 func resume_variables(story_id := "", character := "") -> Dictionary:
-	var chr := _character if character.is_empty() else character
-	return (_variables.get(_resolve(story_id), {}).get(chr, {}) as Dictionary).duplicate(true)
+	return (_run_get("variables", {}, story_id, character) as Dictionary).duplicate(true)
 
 
 ## Efface l'état du run terminé (reprise + trace de session + inventaire) pour le
@@ -204,42 +185,35 @@ func clear_checkpoint() -> void:
 ## Nœud de reprise pour (story_id, personnage), ou "" si aucun (repart du début).
 ## story_id / character vides = contexte courant.
 func resume_node(story_id := "", character := "") -> String:
-	var chr := _character if character.is_empty() else character
-	return _position.get(_resolve(story_id), {}).get(chr, "")
+	return _run_get("position", "", story_id, character)
 
 
 ## Enregistre l'illustration actuellement affichée pour le personnage courant —
 ## appelé à CHAQUE @illustration exécutée, pour que la reprise retrouve la page
 ## de gauche telle que laissée.
-func record_illustration(name: String) -> void:
-	if not _illustration.has(_story_id):
-		_illustration[_story_id] = {}
-	_illustration[_story_id][_character] = name
+func record_illustration(illustration_name: String) -> void:
+	_run_put("illustration", illustration_name)
 	_save()
 
 
 ## Illustration à réafficher à la reprise pour (story_id, personnage), ou "" si
 ## aucune (page de gauche vierge, comme en début d'histoire).
 func resume_illustration(story_id := "", character := "") -> String:
-	var chr := _character if character.is_empty() else character
-	return _illustration.get(_resolve(story_id), {}).get(chr, "")
+	return _run_get("illustration", "", story_id, character)
 
 
 ## Enregistre le texte du passage actuellement affiché pour le personnage
 ## courant — à CHAQUE affichage de passage et à chaque dialogue ajouté, pour que
 ## la reprise retrouve la page de droite telle que laissée.
 func record_passage_text(text: String) -> void:
-	if not _passage_text.has(_story_id):
-		_passage_text[_story_id] = {}
-	_passage_text[_story_id][_character] = text
+	_run_put("passage_text", text)
 	_save()
 
 
 ## Texte du passage à réafficher à la reprise pour (story_id, personnage), ou ""
 ## si aucun (le nœud de reprise est alors rejoué tel quel).
 func resume_passage_text(story_id := "", character := "") -> String:
-	var chr := _character if character.is_empty() else character
-	return _passage_text.get(_resolve(story_id), {}).get(chr, "")
+	return _run_get("passage_text", "", story_id, character)
 
 
 ## Recommence la partie de ce (story_id, personnage) : efface UNIQUEMENT sa
@@ -264,12 +238,8 @@ func restart_playthrough(story_id: String, character: String) -> void:
 ## personnage — un nouveau run repart les mains vides. Ne touche NI zones NI
 ## "decouverte".
 func _erase_current_run(story_id: String, character: String) -> void:
-	_erase_from(_position, story_id, character)
-	_erase_from(_visited_session, story_id, character)
-	_erase_from(_inventory, story_id, character)
-	_erase_from(_illustration, story_id, character)
-	_erase_from(_passage_text, story_id, character)
-	_erase_from(_variables, story_id, character)
+	for section in RUN_SECTIONS:
+		_erase_from(_run_store(section), story_id, character)
 
 
 func _erase_from(store: Dictionary, story_id: String, character: String) -> void:
@@ -285,12 +255,7 @@ func _erase_from(store: Dictionary, story_id: String, character: String) -> void
 func reset() -> void:
 	_data = {}
 	_zones = {}
-	_position = {}
-	_visited_session = {}
-	_inventory = {}
-	_illustration = {}
-	_passage_text = {}
-	_variables = {}
+	_run = {}
 	_save()
 
 
@@ -382,25 +347,42 @@ func _node_entry(node_id: String) -> Dictionary:
 	return nodes[node_id]
 
 
-## Écriture : liste des nœuds de session pour le (story_id, personnage) courant,
-## créée au besoin.
-func _session_entry() -> Array:
-	var by_story: Dictionary = _visited_session.get_or_add(_story_id, {})
-	return by_story.get_or_add(_character, [])
+# ------------------------------------------- Accès aux sections de la partie
+# (cf. RUN_SECTIONS pour la liste et le sens de chaque section)
+
+## Le magasin d'une section : { story_id: { personnage: valeur } }, créé vide
+## au besoin.
+func _run_store(section: String) -> Dictionary:
+	return _run.get_or_add(section, {})
 
 
-## Écriture : inventaire { item_id: qté } du (story_id, personnage) courant,
-## créé au besoin.
-func _inventory_entry() -> Dictionary:
-	var by_story: Dictionary = _inventory.get_or_add(_story_id, {})
-	return by_story.get_or_add(_character, {})
+## Lecture : valeur d'une section pour (story_id, personnage), ou `default`.
+## story_id / character vides = contexte courant. La valeur renvoyée est
+## l'état INTERNE quand elle existe : les accesseurs publics dupliquent.
+func _run_get(section: String, default: Variant, story_id := "", character := "") -> Variant:
+	var chr := _character if character.is_empty() else character
+	return _run_store(section).get(_resolve(story_id), {}).get(chr, default)
+
+
+## Écriture : pose la valeur pour (histoire, personnage) COURANTS. Ne sauve
+## pas — l'appelant regroupe ses écritures puis appelle _save() une fois.
+func _run_put(section: String, value: Variant) -> void:
+	(_run_store(section).get_or_add(_story_id, {}) as Dictionary)[_character] = value
+
+
+## Écriture : valeur MUTABLE pour (histoire, personnage) courants, créée à
+## partir de `default` au besoin (liste de session, inventaire...).
+func _run_slot(section: String, default: Variant) -> Variant:
+	var per_character: Dictionary = _run_store(section).get_or_add(_story_id, {})
+	if not per_character.has(_character):
+		per_character[_character] = default
+	return per_character[_character]
 
 
 ## Format disque, structuré par DURÉE DE VIE des données :
 ##   { "decouverte":      <cumulatif, jamais remis à zéro : visited_by/chosen>,
-##     "partie_en_cours": { "zones", "position", "visited_session", "inventory" } }
-## La section "partie_en_cours" peut encore grossir : ajouter une clé ici et
-## l'inclure dans restart_playthrough().
+##     "partie_en_cours": { "zones" + une clé par section de RUN_SECTIONS } }
+## Ajouter une donnée de partie = l'ajouter à RUN_SECTIONS, rien d'autre.
 ##
 ## Écriture ATOMIQUE : le JSON part dans un fichier temporaire, l'ancienne
 ## sauvegarde devient la copie de secours (.bak), puis le temporaire prend sa
@@ -412,17 +394,12 @@ func _save() -> void:
 	if file == null:
 		push_error("Progress: impossible d'écrire " + tmp_path)
 		return
+	var current_run: Dictionary = {"zones": _zones}
+	for section in RUN_SECTIONS:
+		current_run[section] = _run_store(section)
 	file.store_string(JSON.stringify({
 		"decouverte": _data,
-		"partie_en_cours": {
-			"zones": _zones,
-			"position": _position,
-			"visited_session": _visited_session,
-			"inventory": _inventory,
-			"illustration": _illustration,
-			"passage_text": _passage_text,
-			"variables": _variables,
-		},
+		"partie_en_cours": current_run,
 	}, "\t"))
 	file.close()
 
@@ -458,18 +435,15 @@ func _try_load(path: String) -> bool:
 ## ancien. Chaque nouvelle version du format ajoute une branche EN TÊTE ; les
 ## anciennes branches restent pour ne perdre aucune sauvegarde existante.
 func _migrate(parsed: Dictionary) -> void:
-	# v3 (points 7-8) — sections par durée de vie. "visited_session" absent des
-	# toutes premières sauvegardes v3 (point 7) → défaut {} sans migration.
+	# v3 (points 7-8) — sections par durée de vie. Une section absente (vieille
+	# sauvegarde d'avant son introduction) démarre simplement vide.
 	if parsed.has("decouverte") or parsed.has("partie_en_cours"):
 		_data = parsed.get("decouverte", {})
 		var current: Dictionary = parsed.get("partie_en_cours", {})
 		_zones = current.get("zones", {})
-		_position = current.get("position", {})
-		_visited_session = current.get("visited_session", {})
-		_inventory = current.get("inventory", {})  # absent des sauvegardes pré-point-10 → {}
-		_illustration = current.get("illustration", {})  # absent des sauvegardes antérieures → {}
-		_passage_text = current.get("passage_text", {})  # idem
-		_variables = current.get("variables", {})  # idem
+		_run = {}
+		for section in RUN_SECTIONS:
+			_run[section] = current.get(section, {})
 		return
 	# v2 (point 4) — { "stories", "zones" }, sans point de reprise.
 	if parsed.has("stories") or parsed.has("zones"):

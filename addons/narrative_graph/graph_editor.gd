@@ -93,12 +93,43 @@ func _ready() -> void:
 
 # --------------------------------------------------------------------- UI
 
+## Monte le panneau : les deux rangées d'outils, la vue graphe + inspecteur,
+## et les dialogues. Chaque rangée a son constructeur dédié.
 func _build_ui() -> void:
-	# Rangée 1 — l'histoire : choix du fichier, création de nœud, vérification,
-	# recherche, statut.
+	add_child(_build_story_toolbar())
+	add_child(_build_layout_toolbar())
+
+	var split := HSplitContainer.new()
+	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	add_child(split)
+
+	_graph_edit = GraphEdit.new()
+	_graph_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_graph_edit.minimap_enabled = true
+	# Connecteurs courbes (natif) : cohérent avec la carte en jeu (story_map),
+	# aucune ligne de dessin custom à écrire.
+	_graph_edit.connection_lines_curvature = LINES_CURVATURE
+	# Le rangement natif de GraphEdit ignore la logique de l'histoire :
+	# masqué au profit du bouton « Disposition auto » de la barre d'outils.
+	_graph_edit.show_arrange_button = false
+	_graph_edit.node_selected.connect(_on_node_selected)
+	_graph_edit.end_node_move.connect(_save_positions)
+	# Tirer un port de sortie vers l'entrée d'un autre nœud REDIRIGE le lien
+	# correspondant dans le .untold (la cible seule change, la ligne est intacte).
+	_graph_edit.connection_request.connect(_on_connection_request)
+	split.add_child(_graph_edit)
+
+	_inspector = NodeInspector.new()
+	split.add_child(_inspector)
+
+	_build_dialogs()
+
+
+## Rangée 1 — l'histoire : choix du fichier, création de nœud, annuler/rétablir,
+## vérification, recherche, statut.
+func _build_story_toolbar() -> HBoxContainer:
 	var toolbar := HBoxContainer.new()
 	toolbar.add_theme_constant_override("separation", 8)
-	add_child(toolbar)
 
 	var caption := Label.new()
 	caption.text = "Histoire :"
@@ -153,11 +184,13 @@ func _build_ui() -> void:
 	_status.modulate = Color(0.7, 0.7, 0.8)
 	_status.clip_text = true
 	toolbar.add_child(_status)
+	return toolbar
 
-	# Rangée 2 — la disposition : rangement, ordre du fichier, repli.
+
+## Rangée 2 — la disposition : rangement auto, ordre du fichier, repli.
+func _build_layout_toolbar() -> HBoxContainer:
 	var layout_bar := HBoxContainer.new()
 	layout_bar.add_theme_constant_override("separation", 8)
-	add_child(layout_bar)
 
 	var layout_caption := Label.new()
 	layout_caption.text = "Disposition :"
@@ -194,31 +227,7 @@ func _build_ui() -> void:
 	wire_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	wire_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	layout_bar.add_child(wire_hint)
-
-	var split := HSplitContainer.new()
-	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	add_child(split)
-
-	_graph_edit = GraphEdit.new()
-	_graph_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_graph_edit.minimap_enabled = true
-	# Connecteurs courbes (natif) : cohérent avec la carte en jeu (story_map),
-	# aucune ligne de dessin custom à écrire.
-	_graph_edit.connection_lines_curvature = LINES_CURVATURE
-	# Le rangement natif de GraphEdit ignore la logique de l'histoire :
-	# masqué au profit du bouton « Disposition auto » de la barre d'outils.
-	_graph_edit.show_arrange_button = false
-	_graph_edit.node_selected.connect(_on_node_selected)
-	_graph_edit.end_node_move.connect(_save_positions)
-	# Tirer un port de sortie vers l'entrée d'un autre nœud REDIRIGE le lien
-	# correspondant dans le .untold (la cible seule change, la ligne est intacte).
-	_graph_edit.connection_request.connect(_on_connection_request)
-	split.add_child(_graph_edit)
-
-	_inspector = NodeInspector.new()
-	split.add_child(_inspector)
-
-	_build_dialogs()
+	return layout_bar
 
 
 ## Dialogues réutilisés : création de nœud et rapport de vérification.
@@ -459,13 +468,10 @@ func _node_accent(id: String) -> Dictionary:
 	return {"tinted": false, "color": NODE_BORDER}
 
 
-## Couleur d'un personnage : sa ressource si connue, sinon une teinte stable
-## dérivée du nom (mêmes règles que la carte en jeu, story_map._color_of).
+## Couleur d'un personnage — point unique de vérité : CharacterData.color_for
+## (mêmes règles que la carte en jeu).
 func _character_color(character_type: String) -> Color:
-	for data in _characters:
-		if data.character_type == character_type:
-			return data.color
-	return Color.from_hsv(fmod(abs(float(character_type.hash())) / 1000.0, 1.0), 0.55, 0.9)
+	return CharacterData.color_for(character_type, _characters)
 
 
 ## Style « pilule sobre » du GraphNode : coins arrondis (barre de titre + corps),
@@ -487,37 +493,40 @@ func _apply_node_style(gnode: GraphNode, accent: Dictionary) -> void:
 
 
 ## Barre de titre : coins arrondis EN HAUT seulement (le corps arrondit le bas).
+## Base commune des deux styleboxes d'un GraphNode (fond, marges, bordure —
+## épaissie quand le nœud est sélectionné). Les coins arrondis sont posés par
+## l'appelant : en haut pour la barre de titre, en bas pour le corps.
+func _node_box(bg: Color, border: Color, selected: bool) -> StyleBoxFlat:
+	var box := StyleBoxFlat.new()
+	box.bg_color = bg
+	box.content_margin_left = 8
+	box.content_margin_right = 8
+	box.content_margin_top = 4
+	box.content_margin_bottom = 4
+	box.border_color = border
+	box.set_border_width_all(2 if selected else 1)
+	return box
+
+
+## Barre de titre : coins arrondis EN HAUT seulement, pas de bordure basse
+## (elle se fond dans le corps).
 func _title_box(bg: Color, border: Color, selected: bool) -> StyleBoxFlat:
-	var s := StyleBoxFlat.new()
-	s.bg_color = bg
-	s.corner_radius_top_left = NODE_CORNER_RADIUS
-	s.corner_radius_top_right = NODE_CORNER_RADIUS
-	s.content_margin_left = 8
-	s.content_margin_right = 8
-	s.content_margin_top = 4
-	s.content_margin_bottom = 4
-	s.border_color = border
-	s.border_width_left = 2 if selected else 1
-	s.border_width_right = s.border_width_left
-	s.border_width_top = s.border_width_left
-	return s
+	var box := _node_box(bg, border, selected)
+	box.corner_radius_top_left = NODE_CORNER_RADIUS
+	box.corner_radius_top_right = NODE_CORNER_RADIUS
+	box.border_width_bottom = 0
+	return box
 
 
-## Corps : coins arrondis EN BAS seulement (la barre de titre arrondit le haut).
+## Corps : coins arrondis EN BAS seulement (la barre de titre arrondit le haut),
+## pas de bordure haute.
 func _body_box(bg: Color, border: Color, selected: bool) -> StyleBoxFlat:
-	var s := StyleBoxFlat.new()
-	s.bg_color = bg
-	s.corner_radius_bottom_left = NODE_CORNER_RADIUS
-	s.corner_radius_bottom_right = NODE_CORNER_RADIUS
-	s.content_margin_left = 8
-	s.content_margin_right = 8
-	s.content_margin_top = 4
-	s.content_margin_bottom = 6
-	s.border_color = border
-	s.border_width_left = 2 if selected else 1
-	s.border_width_right = s.border_width_left
-	s.border_width_bottom = s.border_width_left
-	return s
+	var box := _node_box(bg, border, selected)
+	box.corner_radius_bottom_left = NODE_CORNER_RADIUS
+	box.corner_radius_bottom_right = NODE_CORNER_RADIUS
+	box.content_margin_bottom = 6
+	box.border_width_top = 0
+	return box
 
 
 func _excerpt(node: StoryNode) -> String:
@@ -550,24 +559,32 @@ func _link_caption(link: Dictionary) -> String:
 
 ## Ids visibles : ceux qu'on atteint depuis le début SANS traverser un nœud
 ## replié (le nœud replié reste visible, ses dépendants exclusifs non).
+## Nœuds atteignables depuis le début de l'histoire (parcours en largeur du
+## graphe) : { id: true }. Partagé par l'affichage (_visible_ids) et le
+## contrôle de santé (_run_checks — nœuds injoignables).
+func _reachable_from_start() -> Dictionary:
+	var reachable: Dictionary = {}
+	if not _story.has_node(_story.start_node):
+		return reachable
+	reachable[_story.start_node] = true
+	var queue: Array = [_story.start_node]
+	while not queue.is_empty():
+		for link in _graph.outgoing(queue.pop_front()):
+			var target: String = link["target"]
+			if _story.has_node(target) and not reachable.has(target):
+				reachable[target] = true
+				queue.append(target)
+	return reachable
+
+
 ## Un nœud encore atteignable par une autre branche ouverte reste affiché.
 ## Les nœuds inaccessibles depuis le début (orphelins) restent visibles.
 func _visible_ids() -> Dictionary:
 	var visible: Dictionary = {}
-	var reachable: Dictionary = {}
+	var reachable := _reachable_from_start()
 	if _story.has_node(_story.start_node):
-		reachable[_story.start_node] = true
-		var queue: Array = [_story.start_node]
-		while not queue.is_empty():
-			var id: String = queue.pop_front()
-			for link in _graph.outgoing(id):
-				var target: String = link["target"]
-				if _story.has_node(target) and not reachable.has(target):
-					reachable[target] = true
-					queue.append(target)
-
 		visible[_story.start_node] = true
-		queue = [_story.start_node]
+		var queue: Array = [_story.start_node]
 		while not queue.is_empty():
 			var open_id: String = queue.pop_front()
 			if _meta.is_collapsed(open_id):
@@ -814,16 +831,7 @@ func _run_checks() -> void:
 			if not IllustrationLibrary.defs().has(illu):
 				problems.append("• %s : illustration inconnue « %s » (absente de illustrations_defs.json)." % [id, illu])
 
-	var reachable: Dictionary = {}
-	if _story.has_node(_story.start_node):
-		reachable[_story.start_node] = true
-		var queue: Array = [_story.start_node]
-		while not queue.is_empty():
-			for link in _graph.outgoing(queue.pop_front()):
-				var target: String = link["target"]
-				if _story.has_node(target) and not reachable.has(target):
-					reachable[target] = true
-					queue.append(target)
+	var reachable := _reachable_from_start()
 	for id in _source.order:
 		if _story.has_node(id) and not reachable.has(id):
 			problems.append("• nœud injoignable depuis le début : « %s »." % id)

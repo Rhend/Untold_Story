@@ -16,6 +16,16 @@ const ASSIGN_PATTERN := "^@(?:var|set)\\s+([A-Za-z_]\\w*)\\s*(\\+=|-=|=)\\s*(.+)
 ## l'instruction qui suit sur la même ligne (texte, choix, saut, commande...).
 const GUARD_PATTERN := "^\\{\\s*([^{}]+?)\\s*\\}\\s*(\\S.*)$"
 
+## Conditions de garde, compilées UNE fois (_parse_conds tourne pour chaque
+## garde du fichier). « nom op valeur » reprend le sous-langage de
+## COND_PATTERN — toute évolution doit toucher les deux.
+static var _re_cond_var := RegEx.create_from_string(
+		"^([A-Za-z_]\\w*)\\s*(==|!=|<=|>=|<|>)\\s*(\"[^\"]*\"|-?\\d+(?:\\.\\d+)?)$")
+static var _re_cond_visited := RegEx.create_from_string("^(!)?\\s*visited\\(\\s*(\\S+?)\\s*\\)$")
+static var _re_cond_zone := RegEx.create_from_string("^(!)?\\s*zone_clicked\\(\\s*\"([^\"]*)\"\\s*\\)$")
+static var _re_cond_item := RegEx.create_from_string(
+		"^(!)?\\s*has_item\\(\\s*\"([^\"]*)\"\\s*(?:,\\s*(\\d+)\\s*)?\\)$")
+
 
 static func parse(text: String) -> Story:
 	var story := Story.new()
@@ -45,11 +55,11 @@ static func parse(text: String) -> Story:
 
 		# Variable globale : "@var nom = valeur" (avant tout nœud).
 		if line.begins_with("@var"):
-			var mv := re_assign.search(line)
-			if mv and mv.get_string(2) == "=":
+			var var_match := re_assign.search(line)
+			if var_match and var_match.get_string(2) == "=":
 				if current != null:
 					push_warning("StoryParser: « @var » après un nœud (portée globale quand même) : " + line)
-				story.variables[mv.get_string(1)] = _parse_value(mv.get_string(3))
+				story.variables[var_match.get_string(1)] = _parse_value(var_match.get_string(3))
 			else:
 				push_warning("StoryParser: « @var » illisible ignoré (attendu « @var nom = valeur ») : " + line)
 			continue
@@ -70,33 +80,33 @@ static func parse(text: String) -> Story:
 		# (Le saut conditionnel historique '{ ... -> noeud }' n'est pas concerné :
 		# rien ne suit son accolade fermante.)
 		var guard: Array = []
-		var mg := re_guard.search(line)
-		if mg:
-			guard = _parse_conds(mg.get_string(1))
+		var guard_match := re_guard.search(line)
+		if guard_match:
+			guard = _parse_conds(guard_match.get_string(1))
 			if guard.is_empty():
 				push_warning("StoryParser: condition illisible ignorée : " + line)
-			line = mg.get_string(2).strip_edges()
+			line = guard_match.get_string(2).strip_edges()
 
 		# Choix : "* [Texte affiché] -> noeud_cible"
-		var mc := re_choice.search(line)
-		if mc:
+		var choice_match := re_choice.search(line)
+		if choice_match:
 			_append(current, {
 				"type": "choice",
-				"text": mc.get_string(1).strip_edges(),
-				"target": mc.get_string(2),
+				"text": choice_match.get_string(1).strip_edges(),
+				"target": choice_match.get_string(2),
 			}, guard)
 			continue
 
 		# Saut conditionnel : '{ var == "valeur" -> noeud }' ou numérique
 		# '{ var >= 3 -> noeud }'.
-		var mco := re_cond.search(line)
-		if mco:
+		var cond_jump_match := re_cond.search(line)
+		if cond_jump_match:
 			_append(current, {
 				"type": "cond",
-				"var": mco.get_string(1),
-				"op": mco.get_string(2),
-				"value": _parse_value(mco.get_string(3)),
-				"target": mco.get_string(4),
+				"var": cond_jump_match.get_string(1),
+				"op": cond_jump_match.get_string(2),
+				"value": _parse_value(cond_jump_match.get_string(3)),
+				"target": cond_jump_match.get_string(4),
 			}, guard)
 			continue
 
@@ -111,13 +121,13 @@ static func parse(text: String) -> Story:
 		# Affectation : "@set nom = valeur", ou arithmétique "@set nom += 2" /
 		# "@set nom -= 1" (compteurs : compétences, réputation...).
 		if line.begins_with("@set"):
-			var ms := re_assign.search(line)
-			if ms:
+			var set_match := re_assign.search(line)
+			if set_match:
 				_append(current, {
 					"type": "set",
-					"name": ms.get_string(1),
-					"op": ms.get_string(2),
-					"value": _parse_value(ms.get_string(3)),
+					"name": set_match.get_string(1),
+					"op": set_match.get_string(2),
+					"value": _parse_value(set_match.get_string(3)),
 				}, guard)
 			else:
 				push_warning("StoryParser: « @set » illisible ignoré : " + line)
@@ -125,12 +135,12 @@ static func parse(text: String) -> Story:
 
 		# Commande moteur : '@nom("arg1", "arg2")' (ex: illustration, minigame)
 		if line.begins_with("@"):
-			var mcmd := re_cmd.search(line)
-			if mcmd:
+			var command_match := re_cmd.search(line)
+			if command_match:
 				_append(current, {
 					"type": "command",
-					"name": mcmd.get_string(1),
-					"args": _parse_args(mcmd.get_string(2)),
+					"name": command_match.get_string(1),
+					"args": _parse_args(command_match.get_string(2)),
 				}, guard)
 			else:
 				push_warning("StoryParser: commande illisible ignorée : " + line)
@@ -171,52 +181,43 @@ static func _append(node: StoryNode, ins: Dictionary, guard: Array) -> void:
 ##   !has_item("i")    → {"kind": "item", "id", "qty": 1, "neg": true}
 ## Retourne [] si une des conditions est illisible.
 static func _parse_conds(s: String) -> Array:
-	var re_var := RegEx.new()
-	re_var.compile("^([A-Za-z_]\\w*)\\s*(==|!=|<=|>=|<|>)\\s*(\"[^\"]*\"|-?\\d+(?:\\.\\d+)?)$")
-	var re_visited := RegEx.new()
-	re_visited.compile("^(!)?\\s*visited\\(\\s*(\\S+?)\\s*\\)$")
-	var re_zone := RegEx.new()
-	re_zone.compile("^(!)?\\s*zone_clicked\\(\\s*\"([^\"]*)\"\\s*\\)$")
-	var re_item := RegEx.new()
-	re_item.compile("^(!)?\\s*has_item\\(\\s*\"([^\"]*)\"\\s*(?:,\\s*(\\d+)\\s*)?\\)$")
-
 	var groups: Array = []
 	for group_src in s.split(" or "):
 		var conds: Array = []
 		for part in group_src.split(" and "):
 			part = part.strip_edges()
-			var mv := re_var.search(part)
-			if mv:
+			var var_match := _re_cond_var.search(part)
+			if var_match:
 				conds.append({
 					"kind": "var",
-					"name": mv.get_string(1),
-					"op": mv.get_string(2),
-					"value": _parse_value(mv.get_string(3)),
+					"name": var_match.get_string(1),
+					"op": var_match.get_string(2),
+					"value": _parse_value(var_match.get_string(3)),
 				})
 				continue
-			var mt := re_visited.search(part)
-			if mt:
+			var visited_match := _re_cond_visited.search(part)
+			if visited_match:
 				conds.append({
 					"kind": "visited",
-					"id": mt.get_string(2),
-					"neg": mt.get_string(1) == "!",
+					"id": visited_match.get_string(2),
+					"neg": visited_match.get_string(1) == "!",
 				})
 				continue
-			var mz := re_zone.search(part)
-			if mz:
+			var zone_match := _re_cond_zone.search(part)
+			if zone_match:
 				conds.append({
 					"kind": "zone",
-					"id": mz.get_string(2),
-					"neg": mz.get_string(1) == "!",
+					"id": zone_match.get_string(2),
+					"neg": zone_match.get_string(1) == "!",
 				})
 				continue
-			var mi := re_item.search(part)
-			if mi:
+			var item_match := _re_cond_item.search(part)
+			if item_match:
 				conds.append({
 					"kind": "item",
-					"id": mi.get_string(2),
-					"qty": int(mi.get_string(3)) if mi.get_string(3) != "" else 1,
-					"neg": mi.get_string(1) == "!",
+					"id": item_match.get_string(2),
+					"qty": int(item_match.get_string(3)) if item_match.get_string(3) != "" else 1,
+					"neg": item_match.get_string(1) == "!",
 				})
 				continue
 			return []
@@ -232,12 +233,12 @@ static func _unquote(s: String) -> String:
 
 
 ## Valeur typée d'une affectation ou d'une condition : entre guillemets →
-## String ; littéral numérique → int/float ; sinon le texte brut (String,
-## comportement historique des valeurs non citées).
+## String (même « "3" » reste du texte) ; littéral numérique → int/float ;
+## sinon le texte brut (String, comportement historique des valeurs non citées).
 static func _parse_value(s: String) -> Variant:
 	var t := s.strip_edges()
 	if t.length() >= 2 and t.begins_with("\"") and t.ends_with("\""):
-		return t.substr(1, t.length() - 2)
+		return _unquote(t)
 	if t.is_valid_int():
 		return t.to_int()
 	if t.is_valid_float():
